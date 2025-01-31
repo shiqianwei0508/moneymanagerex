@@ -165,7 +165,7 @@ void mmGUIFrame::DoUpdateReportNavigation(wxTreeItemId& parent_item)
 
     if (hidden_reports.Index("Income vs Expenses") == wxNOT_FOUND)
     {
-        wxTreeItemId incexpOverTime = m_nav_tree_ctrl->AppendItem(parent_item, _("Income vs Expenses"), img::PIECHART_PNG, img::PIECHART_PNG);
+        wxTreeItemId incexpOverTime = m_nav_tree_ctrl->AppendItem(parent_item, _("Income vs. Expenses"), img::PIECHART_PNG, img::PIECHART_PNG);
         m_nav_tree_ctrl->SetItemData(incexpOverTime, new mmTreeItemData("Income vs Expenses", new mmReportIncomeExpenses()));
 
         wxTreeItemId incexpMonthly = m_nav_tree_ctrl->AppendItem(incexpOverTime, _("Monthly"), img::PIECHART_PNG, img::PIECHART_PNG);
@@ -222,7 +222,7 @@ void mmGUIFrame::DoUpdateReportNavigation(wxTreeItemId& parent_item)
 
     ///////////////////////////////////////////////////////////////////
 
-    Model_Account::Data_Set investments_account = Model_Account::instance().find(Model_Account::ACCOUNTTYPE(Model_Account::all_type()[Model_Account::INVESTMENT], EQUAL));
+    Model_Account::Data_Set investments_account = Model_Account::instance().find(Model_Account::ACCOUNTTYPE(Model_Account::TYPE_STR_INVESTMENT, EQUAL));
     if (!investments_account.empty())
     {
         if (hidden_reports.Index("Stocks Report") == wxNOT_FOUND)
@@ -240,7 +240,7 @@ void mmGUIFrame::DoUpdateReportNavigation(wxTreeItemId& parent_item)
 void mmGUIFrame::DoUpdateGRMNavigation(wxTreeItemId& parent_item)
 {
     /*GRM Reports*/
-    auto records = Model_Report::instance().all();
+    auto records = Model_Report::instance().find(Model_Report::ACTIVE(1, EQUAL));
     //Sort by group name and report name
     std::sort(records.begin(), records.end(), SorterByREPORTNAME());
     std::stable_sort(records.begin(), records.end(), SorterByGROUPNAME());
@@ -253,6 +253,7 @@ void mmGUIFrame::DoUpdateGRMNavigation(wxTreeItemId& parent_item)
         if (group_name != record.GROUPNAME && !no_group)
         {
             group = m_nav_tree_ctrl->AppendItem(parent_item, wxGetTranslation(record.GROUPNAME), img::CUSTOMSQL_GRP_PNG, img::CUSTOMSQL_GRP_PNG);
+            m_nav_tree_ctrl->SetItemBold(group, true);
             m_nav_tree_ctrl->SetItemData(group, new mmTreeItemData(new mmGeneralGroupReport(record.GROUPNAME), record.GROUPNAME));
             group_name = record.GROUPNAME;
         }

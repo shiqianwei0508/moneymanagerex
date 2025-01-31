@@ -60,7 +60,7 @@ bool mmBudgetYearDialog::Create(wxWindow* parent, wxWindowID id,
     this->SetInitialSize();
     SetIcon(mmex::getProgramIcon());
     Centre();
-    return TRUE;
+    return true;
 }
 
 void mmBudgetYearDialog::fillControls()
@@ -69,7 +69,7 @@ void mmBudgetYearDialog::fillControls()
     for (const auto& e: Model_Budgetyear::instance().all(Model_Budgetyear::COL_BUDGETYEARNAME))
     {
         const wxString& payeeString = e.BUDGETYEARNAME;
-        int budgetYearID = e.BUDGETYEARID;
+        int64 budgetYearID = e.BUDGETYEARID;
         m_listBox->Insert(payeeString, index++, new mmListBoxItem(budgetYearID, payeeString));
     }
 }
@@ -90,12 +90,12 @@ void mmBudgetYearDialog::CreateControls()
     itemBoxSizer2->Add(itemBoxSizer5, 1, wxGROW|wxALL, 5);
 
     wxButton* itemButton7 = new wxButton(this, wxID_ADD
-        , _("&Add Year"));
+        , _("Add &Year"));
     itemBoxSizer5->Add(itemButton7, 0, wxALIGN_CENTER_VERTICAL);
     mmToolTip(itemButton7, _("Add a new budget year"));
 
     wxButton* itemBudgetMonth = new wxButton(this, ID_ADD_MONTH
-        , _("&Add Month"));
+        , _("Add &Month"));
     itemBoxSizer5->Add(itemBudgetMonth, 0, wxALIGN_CENTER_VERTICAL | wxLEFT, 5);
     mmToolTip(itemBudgetMonth, _("Add a new budget month"));
 
@@ -144,7 +144,7 @@ void mmBudgetYearDialog::OnAddMonth(wxCommandEvent& /*event*/)
 void mmBudgetYearDialog::OnDelete(wxCommandEvent& /*event*/)
 {
     wxString budgetYearString = m_listBox->GetStringSelection();
-    int budgetYearID = Model_Budgetyear::instance().Get(budgetYearString);
+    int64 budgetYearID = Model_Budgetyear::instance().Get(budgetYearString);
     Model_Budgetyear::instance().remove(budgetYearID);
     m_listBox->Clear();
     fillControls();

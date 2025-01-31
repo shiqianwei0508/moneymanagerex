@@ -30,8 +30,7 @@ wxEND_EVENT_TABLE()
 mmAddAccountWizard::mmAddAccountWizard(wxFrame *frame)
     : wxWizard(frame,wxID_ANY,_("Add Account Wizard")
     , wxBitmap(addacctwiz_xpm), wxDefaultPosition
-    , wxDEFAULT_DIALOG_STYLE), acctID_(-1)
-    , currencyID_(-1), accountType_(0)
+    , wxDEFAULT_DIALOG_STYLE)
 {
     // a wizard page may be either an object of predefined class
     page1 = new wxWizardPageSimple(this);
@@ -64,8 +63,8 @@ void mmAddAccountWizard::RunIt()
         Model_Account::Data* account = Model_Account::instance().create();
 
         account->FAVORITEACCT = "TRUE";
-        account->STATUS = Model_Account::all_status()[Model_Account::OPEN];
-        account->ACCOUNTTYPE = Model_Account::all_type()[accountType_];
+        account->STATUS = Model_Account::STATUS_STR_OPEN;
+        account->ACCOUNTTYPE = Model_Account::TYPE_STR[accountType_];
         account->ACCOUNTNAME = accountName_;
         account->INITIALBAL = 0;
         account->INITIALDATE = wxDate::Today().FormatISODate();
@@ -92,7 +91,7 @@ void mmAddAccountNamePage::processPage(wxWizardEvent& event)
         {
             if (Model_Account::instance().get(account_name))
             {
-                wxMessageBox(_("Account Name already exists"), _("New Account"), wxOK|wxICON_ERROR, this);
+                wxMessageBox(_("An account with this name already exists"), _("New Account"), wxOK|wxICON_ERROR, this);
                 event.Veto();
             }
         }
@@ -124,10 +123,10 @@ mmAddAccountTypePage::mmAddAccountTypePage(mmAddAccountWizard *parent)
     , parent_(parent)
 {
     itemChoiceType_ = new wxChoice(this, wxID_ANY);
-    for (const auto& type: Model_Account::all_type())
+    for (const auto& type: Model_Account::TYPE_STR)
         itemChoiceType_->Append(wxGetTranslation(type), new wxStringClientData(type));
     mmToolTip(itemChoiceType_, _("Specify the type of account to be created."));
-    itemChoiceType_->SetSelection(Model_Account::CHECKING);
+    itemChoiceType_->SetSelection(Model_Account::TYPE_ID_CHECKING);
 
     wxBoxSizer *mainSizer = new wxBoxSizer(wxVERTICAL);
 
@@ -158,12 +157,12 @@ mmAddAccountTypePage::mmAddAccountTypePage(mmAddAccountWizard *parent)
 
 bool mmAddAccountTypePage::TransferDataFromWindow()
 {
-    int currencyID = Option::instance().getBaseCurrencyID();
+    int64 currencyID = Option::instance().getBaseCurrencyID();
     if (currencyID == -1)
     {
         wxString errorMsg;
         errorMsg << _("Base Account Currency Not set.") << "\n"
-                 << _("Set that first using Tools->Options menu and then add a new account.");
+                 << _u("Set that first using Tools → Settings… menu and then add a new account.");
         wxMessageBox( errorMsg, _("New Account"), wxOK|wxICON_WARNING, this);
         return false;
     }

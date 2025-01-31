@@ -18,11 +18,9 @@ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 ********************************************************/
 
 #include "myusage.h"
-#include "option.h"
 #include "reports/mmDateRange.h"
 #include "reports/htmlbuilder.h"
 #include "model/Model_Usage.h"
-#include "model/Model_Report.h"
 
 mmReportMyUsage::mmReportMyUsage()
 : mmPrintableBase(wxTRANSLATE("MMEX Usage Frequency"))
@@ -95,7 +93,6 @@ wxString mmReportMyUsage::getHTMLText()
 
              if (!pobj.HasMember("seconds") || !pobj["seconds"].IsDouble())
                  continue;
-             const auto s = pobj["seconds"].GetDouble();
 
              usage_by_module[module] += 1;
          }
@@ -106,8 +103,10 @@ wxString mmReportMyUsage::getHTMLText()
     }
 
     std::map<int, wxString> usage_by_frequency;
-    for (const auto i : usage_by_module) {
+    std::vector<std::pair<wxString, int>> usage_vector;
+    for (const auto &i : usage_by_module) {
         usage_by_frequency[i.second] = i.first;
+        usage_vector.push_back(i);
     }
 
     loop_t contents;
@@ -133,7 +132,11 @@ wxString mmReportMyUsage::getHTMLText()
         GraphSeries data_usage;
 
         wxArrayString labels;
-        for (const auto &stats : usage_by_module)
+
+        std::stable_sort(usage_vector.begin(), usage_vector.end(), [](const std::pair<wxString, int>& left, const std::pair<wxString, int>& right) {
+            return left.second > right.second;});
+
+        for (const auto &stats : usage_vector)
         {
             data_usage.values.push_back(stats.second);
             gd.labels.push_back(stats.first);

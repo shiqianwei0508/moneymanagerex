@@ -83,33 +83,42 @@ StocksListCtrl::StocksListCtrl(mmStocksPanel* cp, wxWindow *parent, wxWindowID w
     m_selected_col = Model_Setting::instance().GetIntSetting("STOCKS_SORT_COL", col_sort());
     m_asc = Model_Setting::instance().GetBoolSetting("STOCKS_ASC", true);
 
-    m_columns.push_back(PANEL_COLUMN(" ", 25, wxLIST_FORMAT_LEFT));
-    m_columns.push_back(PANEL_COLUMN(_("ID"), wxLIST_AUTOSIZE, wxLIST_FORMAT_RIGHT));
-    m_columns.push_back(PANEL_COLUMN(_("*Date"), wxLIST_AUTOSIZE_USEHEADER, wxLIST_FORMAT_LEFT));
-    m_columns.push_back(PANEL_COLUMN(_("Company Name"), wxLIST_AUTOSIZE_USEHEADER, wxLIST_FORMAT_LEFT));
-    m_columns.push_back(PANEL_COLUMN(_("Symbol"), wxLIST_AUTOSIZE_USEHEADER, wxLIST_FORMAT_LEFT));
-    m_columns.push_back(PANEL_COLUMN(_("Share Total"), wxLIST_AUTOSIZE_USEHEADER, wxLIST_FORMAT_RIGHT));
-    m_columns.push_back(PANEL_COLUMN(_("Avg Share Price"), wxLIST_AUTOSIZE_USEHEADER, wxLIST_FORMAT_RIGHT));
-    m_columns.push_back(PANEL_COLUMN(_("Total Cost"), wxLIST_AUTOSIZE_USEHEADER, wxLIST_FORMAT_RIGHT));
-    m_columns.push_back(PANEL_COLUMN(_("Realized Gain/Loss"), wxLIST_AUTOSIZE_USEHEADER, wxLIST_FORMAT_RIGHT));
-    m_columns.push_back(PANEL_COLUMN(_("Unrealized Gain/Loss"), wxLIST_AUTOSIZE_USEHEADER, wxLIST_FORMAT_RIGHT));
-    m_columns.push_back(PANEL_COLUMN(_("Curr. Share Price"), wxLIST_AUTOSIZE_USEHEADER, wxLIST_FORMAT_RIGHT));
-    m_columns.push_back(PANEL_COLUMN(_("Curr. Total Value"), wxLIST_AUTOSIZE_USEHEADER, wxLIST_FORMAT_RIGHT));
-    m_columns.push_back(PANEL_COLUMN(_("Price Date"), wxLIST_AUTOSIZE_USEHEADER, wxLIST_FORMAT_LEFT));
-    m_columns.push_back(PANEL_COLUMN(_("Commission"), wxLIST_AUTOSIZE_USEHEADER, wxLIST_FORMAT_RIGHT));
-    m_columns.push_back(PANEL_COLUMN(_("Notes"), wxLIST_AUTOSIZE_USEHEADER, wxLIST_FORMAT_LEFT));
+    m_columns.push_back(PANEL_COLUMN(" ", 25, wxLIST_FORMAT_LEFT, false));
+    m_real_columns.push_back(COL_ICON);
+    m_columns.push_back(PANEL_COLUMN(_("ID"), wxLIST_AUTOSIZE, wxLIST_FORMAT_RIGHT, true));
+    m_real_columns.push_back(COL_ID);
+    m_columns.push_back(PANEL_COLUMN(_("*Date"), wxLIST_AUTOSIZE_USEHEADER, wxLIST_FORMAT_LEFT, true));
+    m_real_columns.push_back(COL_DATE);
+    m_columns.push_back(PANEL_COLUMN(_("Company Name"), wxLIST_AUTOSIZE_USEHEADER, wxLIST_FORMAT_LEFT, true));
+    m_real_columns.push_back(COL_NAME);
+    m_columns.push_back(PANEL_COLUMN(_("Symbol"), wxLIST_AUTOSIZE_USEHEADER, wxLIST_FORMAT_LEFT, true));
+    m_real_columns.push_back(COL_SYMBOL);
+    m_columns.push_back(PANEL_COLUMN(_("Share Total"), wxLIST_AUTOSIZE_USEHEADER, wxLIST_FORMAT_RIGHT, true));
+    m_real_columns.push_back(COL_NUMBER);
+    m_columns.push_back(PANEL_COLUMN(_("Avg Share Price"), wxLIST_AUTOSIZE_USEHEADER, wxLIST_FORMAT_RIGHT, true));
+    m_real_columns.push_back(COL_PRICE);
+    m_columns.push_back(PANEL_COLUMN(_("Total Cost"), wxLIST_AUTOSIZE_USEHEADER, wxLIST_FORMAT_RIGHT, true));
+    m_real_columns.push_back(COL_VALUE);
+    m_columns.push_back(PANEL_COLUMN(_("Realized Gain/Loss"), wxLIST_AUTOSIZE_USEHEADER, wxLIST_FORMAT_RIGHT, true));
+    m_real_columns.push_back(COL_REAL_GAIN_LOSS);
+    m_columns.push_back(PANEL_COLUMN(_("Unrealized Gain/Loss"), wxLIST_AUTOSIZE_USEHEADER, wxLIST_FORMAT_RIGHT, true));
+    m_real_columns.push_back(COL_GAIN_LOSS);
+    m_columns.push_back(PANEL_COLUMN(_("Curr. Share Price"), wxLIST_AUTOSIZE_USEHEADER, wxLIST_FORMAT_RIGHT, true));
+    m_real_columns.push_back(COL_CURRENT);
+    m_columns.push_back(PANEL_COLUMN(_("Curr. Total Value"), wxLIST_AUTOSIZE_USEHEADER, wxLIST_FORMAT_RIGHT, true));
+    m_real_columns.push_back(COL_CURRVALUE);
+    m_columns.push_back(PANEL_COLUMN(_("Price Date"), wxLIST_AUTOSIZE_USEHEADER, wxLIST_FORMAT_LEFT, true));
+    m_real_columns.push_back(COL_PRICEDATE);
+    m_columns.push_back(PANEL_COLUMN(_("Commission"), wxLIST_AUTOSIZE_USEHEADER, wxLIST_FORMAT_RIGHT, true));
+    m_real_columns.push_back(COL_COMMISSION);
+    m_columns.push_back(PANEL_COLUMN(_("Notes"), wxLIST_AUTOSIZE_USEHEADER, wxLIST_FORMAT_LEFT, true));
+    m_real_columns.push_back(COL_NOTES);
 
     m_col_width = "STOCKS_COL%d_WIDTH";
+    m_col_idstr = "STOCKS";
     m_default_sort_column = col_sort();
 
-    for (const auto& entry : m_columns)
-    {
-        int count = GetColumnCount();
-        InsertColumn(count
-            , entry.HEADER
-            , entry.FORMAT
-            , Model_Setting::instance().GetIntSetting(wxString::Format(m_col_width, count), entry.WIDTH));
-    }
+    CreateColumns();
 
     initVirtualListControl(-1, m_selected_col, m_asc);
     if (!m_stocks.empty())
@@ -134,16 +143,16 @@ void StocksListCtrl::OnMouseRightClick(wxMouseEvent& event)
     bool hide_menu_item = (m_selected_row < 0);
 
     wxMenu menu;
-    menu.Append(MENU_TREEPOPUP_NEW, __(wxTRANSLATE("&New Stock Investment")));
+    menu.Append(MENU_TREEPOPUP_NEW, _u("&New Stock Investment…"));
     menu.AppendSeparator();
-    menu.Append(MENU_TREEPOPUP_ADDTRANS, __(wxTRANSLATE("&Add Stock Transactions")));
+    menu.Append(MENU_TREEPOPUP_ADDTRANS, _u("&Add Stock Transactions…"));
     menu.Append(MENU_TREEPOPUP_VIEWTRANS, _("&View Stock Transactions"));
     menu.AppendSeparator();
-    menu.Append(MENU_TREEPOPUP_EDIT, __(wxTRANSLATE("&Edit Stock Investment")));
+    menu.Append(MENU_TREEPOPUP_EDIT, _u("&Edit Stock Investment…"));
     menu.AppendSeparator();
-    menu.Append(MENU_TREEPOPUP_DELETE, __(wxTRANSLATE("&Delete Stock Investment")));
+    menu.Append(MENU_TREEPOPUP_DELETE, _u("&Delete Stock Investment…"));
     menu.AppendSeparator();
-    menu.Append(MENU_TREEPOPUP_ORGANIZE_ATTACHMENTS, __(wxTRANSLATE("&Organize Attachments")));
+    menu.Append(MENU_TREEPOPUP_ORGANIZE_ATTACHMENTS, _u("&Organize Attachments…"));
     menu.Append(wxID_INDEX, _("Stock &Web Page"));
 
     menu.Enable(MENU_TREEPOPUP_EDIT, !hide_menu_item);
@@ -151,6 +160,7 @@ void StocksListCtrl::OnMouseRightClick(wxMouseEvent& event)
     menu.Enable(MENU_TREEPOPUP_VIEWTRANS, !hide_menu_item);
     menu.Enable(MENU_TREEPOPUP_DELETE, !hide_menu_item);
     menu.Enable(MENU_TREEPOPUP_ORGANIZE_ATTACHMENTS, !hide_menu_item);
+    menu.Enable(wxID_INDEX, !hide_menu_item);
 
     PopupMenu(&menu, event.GetPosition());
 
@@ -159,8 +169,10 @@ void StocksListCtrl::OnMouseRightClick(wxMouseEvent& event)
 
 wxString StocksListCtrl::OnGetItemText(long item, long column) const
 {
-    if (column == COL_ID)           return wxString::Format("%i", m_stocks[item].STOCKID).Trim();
-    if (column == COL_DATE)         return mmGetDateForDisplay(m_stocks[item].PURCHASEDATE);
+    column = m_real_columns[column];
+
+    if (column == COL_ID)           return wxString::Format("%lld", m_stocks[item].STOCKID).Trim();
+    if (column == COL_DATE)         return mmGetDateTimeForDisplay(m_stocks[item].PURCHASEDATE);
     if (column == COL_NAME)         return m_stocks[item].STOCKNAME;
     if (column == COL_SYMBOL)       return m_stocks[item].SYMBOL;
     if (column == COL_NUMBER)
@@ -174,13 +186,13 @@ wxString StocksListCtrl::OnGetItemText(long item, long column) const
     if (column == COL_GAIN_LOSS)    return Model_Currency::toString(GetGainLoss(item), m_stock_panel->m_currency);
     if (column == COL_CURRENT)      return Model_Currency::toString(m_stocks[item].CURRENTPRICE, m_stock_panel->m_currency, 4);
     if (column == COL_CURRVALUE)    return Model_Currency::toString(Model_Stock::CurrentValue(m_stocks[item]), m_stock_panel->m_currency);
-    if (column == COL_PRICEDATE)    return mmGetDateForDisplay(Model_Stock::instance().lastPriceDate(&m_stocks[item]));
+    if (column == COL_PRICEDATE)    return mmGetDateTimeForDisplay(Model_Stock::instance().lastPriceDate(&m_stocks[item]));
     if (column == COL_COMMISSION)   return Model_Currency::toString(m_stocks[item].COMMISSION, m_stock_panel->m_currency);
     if (column == COL_NOTES)
     {
         wxString full_notes = m_stocks[item].NOTES;
         full_notes.Replace("\n", " ");
-        if (Model_Attachment::NrAttachments(Model_Attachment::reftype_desc(Model_Attachment::STOCK), m_stocks[item].STOCKID))
+        if (Model_Attachment::NrAttachments(Model_Attachment::REFTYPE_STR_STOCK, m_stocks[item].STOCKID))
             full_notes.Prepend(mmAttachmentManage::GetAttachmentNoteSign());
         return full_notes;
     }
@@ -279,8 +291,8 @@ void StocksListCtrl::OnDeleteStocks(wxCommandEvent& /*event*/)
     if (msgDlg.ShowModal() == wxID_YES)
     {
         Model_Stock::instance().remove(m_stocks[m_selected_row].STOCKID);
-        mmAttachmentManage::DeleteAllAttachments(Model_Attachment::reftype_desc(Model_Attachment::STOCK), m_stocks[m_selected_row].STOCKID);
-        Model_Translink::RemoveTransLinkRecords(Model_Attachment::STOCK, m_stocks[m_selected_row].STOCKID);
+        mmAttachmentManage::DeleteAllAttachments(Model_Attachment::REFTYPE_STR_STOCK, m_stocks[m_selected_row].STOCKID);
+        Model_Translink::RemoveTransLinkRecords(Model_Attachment::REFTYPE_ID_STOCK, m_stocks[m_selected_row].STOCKID);
         DeleteItem(m_selected_row);
         doRefreshItems(-1);
         m_stock_panel->m_frame->RefreshNavigationTree();
@@ -291,14 +303,15 @@ void StocksListCtrl::OnMoveStocks(wxCommandEvent& /*event*/)
 {
     if (m_selected_row == -1) return;
     
-    const auto& accounts = Model_Account::instance().find(Model_Account::ACCOUNTTYPE(Model_Account::all_type()[Model_Account::INVESTMENT]));
+    const auto& accounts = Model_Account::instance().find(
+        Model_Account::ACCOUNTTYPE(Model_Account::TYPE_STR_INVESTMENT));
     if (accounts.empty()) return;
 
     const Model_Account::Data* from_account = Model_Account::instance().get(m_stock_panel->m_account_id);
     wxString headerMsg = wxString::Format(_("Moving Transaction from %s to"), from_account->ACCOUNTNAME);
     mmSingleChoiceDialog scd(this, _("Select the destination Account "), headerMsg , accounts);
 
-    int toAccountID = -1;
+    int64 toAccountID = -1;
     int error_code = scd.ShowModal();
     if (error_code == wxID_OK)
     {
@@ -333,8 +346,8 @@ void StocksListCtrl::OnOrganizeAttachments(wxCommandEvent& /*event*/)
 {
     if (m_selected_row < 0) return;
 
-    wxString RefType = Model_Attachment::reftype_desc(Model_Attachment::STOCK);
-    int RefId = m_stocks[m_selected_row].STOCKID;
+    wxString RefType = Model_Attachment::REFTYPE_STR_STOCK;
+    int64 RefId = m_stocks[m_selected_row].STOCKID;
 
     mmAttachmentDialog dlg(this, RefType, RefId);
     dlg.ShowModal();
@@ -359,8 +372,8 @@ void StocksListCtrl::OnOpenAttachment(wxCommandEvent& /*event*/)
 {
     if (m_selected_row < 0) return;
 
-    wxString RefType = Model_Attachment::reftype_desc(Model_Attachment::STOCK);
-    int RefId = m_stocks[m_selected_row].STOCKID;
+    wxString RefType = Model_Attachment::REFTYPE_STR_STOCK;
+    int64 RefId = m_stocks[m_selected_row].STOCKID;
 
     mmAttachmentManage::OpenAttachmentFromPanelIcon(this, RefType, RefId);
     doRefreshItems(RefId);
@@ -404,13 +417,13 @@ void StocksListCtrl::OnColClick(wxListEvent& event)
     Model_Setting::instance().Set("STOCKS_ASC", m_asc);
     Model_Setting::instance().Set("STOCKS_SORT_COL", m_selected_col);
 
-    int trx_id = -1;
+    int64 trx_id = -1;
     if (m_selected_row>=0) trx_id = m_stocks[m_selected_row].STOCKID;
     doRefreshItems(trx_id);
     m_stock_panel->OnListItemSelected(-1);
 }
 
-void StocksListCtrl::doRefreshItems(int trx_id)
+void StocksListCtrl::doRefreshItems(int64 trx_id)
 {
     int selectedIndex = initVirtualListControl(trx_id, m_selected_col, m_asc);
     long cnt = static_cast<long>(m_stocks.size());
@@ -433,7 +446,7 @@ void StocksListCtrl::doRefreshItems(int trx_id)
     }
 }
 
-int StocksListCtrl::initVirtualListControl(int id, int col, bool asc)
+int StocksListCtrl::initVirtualListControl(int64 trx_id, int col, bool asc)
 {
     m_stock_panel->updateHeader();
     /* Clear all the records */
@@ -453,7 +466,7 @@ int StocksListCtrl::initVirtualListControl(int id, int col, bool asc)
     int cnt = 0, selected_item = -1;
     for (auto& stock : m_stocks)
     {
-        if (id == stock.STOCKID)
+        if (trx_id == stock.STOCKID)
         {
             selected_item = cnt;
             break;

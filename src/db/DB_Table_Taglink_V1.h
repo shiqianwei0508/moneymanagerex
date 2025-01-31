@@ -1,7 +1,7 @@
 ﻿// -*- C++ -*-
 //=============================================================================
 /**
- *      Copyright: (c) 2013 - 2022 Guan Lisheng (guanlisheng@gmail.com)
+ *      Copyright: (c) 2013 - 2025 Guan Lisheng (guanlisheng@gmail.com)
  *      Copyright: (c) 2017 - 2018 Stefano Giorgio (stef145g)
  *      Copyright: (c) 2022 Mark Whalley (mark@ipx.co.uk)
  *
@@ -12,7 +12,7 @@
  *      @brief
  *
  *      Revision History:
- *          AUTO GENERATED at 2022-09-28 23:10:47.317664.
+ *          AUTO GENERATED at 2025-01-27 22:25:33.865032.
  *          DO NOT EDIT!
  */
 //=============================================================================
@@ -20,10 +20,10 @@
 
 #include "DB_Table.h"
 
-struct DB_Table_ASSETCLASS_V1 : public DB_Table
+struct DB_Table_TAGLINK_V1 : public DB_Table
 {
     struct Data;
-    typedef DB_Table_ASSETCLASS_V1 Self;
+    typedef DB_Table_TAGLINK_V1 Self;
 
     /** A container to hold list of Data records for the table*/
     struct Data_Set : public std::vector<Self::Data>
@@ -49,13 +49,13 @@ struct DB_Table_ASSETCLASS_V1 : public DB_Table
 
     /** A container to hold a list of Data record pointers for the table in memory*/
     typedef std::vector<Self::Data*> Cache;
-    typedef std::map<int, Self::Data*> Index_By_Id;
+    typedef std::map<int64, Self::Data*> Index_By_Id;
     Cache cache_;
     Index_By_Id index_by_id_;
     Data* fake_; // in case the entity not found
 
     /** Destructor: clears any data records stored in memory */
-    ~DB_Table_ASSETCLASS_V1() 
+    ~DB_Table_TAGLINK_V1() 
     {
         delete this->fake_;
         destroy_cache();
@@ -64,7 +64,7 @@ struct DB_Table_ASSETCLASS_V1 : public DB_Table
     /** Removes all records stored in memory (cache) for the table*/ 
     void destroy_cache()
     {
-        std::for_each(cache_.begin(), cache_.end(), std::mem_fun(&Data::destroy));
+        std::for_each(cache_.begin(), cache_.end(), std::mem_fn(&Data::destroy));
         cache_.clear();
         index_by_id_.clear(); // no memory release since it just stores pointer and the according objects are in cache
     }
@@ -76,12 +76,12 @@ struct DB_Table_ASSETCLASS_V1 : public DB_Table
         {
             try
             {
-                db->ExecuteUpdate("CREATE TABLE ASSETCLASS_V1 (ID INTEGER primary key, PARENTID INTEGER, NAME TEXT COLLATE NOCASE NOT NULL, ALLOCATION REAL, SORTORDER INTEGER)");
+                db->ExecuteUpdate("CREATE TABLE TAGLINK_V1(TAGLINKID INTEGER PRIMARY KEY, REFTYPE TEXT NOT NULL, REFID INTEGER NOT NULL, TAGID INTEGER NOT NULL, FOREIGN KEY (TAGID) REFERENCES TAG_V1 (TAGID), UNIQUE(REFTYPE, REFID, TAGID))");
                 this->ensure_data(db);
             }
             catch(const wxSQLite3Exception &e) 
             { 
-                wxLogError("ASSETCLASS_V1: Exception %s", e.GetMessage().utf8_str());
+                wxLogError("TAGLINK_V1: Exception %s", e.GetMessage().utf8_str());
                 return false;
             }
         }
@@ -95,10 +95,11 @@ struct DB_Table_ASSETCLASS_V1 : public DB_Table
     {
         try
         {
+            db->ExecuteUpdate("CREATE INDEX IF NOT EXISTS IDX_TAGLINK ON TAGLINK_V1 (REFTYPE, REFID, TAGID)");
         }
         catch(const wxSQLite3Exception &e) 
         { 
-            wxLogError("ASSETCLASS_V1: Exception %s", e.GetMessage().utf8_str());
+            wxLogError("TAGLINK_V1: Exception %s", e.GetMessage().utf8_str());
             return false;
         }
 
@@ -111,56 +112,48 @@ struct DB_Table_ASSETCLASS_V1 : public DB_Table
         db->Commit();
     }
     
-    struct ID : public DB_Column<int>
+    struct TAGLINKID : public DB_Column<int64>
     { 
-        static wxString name() { return "ID"; } 
-        explicit ID(const int &v, OP op = EQUAL): DB_Column<int>(v, op) {}
+        static wxString name() { return "TAGLINKID"; } 
+        explicit TAGLINKID(const int64 &v, OP op = EQUAL): DB_Column<int64>(v, op) {}
     };
     
-    struct PARENTID : public DB_Column<int>
+    struct REFTYPE : public DB_Column<wxString>
     { 
-        static wxString name() { return "PARENTID"; } 
-        explicit PARENTID(const int &v, OP op = EQUAL): DB_Column<int>(v, op) {}
+        static wxString name() { return "REFTYPE"; } 
+        explicit REFTYPE(const wxString &v, OP op = EQUAL): DB_Column<wxString>(v, op) {}
     };
     
-    struct NAME : public DB_Column<wxString>
+    struct REFID : public DB_Column<int64>
     { 
-        static wxString name() { return "NAME"; } 
-        explicit NAME(const wxString &v, OP op = EQUAL): DB_Column<wxString>(v, op) {}
+        static wxString name() { return "REFID"; } 
+        explicit REFID(const int64 &v, OP op = EQUAL): DB_Column<int64>(v, op) {}
     };
     
-    struct ALLOCATION : public DB_Column<double>
+    struct TAGID : public DB_Column<int64>
     { 
-        static wxString name() { return "ALLOCATION"; } 
-        explicit ALLOCATION(const double &v, OP op = EQUAL): DB_Column<double>(v, op) {}
+        static wxString name() { return "TAGID"; } 
+        explicit TAGID(const int64 &v, OP op = EQUAL): DB_Column<int64>(v, op) {}
     };
     
-    struct SORTORDER : public DB_Column<int>
-    { 
-        static wxString name() { return "SORTORDER"; } 
-        explicit SORTORDER(const int &v, OP op = EQUAL): DB_Column<int>(v, op) {}
-    };
-    
-    typedef ID PRIMARY;
+    typedef TAGLINKID PRIMARY;
     enum COLUMN
     {
-        COL_ID = 0
-        , COL_PARENTID = 1
-        , COL_NAME = 2
-        , COL_ALLOCATION = 3
-        , COL_SORTORDER = 4
+        COL_TAGLINKID = 0
+        , COL_REFTYPE = 1
+        , COL_REFID = 2
+        , COL_TAGID = 3
     };
 
     /** Returns the column name as a string*/
-    static wxString column_to_name(COLUMN col)
+    static wxString column_to_name(const COLUMN col)
     {
         switch(col)
         {
-            case COL_ID: return "ID";
-            case COL_PARENTID: return "PARENTID";
-            case COL_NAME: return "NAME";
-            case COL_ALLOCATION: return "ALLOCATION";
-            case COL_SORTORDER: return "SORTORDER";
+            case COL_TAGLINKID: return "TAGLINKID";
+            case COL_REFTYPE: return "REFTYPE";
+            case COL_REFID: return "REFID";
+            case COL_TAGID: return "TAGID";
             default: break;
         }
         
@@ -170,11 +163,10 @@ struct DB_Table_ASSETCLASS_V1 : public DB_Table
     /** Returns the column number from the given column name*/
     static COLUMN name_to_column(const wxString& name)
     {
-        if ("ID" == name) return COL_ID;
-        else if ("PARENTID" == name) return COL_PARENTID;
-        else if ("NAME" == name) return COL_NAME;
-        else if ("ALLOCATION" == name) return COL_ALLOCATION;
-        else if ("SORTORDER" == name) return COL_SORTORDER;
+        if ("TAGLINKID" == name) return COL_TAGLINKID;
+        else if ("REFTYPE" == name) return COL_REFTYPE;
+        else if ("REFID" == name) return COL_REFID;
+        else if ("TAGID" == name) return COL_TAGID;
 
         return COLUMN(-1);
     }
@@ -182,24 +174,23 @@ struct DB_Table_ASSETCLASS_V1 : public DB_Table
     /** Data is a single record in the database table*/
     struct Data
     {
-        friend struct DB_Table_ASSETCLASS_V1;
+        friend struct DB_Table_TAGLINK_V1;
         /** This is a instance pointer to itself in memory. */
         Self* table_;
     
-        int ID;//  primary key
-        int PARENTID;
-        wxString NAME;
-        double ALLOCATION;
-        int SORTORDER;
+        int64 TAGLINKID;//  primary key
+        wxString REFTYPE;
+        int64 REFID;
+        int64 TAGID;
 
-        int id() const
+        int64 id() const
         {
-            return ID;
+            return TAGLINKID;
         }
 
-        void id(int id)
+        void id(const int64 id)
         {
-            ID = id;
+            TAGLINKID = id;
         }
 
         bool operator < (const Data& r) const
@@ -212,68 +203,71 @@ struct DB_Table_ASSETCLASS_V1 : public DB_Table
             return this->id() < r->id();
         }
 
-        explicit Data(Self* table = 0) 
+        bool equals(const Data* r) const
+        {
+            if(TAGLINKID != r->TAGLINKID) return false;
+            if(!REFTYPE.IsSameAs(r->REFTYPE)) return false;
+            if(REFID != r->REFID) return false;
+            if(TAGID != r->TAGID) return false;
+            return true;
+        }
+        
+        explicit Data(Self* table = nullptr ) 
         {
             table_ = table;
         
-            ID = -1;
-            PARENTID = -1;
-            ALLOCATION = 0.0;
-            SORTORDER = -1;
+            TAGLINKID = -1;
+            REFID = -1;
+            TAGID = -1;
         }
 
-        explicit Data(wxSQLite3ResultSet& q, Self* table = 0)
+        explicit Data(wxSQLite3ResultSet& q, Self* table = nullptr )
         {
             table_ = table;
         
-            ID = q.GetInt(0); // ID
-            PARENTID = q.GetInt(1); // PARENTID
-            NAME = q.GetString(2); // NAME
-            ALLOCATION = q.GetDouble(3); // ALLOCATION
-            SORTORDER = q.GetInt(4); // SORTORDER
+            TAGLINKID = q.GetInt64(0); // TAGLINKID
+            REFTYPE = q.GetString(1); // REFTYPE
+            REFID = q.GetInt64(2); // REFID
+            TAGID = q.GetInt64(3); // TAGID
         }
+
+        Data(const Data& other) = default;
 
         Data& operator=(const Data& other)
         {
             if (this == &other) return *this;
 
-            ID = other.ID;
-            PARENTID = other.PARENTID;
-            NAME = other.NAME;
-            ALLOCATION = other.ALLOCATION;
-            SORTORDER = other.SORTORDER;
+            TAGLINKID = other.TAGLINKID;
+            REFTYPE = other.REFTYPE;
+            REFID = other.REFID;
+            TAGID = other.TAGID;
             return *this;
         }
 
         template<typename C>
-        bool match(const C &c) const
+        bool match(const C &) const
         {
             return false;
         }
 
-        bool match(const Self::ID &in) const
+        bool match(const Self::TAGLINKID &in) const
         {
-            return this->ID == in.v_;
+            return this->TAGLINKID == in.v_;
         }
 
-        bool match(const Self::PARENTID &in) const
+        bool match(const Self::REFTYPE &in) const
         {
-            return this->PARENTID == in.v_;
+            return this->REFTYPE.CmpNoCase(in.v_) == 0;
         }
 
-        bool match(const Self::NAME &in) const
+        bool match(const Self::REFID &in) const
         {
-            return this->NAME.CmpNoCase(in.v_) == 0;
+            return this->REFID == in.v_;
         }
 
-        bool match(const Self::ALLOCATION &in) const
+        bool match(const Self::TAGID &in) const
         {
-            return this->ALLOCATION == in.v_;
-        }
-
-        bool match(const Self::SORTORDER &in) const
-        {
-            return this->SORTORDER == in.v_;
+            return this->TAGID == in.v_;
         }
 
         // Return the data record as a json string
@@ -292,36 +286,32 @@ struct DB_Table_ASSETCLASS_V1 : public DB_Table
         // Add the field data as json key:value pairs
         void as_json(PrettyWriter<StringBuffer>& json_writer) const
         {
-            json_writer.Key("ID");
-            json_writer.Int(this->ID);
-            json_writer.Key("PARENTID");
-            json_writer.Int(this->PARENTID);
-            json_writer.Key("NAME");
-            json_writer.String(this->NAME.utf8_str());
-            json_writer.Key("ALLOCATION");
-            json_writer.Double(this->ALLOCATION);
-            json_writer.Key("SORTORDER");
-            json_writer.Int(this->SORTORDER);
+            json_writer.Key("TAGLINKID");
+            json_writer.Int64(this->TAGLINKID.GetValue());
+            json_writer.Key("REFTYPE");
+            json_writer.String(this->REFTYPE.utf8_str());
+            json_writer.Key("REFID");
+            json_writer.Int64(this->REFID.GetValue());
+            json_writer.Key("TAGID");
+            json_writer.Int64(this->TAGID.GetValue());
         }
 
         row_t to_row_t() const
         {
             row_t row;
-            row(L"ID") = ID;
-            row(L"PARENTID") = PARENTID;
-            row(L"NAME") = NAME;
-            row(L"ALLOCATION") = ALLOCATION;
-            row(L"SORTORDER") = SORTORDER;
+            row(L"TAGLINKID") = TAGLINKID.GetValue();
+            row(L"REFTYPE") = REFTYPE;
+            row(L"REFID") = REFID.GetValue();
+            row(L"TAGID") = TAGID.GetValue();
             return row;
         }
 
         void to_template(html_template& t) const
         {
-            t(L"ID") = ID;
-            t(L"PARENTID") = PARENTID;
-            t(L"NAME") = NAME;
-            t(L"ALLOCATION") = ALLOCATION;
-            t(L"SORTORDER") = SORTORDER;
+            t(L"TAGLINKID") = TAGLINKID.GetValue();
+            t(L"REFTYPE") = REFTYPE;
+            t(L"REFID") = REFID.GetValue();
+            t(L"TAGID") = TAGID.GetValue();
         }
 
         /** Save the record instance in memory to the database. */
@@ -330,7 +320,7 @@ struct DB_Table_ASSETCLASS_V1 : public DB_Table
             if (db && db->IsReadOnly()) return false;
             if (!table_ || !db) 
             {
-                wxLogError("can not save ASSETCLASS_V1");
+                wxLogError("can not save TAGLINK_V1");
                 return false;
             }
 
@@ -342,7 +332,7 @@ struct DB_Table_ASSETCLASS_V1 : public DB_Table
         {
             if (!table_ || !db) 
             {
-                wxLogError("can not remove ASSETCLASS_V1");
+                wxLogError("can not remove TAGLINK_V1");
                 return false;
             }
             
@@ -357,17 +347,17 @@ struct DB_Table_ASSETCLASS_V1 : public DB_Table
 
     enum
     {
-        NUM_COLUMNS = 5
+        NUM_COLUMNS = 4
     };
 
     size_t num_columns() const { return NUM_COLUMNS; }
 
     /** Name of the table*/    
-    wxString name() const { return "ASSETCLASS_V1"; }
+    wxString name() const { return "TAGLINK_V1"; }
 
-    DB_Table_ASSETCLASS_V1() : fake_(new Data())
+    DB_Table_TAGLINK_V1() : fake_(new Data())
     {
-        query_ = "SELECT ID, PARENTID, NAME, ALLOCATION, SORTORDER FROM ASSETCLASS_V1 ";
+        query_ = "SELECT TAGLINKID, REFTYPE, REFID, TAGID FROM TAGLINK_V1 ";
     }
 
     /** Create a new Data record and add to memory table (cache)*/
@@ -397,23 +387,21 @@ struct DB_Table_ASSETCLASS_V1 : public DB_Table
         wxString sql = wxEmptyString;
         if (entity->id() <= 0) //  new & insert
         {
-            sql = "INSERT INTO ASSETCLASS_V1(PARENTID, NAME, ALLOCATION, SORTORDER) VALUES(?, ?, ?, ?)";
+            sql = "INSERT INTO TAGLINK_V1(REFTYPE, REFID, TAGID, TAGLINKID) VALUES(?, ?, ?, ?)";
         }
         else
         {
-            sql = "UPDATE ASSETCLASS_V1 SET PARENTID = ?, NAME = ?, ALLOCATION = ?, SORTORDER = ? WHERE ID = ?";
+            sql = "UPDATE TAGLINK_V1 SET REFTYPE = ?, REFID = ?, TAGID = ? WHERE TAGLINKID = ?";
         }
 
         try
         {
             wxSQLite3Statement stmt = db->PrepareStatement(sql);
 
-            stmt.Bind(1, entity->PARENTID);
-            stmt.Bind(2, entity->NAME);
-            stmt.Bind(3, entity->ALLOCATION);
-            stmt.Bind(4, entity->SORTORDER);
-            if (entity->id() > 0)
-                stmt.Bind(5, entity->ID);
+            stmt.Bind(1, entity->REFTYPE);
+            stmt.Bind(2, entity->REFID);
+            stmt.Bind(3, entity->TAGID);
+            stmt.Bind(4, entity->id() > 0 ? entity->TAGLINKID : newId());
 
             stmt.ExecuteUpdate();
             stmt.Finalize();
@@ -430,25 +418,25 @@ struct DB_Table_ASSETCLASS_V1 : public DB_Table
         }
         catch(const wxSQLite3Exception &e) 
         { 
-            wxLogError("ASSETCLASS_V1: Exception %s, %s", e.GetMessage().utf8_str(), entity->to_json());
+            wxLogError("TAGLINK_V1: Exception %s, %s", e.GetMessage().utf8_str(), entity->to_json());
             return false;
         }
 
         if (entity->id() <= 0)
         {
-            entity->id((db->GetLastRowId()).ToLong());
+            entity->id(db->GetLastRowId());
             index_by_id_.insert(std::make_pair(entity->id(), entity));
         }
         return true;
     }
 
     /** Remove the Data record from the database and the memory table (cache) */
-    bool remove(int id, wxSQLite3Database* db)
+    bool remove(const int64 id, wxSQLite3Database* db)
     {
         if (id <= 0) return false;
         try
         {
-            wxString sql = "DELETE FROM ASSETCLASS_V1 WHERE ID = ?";
+            wxString sql = "DELETE FROM TAGLINK_V1 WHERE TAGLINKID = ?";
             wxSQLite3Statement stmt = db->PrepareStatement(sql);
             stmt.Bind(1, id);
             stmt.ExecuteUpdate();
@@ -473,7 +461,7 @@ struct DB_Table_ASSETCLASS_V1 : public DB_Table
         }
         catch(const wxSQLite3Exception &e) 
         { 
-            wxLogError("ASSETCLASS_V1: Exception %s", e.GetMessage().utf8_str());
+            wxLogError("TAGLINK_V1: Exception %s", e.GetMessage().utf8_str());
             return false;
         }
 
@@ -514,12 +502,12 @@ struct DB_Table_ASSETCLASS_V1 : public DB_Table
     * Search the memory table (Cache) for the data record.
     * If not found in memory, search the database and update the cache.
     */
-    Self::Data* get(int id, wxSQLite3Database* db)
+    Self::Data* get(const int64 id, wxSQLite3Database* db)
     {
         if (id <= 0) 
         {
             ++ skip_;
-            return 0;
+            return nullptr;
         }
 
         Index_By_Id::iterator it = index_by_id_.find(id);
@@ -530,7 +518,7 @@ struct DB_Table_ASSETCLASS_V1 : public DB_Table
         }
         
         ++ miss_;
-        Self::Data* entity = 0;
+        Self::Data* entity = nullptr;
         wxString where = wxString::Format(" WHERE %s = ?", PRIMARY::name().utf8_str());
         try
         {
@@ -559,12 +547,50 @@ struct DB_Table_ASSETCLASS_V1 : public DB_Table
  
         return entity;
     }
+    /**
+    * Search the database for the data record, bypassing the cache.
+    */
+    Self::Data* get_record(const int64 id, wxSQLite3Database* db)
+    {
+        if (id <= 0) 
+        {
+            ++ skip_;
+            return nullptr;
+        }
+
+        Self::Data* entity = nullptr;
+        wxString where = wxString::Format(" WHERE %s = ?", PRIMARY::name().utf8_str());
+        try
+        {
+            wxSQLite3Statement stmt = db->PrepareStatement(this->query() + where);
+            stmt.Bind(1, id);
+
+            wxSQLite3ResultSet q = stmt.ExecuteQuery();
+            if(q.NextRow())
+            {
+                entity = new Self::Data(q, this);
+            }
+            stmt.Finalize();
+        }
+        catch(const wxSQLite3Exception &e) 
+        { 
+            wxLogError("%s: Exception %s", this->name().utf8_str(), e.GetMessage().utf8_str());
+        }
+        
+        if (!entity) 
+        {
+            entity = this->fake_;
+            // wxLogError("%s: %d not found", this->name().utf8_str(), id);
+        }
+ 
+        return entity;
+    }
 
     /**
     * Return a list of Data records (Data_Set) derived directly from the database.
     * The Data_Set is sorted based on the column number.
     */
-    const Data_Set all(wxSQLite3Database* db, COLUMN col = COLUMN(0), bool asc = true)
+    const Data_Set all(wxSQLite3Database* db, const COLUMN col = COLUMN(0), const bool asc = true)
     {
         Data_Set result;
         try

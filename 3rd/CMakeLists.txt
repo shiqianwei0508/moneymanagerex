@@ -26,16 +26,6 @@ add_library(RapidJSON INTERFACE)
 target_include_directories(RapidJSON SYSTEM INTERFACE
     $<BUILD_INTERFACE:${RAPIDJSON_INCLUDE_DIRS}>)
 
-# lunasvg
- set(CMAKE_CXX_STANDARD 14)
- set(CMAKE_C_STANDARD 11)
- add_library(lunasvg STATIC)
-
- add_subdirectory(lunasvg/include)
- add_subdirectory(lunasvg/source)
- add_subdirectory(lunasvg/3rdparty/software)
- add_subdirectory(lunasvg/3rdparty/plutovg)
-
 add_library(LuaGlue INTERFACE)
 target_include_directories(LuaGlue SYSTEM INTERFACE LuaGlue/include)
 
@@ -173,13 +163,8 @@ if(NOT wxSQLite3_FOUND OR NOT (WXSQLITE3_HAVE_CODEC OR MMEX_ENCRYPTION_OPTIONAL)
         wxSQLite3_VERSION LIMIT_COUNT 1
             REGEX "#define WXSQLITE3_VERSION_STRING[\t ]+\"[^\"]+ [0-9.]+\"")
     string(REGEX REPLACE ".+\"[^\"]+ ([0-9.]+)\".*" \\1 wxSQLite3_VERSION ${wxSQLite3_VERSION})
-    if(wxSQLite3_VERSION VERSION_LESS 4)
-        set(sqlite3_dir sqlite3/secure)
-    else()
-        set(sqlite3_dir sqlite3secure)
-    endif()
-    add_library(SQLite3 STATIC EXCLUDE_FROM_ALL wxsqlite3/${sqlite3_dir}/src/sqlite3secure.c)
-    target_include_directories(SQLite3 SYSTEM PUBLIC wxsqlite3/${sqlite3_dir}/src)
+    add_library(SQLite3 STATIC EXCLUDE_FROM_ALL wxsqlite3/src/sqlite3mc_amalgamation.c)
+    target_include_directories(SQLite3 SYSTEM PUBLIC wxsqlite3/src)
 
     if(LINUX)
         include(CheckLibraryExists)
@@ -240,6 +225,9 @@ if(NOT wxSQLite3_FOUND OR NOT (WXSQLITE3_HAVE_CODEC OR MMEX_ENCRYPTION_OPTIONAL)
     endif()
 
     if(NOT MSVC) # wxSQLite3 security ext doesn't require C 99 for MSVC
+        if((NOT LINUX) OR (NOT ";aarch64;arm;arm64;armv8b;armv8l;" MATCHES ";${CMAKE_HOST_SYSTEM_PROCESSOR};"))
+            set (CMAKE_C_FLAGS "-msse4.2 -maes")
+        endif()
         if(";${CMAKE_C_COMPILE_FEATURES};" MATCHES ";c_std_99;")
             target_compile_features(SQLite3 PRIVATE c_std_99)
         elseif(";${CMAKE_C_COMPILE_FEATURES};" MATCHES ";c_restrict;")

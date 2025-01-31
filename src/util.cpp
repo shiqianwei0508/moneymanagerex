@@ -1,7 +1,7 @@
 /*******************************************************
  Copyright (C) 2006 Madhan Kanagavel
  Copyright (C) 2013-2022 Nikolay Akimov
- Copyright (C) 2021-2022 Mark Whalley (mark@ipx.co.uk)
+ Copyright (C) 2021-2024 Mark Whalley (mark@ipx.co.uk)
 
  This program is free software; you can redistribute it and/or modify
  it under the terms of the GNU General Public License as published by
@@ -43,6 +43,7 @@
 #include <wx/fs_mem.h>
 #include <fmt/core.h>
 #include <cwchar>
+#include <locale>
 
 using namespace rapidjson;
 
@@ -66,16 +67,29 @@ wxString JSON_Formated(rapidjson::Document& j_doc)
 
 //----------------------------------------------------------------------------
 
-mmTreeItemData::mmTreeItemData(int type, int id)
-    : id_(id)
-    , type_(type)
+mmTreeItemData::mmTreeItemData(int type, int64 id)
+    : type_(type)
+    , id_(id)
     , report_(nullptr)
 {
-    stringData_ = (wxString::Format("%i", id));
+    stringData_ = wxString::Format("%lld", id);
 }
+
+mmTreeItemData::mmTreeItemData(int type, const wxString& data)
+    : type_(type)
+    , stringData_(data)
+    , report_(nullptr)
+{}
+
+mmTreeItemData::mmTreeItemData(int type, int64 id, const wxString& data)
+    : type_(type)
+    , id_(id)
+    , stringData_(data)
+    , report_(nullptr)
+{}
+
 mmTreeItemData::mmTreeItemData(const wxString& data, mmPrintableBase* report)
-    : id_(-1)
-    , type_(mmTreeItemData::REPORT)
+    : type_(mmTreeItemData::REPORT)
     , stringData_(data)
     , report_(report)
 {
@@ -83,17 +97,11 @@ mmTreeItemData::mmTreeItemData(const wxString& data, mmPrintableBase* report)
     const wxString& settings = Model_Infotable::instance().GetStringInfo(n, "");
     report_->initReportSettings(settings);
 }
+
 mmTreeItemData::mmTreeItemData(mmPrintableBase* report, const wxString& data)
-    : id_(-1)
-    , type_(mmTreeItemData::GRM)
+    : type_(mmTreeItemData::GRM)
     , stringData_(data)
     , report_(report)
-{}
-mmTreeItemData::mmTreeItemData(int type, const wxString& data)
-    : id_(-1)
-    , type_(type)
-    , stringData_(data)
-    , report_(nullptr)
 {}
 
 //----------------------------------------------------------------------------
@@ -129,8 +137,8 @@ const wxString inQuotes(const wxString& l, const wxString& delimiter)
     return label;
 }
 
-void mmLoadColorsFromDatabase(bool def)
-{
+void mmLoadColorsFromDatabase(const bool def)
+    {
     mmColors::userDefColor1 = def ? wxColour(246, 144, 144) : Model_Infotable::instance().GetColourSetting("USER_COLOR1", wxColour(246, 144, 144));
     mmColors::userDefColor2 = def ? wxColour(229, 196, 146) : Model_Infotable::instance().GetColourSetting("USER_COLOR2", wxColour(229, 196, 146));
     mmColors::userDefColor3 = def ? wxColour(245, 237, 149) : Model_Infotable::instance().GetColourSetting("USER_COLOR3", wxColour(245, 237, 149));
@@ -148,7 +156,7 @@ wxColour mmColors::userDefColor5;
 wxColour mmColors::userDefColor6;
 wxColour mmColors::userDefColor7;
 
-wxColour getUDColour(int c)
+wxColour getUDColour(const int c)
 {
     switch (c)
     {
@@ -273,7 +281,7 @@ void csv2tab_separated_values(wxString& line, const wxString& delimit)
             token.Replace(delimit, "\t");
         temp_line << token;
         i++;
-    };
+    }
     //Replace back all replacers to the original value
     temp_line.Replace("\5", "\"");
     temp_line.Replace("\6", "'");
@@ -304,55 +312,119 @@ static const wxString g_short_days_of_week[7] =
     , wxTRANSLATE("Sat")
 };
 
-
-const wxString mmGetDateForDisplay(const wxString &iso_date, const wxString& dateFormat)
+const wxString mmGetDateTimeForDisplay(const wxString &datetime_iso, const wxString& format)
 {
-    //ISO Date to formatted string lookup table.
-    static std::unordered_map<wxString, wxString> dateLookup;
-    static wxString date_format;
-    if (date_format.empty())
-        date_format = Option::instance().getDateFormat();
+    // ISO Date to formatted string lookup table.
+    static std::unordered_map<wxString, wxString> cache;
+    static wxString cache_format;
+    static wxRegEx date_pattern(R"(^[0-9]{4}\-[0-9]{2}\-[0-9]{2})");
+
+    if (format.empty())
+        return "";
+
+    if (!date_pattern.Matches(datetime_iso))
+        return "";
 
     // If format has been changed, delete all stored strings.
-    if (dateFormat != date_format)
-    {
-        dateLookup.clear();
-        if (dateFormat.empty()) {
-            return "";
-        }
-        date_format = dateFormat;
+    if (cache_format != format) {
+        cache.clear();
+        cache_format = format;
     }
 
-    // If date exists in lookup - return it.
-    auto it = dateLookup.find(iso_date);
-    if (it != dateLookup.end())
-        return it->second; // The stored formatted date.
+    // Reset cache if it is too big.
+    if (cache.size() > 2000) {
+        cache.clear();
+    }
 
-    wxRegEx pattern(R"([0-9]{4}\-[0-9]{2}\-[0-9]{2})");
-    if (!pattern.Matches(iso_date)) {
+    // If datetime_iso is in cache, return the stored formatted string.
+    auto it = cache.find(datetime_iso);
+    if (it != cache.end())
+        return it->second;
+
+    // Format date.
+    wxString datetime_str = format;
+    datetime_str.Replace("%Y", datetime_iso.Mid(0, 4));
+    datetime_str.Replace("%y", datetime_iso.Mid(2, 2));
+    if (datetime_str.Contains("%Mon")) {
+        const auto mon = wxGetTranslation(MONTHS_SHORT[wxAtoi(datetime_iso.Mid(5, 2)) - 1]);
+        datetime_str.Replace("%Mon", mon);
+    }
+    datetime_str.Replace("%m", datetime_iso.Mid(5, 2));
+    datetime_str.Replace("%d", datetime_iso.Mid(8, 2));
+    if (datetime_str.Contains("%w")) {
+        wxDateTime d;
+        d.ParseISODate(datetime_iso);
+        const auto weekday = wxGetTranslation(g_short_days_of_week[d.GetWeekDay()]);
+        datetime_str.Replace("%w", weekday);
+    }
+
+    // Format time.
+    if (datetime_iso.Length() == 19) {
+        datetime_str.Replace("%H", datetime_iso.Mid(11, 2));
+        datetime_str.Replace("%M", datetime_iso.Mid(14, 2));
+        datetime_str.Replace("%S", datetime_iso.Mid(17, 2));
+    }
+
+    // Store formatted string and return it.
+    return cache[datetime_iso] = datetime_str;
+}
+
+const wxString mmGetDateForDisplay(const wxString &datetime_iso, const wxString& format)
+{
+    // ISO Date to formatted string lookup table.
+    static std::unordered_map<wxString, wxString> cache;
+    static wxString cache_format;
+    static wxRegEx date_pattern(R"(^[0-9]{4}\-[0-9]{2}\-[0-9]{2})");
+
+    if (format.empty())
         return "";
+
+    if (!date_pattern.Matches(datetime_iso))
+        return "";
+
+    // If format has been changed, delete all stored strings.
+    if (cache_format != format) {
+        cache.clear();
+        cache_format = format;
     }
 
-    // Format date, store it and return it.
-    wxString date_str = dateFormat;
-    if (date_str.Replace("%Y", iso_date.Mid(0, 4)) == 0)
-        date_str.Replace("%y", iso_date.Mid(2, 2));
+    // Reset cache if it is too big.
+    if (cache.size() > 2000) {
+        cache.clear();
+    }
 
+    // Get the date part.
+    wxString date_iso = datetime_iso.Left(10);
+
+    // If date_iso is in cache, return the stored formatted string.
+    auto it = cache.find(date_iso);
+    if (it != cache.end())
+        return it->second;
+
+    // Format date.
+    wxString date_str = format;
+    date_str.Replace("%Y", date_iso.Mid(0, 4));
+    date_str.Replace("%y", date_iso.Mid(2, 2));
     if (date_str.Contains("%Mon")) {
-        const auto mon = wxGetTranslation(MONTHS_SHORT[wxAtoi(iso_date.Mid(5, 2)) - 1]);
-        date_str.Replace("%Mon", wxGetTranslation(mon));
+        const auto mon = wxGetTranslation(MONTHS_SHORT[wxAtoi(date_iso.Mid(5, 2)) - 1]);
+        date_str.Replace("%Mon", mon);
     }
-
-    date_str.Replace("%m", iso_date.Mid(5, 2));
-    date_str.Replace("%d", iso_date.Mid(8, 2));
+    date_str.Replace("%m", date_iso.Mid(5, 2));
+    date_str.Replace("%d", date_iso.Mid(8, 2));
     if (date_str.Contains("%w")) {
         wxDateTime d;
-        d.ParseISODate(iso_date);
-        const auto week = wxGetTranslation(g_short_days_of_week[d.GetWeekDay()]);
-        date_str.Replace("%w", wxGetTranslation(week));
+        d.ParseISODate(date_iso);
+        const auto weekday = wxGetTranslation(g_short_days_of_week[d.GetWeekDay()]);
+        date_str.Replace("%w", weekday);
     }
 
-    return dateLookup[iso_date] = date_str;
+    // Store formatted string and return it.
+    return cache[date_iso] = date_str;
+}
+
+const wxString mmGetTimeForDisplay(const wxString& datetime_iso)
+{
+    return (datetime_iso.Length() == 19) ? datetime_iso.Mid(11, 8) : wxString("00:00:00");
 }
 
 bool mmParseDisplayStringToDate(wxDateTime& date, const wxString& str_date, const wxString &sDateMask)
@@ -451,7 +523,7 @@ bool mmParseDisplayStringToDate(wxDateTime& date, const wxString& str_date, cons
 
 bool mmParseISODate(const wxString& in, wxDateTime& out)
 {
-    if (in.IsEmpty() || !out.ParseDate(in)) {
+    if (in.IsEmpty() || !(out.ParseDateTime(in) || out.ParseDate(in))) {
         out = wxDateTime::Today();
         return false;
     }
@@ -463,7 +535,7 @@ bool mmParseISODate(const wxString& in, wxDateTime& out)
     return true;
 }
 
-const wxDateTime getUserDefinedFinancialYear(bool prevDayRequired)
+const wxDateTime getUserDefinedFinancialYear(const bool prevDayRequired)
 {
     long monthNum;
     Option::instance().FinancialYearStartMonth().ToLong(&monthNum);
@@ -503,7 +575,7 @@ const std::map<wxString, wxString> &date_formats_regex()
     const wxString tail = "($|[^0-9])+";
     const wxString head = "^";
 
-    for (const auto entry : g_date_formats_map())
+    for (const auto &entry : g_date_formats_map())
     {
         wxString regexp = entry.first;
         regexp.Replace(".", R"([.])");
@@ -523,7 +595,8 @@ const std::map<wxString, wxString> &date_formats_regex()
     return date_regex;
 }
 
-bool comp(std::pair<wxString, wxString> a, std::pair<wxString, wxString> b) {
+bool comp(const std::pair<wxString, wxString>& a, const std::pair<wxString, wxString>& b)
+{
 
     wxString one = a.second;
     wxRegEx pattern(R"([^DayMonY])");
@@ -543,16 +616,18 @@ const std::vector<std::pair<wxString, wxString> > g_date_formats_map()
     if (!df.empty())
         return df;
 
-    std::vector<wxString> formats = {
+    std::vector<wxString> date_formats = {
         "%d %Mon %Y",
         "%d %Mon %y",
         "%d-%Mon-%Y",
+        "%d-%Mon-%y",
         "%d %Mon'%y",
         "%d %m %y",
         "%d %m %Y",
         "%d,%m,%y",
         "%d.%m.%y",
         "%d.%m.%Y",
+        "%d.%m'%Y",
         "%d,%m,%Y",
         "%d/%m %Y",
         "%d/%m/%y",
@@ -581,10 +656,10 @@ const std::vector<std::pair<wxString, wxString> > g_date_formats_map()
     };
 
     const auto local_date_fmt = wxLocale::GetInfo(wxLOCALE_SHORT_DATE_FMT);
-    if (std::find(formats.begin(), formats.end(), local_date_fmt) == formats.end())
-        formats.push_back(local_date_fmt);
+    if (std::find(date_formats.begin(), date_formats.end(), local_date_fmt) == date_formats.end())
+        date_formats.push_back(local_date_fmt);
 
-    for (const auto& entry : formats)
+    for (const auto& entry : date_formats)
     {
         auto local_date_mask = entry;
         local_date_mask.Replace("%Y", "YYYY");
@@ -613,7 +688,7 @@ const std::map<int, std::pair<wxConvAuto, wxString> > g_encoding = {
     , { 9, { wxConvAuto(wxFONTENCODING_CP1257), "1257" } }
 };
 
-wxString cleanseNumberString(wxString str, bool decimal)
+wxString cleanseNumberString(const wxString& str,const bool decimal)
 {
     // Strip any thousands separators and make sure decimal is "." (if present)
     wxString content = str;
@@ -630,7 +705,7 @@ wxString cleanseNumberString(wxString str, bool decimal)
     return content;
 }
 
-double cleanseNumberStringToDouble(wxString str, bool decimal)
+double cleanseNumberStringToDouble(const wxString& str, const bool decimal)
 {
     double v;
     if (!cleanseNumberString(str, decimal).ToCDouble(&v))
@@ -642,7 +717,7 @@ double cleanseNumberStringToDouble(wxString str, bool decimal)
 //
 const wxString mmPlatformType()
 {
-    return wxPlatformInfo::Get().GetOperatingSystemFamilyName().substr(0, 3);
+    return wxPlatformInfo::Get().GetOperatingSystemFamilyName().substr(0, 3).MakeLower();
 }
 
 void DoWindowsFreezeThaw(wxWindow* w)
@@ -666,13 +741,13 @@ END_EVENT_TABLE()
 
 //--------------------------------------------------------------------
 
-bool getOnlineCurrencyRates(wxString& msg, int curr_id, bool used_only)
+bool getOnlineCurrencyRates(wxString& msg,const int64 curr_id, const bool used_only)
 {
     wxString base_currency_symbol;
 
     if (!Model_Currency::GetBaseCurrencySymbol(base_currency_symbol))
     {
-        msg = _("Could not find base currency symbol!");
+        msg = _("Unable to find base currency symbol!");
         return false;
     }
 
@@ -789,7 +864,7 @@ bool get_yahoo_prices(std::map<wxString, double>& symbols
     wxString buffer;
 
     wxString base_curr_symbol = base_currency_symbol;
-    if (type == yahoo_price_type::FIAT && !wxString("USD|EUR|GBP|CHF").Contains(base_currency_symbol))
+    if (type == yahoo_price_type::FIAT && !wxString("USD|EUR|GBP").Contains(base_currency_symbol))
     {
         base_curr_symbol = "USD";
         buffer += wxString::Format("%s%s=X,", base_currency_symbol, base_curr_symbol);
@@ -797,7 +872,7 @@ bool get_yahoo_prices(std::map<wxString, double>& symbols
 
     for (const auto& entry : symbols)
     {
-        wxRegEx pattern(R"(^([-a-zA-Z0-9_@=\.]+)$)");
+        wxRegEx pattern(R"(^([\^-a-zA-Z0-9_@=\.]+)$)");
         if (!pattern.Matches(entry.first))
             continue;
 
@@ -819,7 +894,7 @@ bool get_yahoo_prices(std::map<wxString, double>& symbols
     const auto URL = wxString::Format(mmex::weblink::YahooQuotes, buffer);
 
     wxString json_data;
-    auto err_code = http_get_data(URL, json_data);
+    auto err_code = getYahooFinanceQuotes(URL, json_data);
     if (err_code != CURLE_OK)
     {
         output = json_data;
@@ -838,83 +913,99 @@ bool get_yahoo_prices(std::map<wxString, double>& symbols
 
     if (json_doc.HasMember("finance") && json_doc["finance"].IsObject()) {
         Value e = json_doc["finance"].GetObject();
-        if (e.HasMember("error") && e["error"].IsObject()) {
-            Value err = e["error"].GetObject();
-            if (err.HasMember("description") && err["description"].IsString()) {
-                output = wxString::FromUTF8(err["description"].GetString());
-                return false;
+        if (e.HasMember("error")) {
+            if (e["error"].IsObject()) {
+                Value err = e["error"].GetObject();
+                if (err.HasMember("description") && err["description"].IsString()) {
+                    output = wxString::FromUTF8(err["description"].GetString());
+                    return false;
+                }
             }
         }
     }
 
+    /*{"quoteResponse":{"result":[{"currency":"USD","regularMarketPrice":173.57,"shortName":"Apple Inc.","regularMarketTime":1683316804,"symbol":"AAPL"}],"error":null}}*/
 
-    Value r = json_doc["quoteResponse"].GetObject();
-    Value e = r["result"].GetArray();
+    if (json_doc.HasMember("quoteResponse") && json_doc["quoteResponse"].IsObject()) {
+        Value r = json_doc["quoteResponse"].GetObject();
+        if (r.HasMember("result") && r["result"].IsArray()) {
+            Value e = r["result"].GetArray();
 
-    if (e.Empty()) {
-        output = _("Nothing to update");
-        return false;
-    }
-
-    if (type == yahoo_price_type::FIAT)
-    {
-        for (rapidjson::SizeType i = 0; i < e.Size(); i++)
-        {
-            if (!e[i].IsObject()) continue;
-            Value v = e[i].GetObject();
-
-            if (!v.HasMember("symbol") || !v["symbol"].IsString())
-                continue;
-            auto currency_symbol = wxString::FromUTF8(v["symbol"].GetString());
-
-            double price = 0.0;
-            wxRegEx pattern("^([A-Z]{3})[A-Z]{3}=X$");
-            if (pattern.Matches(currency_symbol))
-            {
-                if (!v.HasMember("regularMarketPrice") || !v["regularMarketPrice"].IsFloat())
-                    continue;
-                price = v["regularMarketPrice"].GetFloat();
-                currency_symbol = pattern.GetMatch(currency_symbol, 1);
-            }
-            wxRegEx crypto_pattern("^([A-Z]{3,})-[A-Z]{3}$");
-            if (crypto_pattern.Matches(currency_symbol))
-            {
-                if (!v.HasMember("regularMarketPrice") || !v["regularMarketPrice"].IsFloat())
-                    continue;
-                price = v["regularMarketPrice"].GetFloat();
-                currency_symbol = crypto_pattern.GetMatch(currency_symbol, 1);
+            if (e.Empty()) {
+                output = _("Nothing to update");
+                return false;
             }
 
-            if (currency_symbol == base_currency_symbol)
-                conversion_factor = price;
+            if (type == yahoo_price_type::FIAT)
+            {
+                for (rapidjson::SizeType i = 0; i < e.Size(); i++)
+                {
+                    if (!e[i].IsObject()) continue;
+                    Value v = e[i].GetObject();
+
+                    if (!v.HasMember("symbol") || !v["symbol"].IsString())
+                        continue;
+                    auto currency_symbol = wxString::FromUTF8(v["symbol"].GetString());
+
+                    double price = 0.0;
+                    wxRegEx pattern("^([A-Z]{3})[A-Z]{3}=X$");
+                    if (pattern.Matches(currency_symbol))
+                    {
+                        if (!v.HasMember("regularMarketPrice") || !v["regularMarketPrice"].IsFloat())
+                            continue;
+                        price = v["regularMarketPrice"].GetFloat();
+                        currency_symbol = pattern.GetMatch(currency_symbol, 1);
+                    }
+                    wxRegEx crypto_pattern("^([A-Z]{3,})-[A-Z]{3}$");
+                    if (crypto_pattern.Matches(currency_symbol))
+                    {
+                        if (!v.HasMember("regularMarketPrice") || !v["regularMarketPrice"].IsFloat())
+                            continue;
+                        price = v["regularMarketPrice"].GetFloat();
+                        currency_symbol = crypto_pattern.GetMatch(currency_symbol, 1);
+                    }
+
+                    if (currency_symbol == base_currency_symbol)
+                        conversion_factor = price;
+                    else
+                        out[currency_symbol] = (price <= 0.0 ? 0.0 : price);
+
+                }
+            }
             else
-                out[currency_symbol] = (price <= 0.0 ? 0.0 : price);
+            {
+                for (rapidjson::SizeType i = 0; i < e.Size(); i++)
+                {
+                    if (!e[i].IsObject()) continue;
+                    Value v = e[i].GetObject();
 
+                    if (!v.HasMember("regularMarketPrice") || !v["regularMarketPrice"].IsFloat())
+                        continue;
+                    auto price = v["regularMarketPrice"].GetFloat();
+
+                    if (!v.HasMember("symbol") || !v["symbol"].IsString())
+                        continue;
+                    const auto symbol = wxString::FromUTF8(v["symbol"].GetString());
+
+                    if (!v.HasMember("currency") || !v["currency"].IsString())
+                        continue;
+                    const auto currency = wxString::FromUTF8(v["currency"].GetString());
+                    double k = currency == "GBp" ? 100 : 1;
+
+                    wxLogDebug("item: %u %s %f", i, symbol, price);
+                    out[symbol] = price <= 0 ? 0 : price / k;
+                }
+            }
+        }
+        else {
+            output = _("JSON Parse Error");
+            return false;
         }
     }
     else
     {
-        for (rapidjson::SizeType i = 0; i < e.Size(); i++)
-        {
-            if (!e[i].IsObject()) continue;
-            Value v = e[i].GetObject();
-
-            if (!v.HasMember("regularMarketPrice") || !v["regularMarketPrice"].IsFloat())
-                continue;
-            auto price = v["regularMarketPrice"].GetFloat();
-
-            if (!v.HasMember("symbol") || !v["symbol"].IsString())
-                continue;
-            const auto symbol = wxString::FromUTF8(v["symbol"].GetString());
-
-            if (!v.HasMember("currency") || !v["currency"].IsString())
-                continue;
-            const auto currency = wxString::FromUTF8(v["currency"].GetString());
-            double k = currency == "GBp" ? 100 : 1;
-
-            wxLogDebug("item: %u %s %f", i, symbol, price);
-            out[symbol] = price <= 0 ? 0 : price / k;
-        }
+        output = _("JSON Parse Error");
+        return false;
     }
 
     for (auto& item : out)
@@ -931,7 +1022,7 @@ bool get_yahoo_prices(std::map<wxString, double>& symbols
 // this method searches coincap using a symbol and gets the ID of the first
 // currency found with that symbol.
 // this method also tries to get the price in USD, or -1.0 if not found
-bool getCoincapInfoFromSymbol(const wxString symbol, wxString& out_id, double& price_usd, wxString& output) {
+bool getCoincapInfoFromSymbol(const wxString& symbol, wxString& out_id, double& price_usd, wxString& output) {
     wxString url = wxString::Format(mmex::weblink::CoinCapSearch, symbol);
 
     wxString json_data;
@@ -983,11 +1074,11 @@ bool getCoincapInfoFromSymbol(const wxString symbol, wxString& out_id, double& p
         }
     }
 
-    output = _("Could not find asset for symbol");
+    output = _("Unable to find asset for symbol.");
     return false;
 }
 
-bool getCoincapAssetHistory(const wxString asset_id, wxDateTime begin_date, std::map<wxDateTime, double> &historical_rates, wxString &msg) {
+bool getCoincapAssetHistory(const wxString& asset_id, wxDateTime begin_date, std::map<wxDateTime, double> &historical_rates, wxString &msg) {
     // coincap uses unix time milliseconds
     long long begin_date_unix = static_cast<long long>(begin_date.GetTicks()) * 1000;
     long long end_date_unix = static_cast<long long>(wxDateTime::Today().GetTicks()) * 1000;
@@ -1018,7 +1109,7 @@ bool getCoincapAssetHistory(const wxString asset_id, wxDateTime begin_date, std:
 
     wxString baseCurrencySymbol;
     if (!Model_Currency::GetBaseCurrencySymbol(baseCurrencySymbol)) {
-        msg = _("Could not get base currency!");
+        msg = _("Unable to get base currency!");
         return false;
     }
 
@@ -1027,7 +1118,7 @@ bool getCoincapAssetHistory(const wxString asset_id, wxDateTime begin_date, std:
     if (baseCurrencySymbol != _("USD")) {
         auto usd = Model_Currency::instance().GetCurrencyRecord("USD");
         if (usd == nullptr) {
-            msg = _("Could not find currency 'USD', needed for converting history prices");
+            msg = _("Unable to find currency 'USD', required for converting historical prices");
             return false;
         }
 
@@ -1048,7 +1139,7 @@ bool getCoincapAssetHistory(const wxString asset_id, wxDateTime begin_date, std:
             auto priceUSD = wxString::FromUTF8(entry["priceUsd"].GetString());
 
             if (!priceUSD.ToCDouble(&price_usd)) {
-                msg = _("Could not parse price in asset history");
+                msg = _("Unable to parse price in asset history");
                 return false;
             }
 
@@ -1067,13 +1158,13 @@ struct curlBuff {
     size_t size;
 };
 
-static size_t curlWriteMemoryCallback(void *contents, size_t size, size_t nmemb, void *userp)
+static size_t curlWriteMemoryCallback(void *contents,const size_t size,const size_t nmemb, void *userp)
 {
     size_t realsize = size * nmemb;
     struct curlBuff *mem = static_cast<struct curlBuff *>(userp);
 
     char *tmp = static_cast<char *>(realloc(mem->memory, mem->size + realsize + 1));
-    if (tmp == NULL) {
+    if (tmp == nullptr) {
         /* out of memory! */
         // printf("not enough memory (realloc returned NULL)\n");
         return 0;
@@ -1087,14 +1178,14 @@ static size_t curlWriteMemoryCallback(void *contents, size_t size, size_t nmemb,
     return realsize;
 }
 
-static size_t curlWriteFileCallback(void *contents, size_t size, size_t nmemb, wxFileOutputStream *stream)
+static size_t curlWriteFileCallback(void *contents,const size_t size,const size_t nmemb, wxFileOutputStream *stream)
 {
     stream->Write(contents, size * nmemb);
     return stream->LastWrite();
 }
 
 #ifdef _DEBUG
-static int log_libcurl_debug(CURL *handle, curl_infotype type, char *data, size_t size, void *userp)
+static int log_libcurl_debug(CURL *handle,const curl_infotype type, char *data,const size_t size, void *userp)
 {
     (void)handle; /* Not used */
     (void)userp; /* Not used */
@@ -1186,6 +1277,7 @@ CURLcode http_get_data(const wxString& sSite, wxString& sOutput, const wxString&
     curl_set_writedata_options(curl, chunk);
 
     curl_easy_setopt(curl, CURLOPT_URL, static_cast<const char*>(sSite.mb_str()));
+    //curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, 0L); //#5870
 
     CURLcode err_code = curl_easy_perform(curl);
     if (err_code == CURLE_OK)
@@ -1263,7 +1355,119 @@ CURLcode http_download_file(const wxString& sSite, const wxString& sPath)
     return err_code;
 }
 
-const wxString getProgramDescription(int type)
+CURLcode getYahooFinanceQuotes(const wxString& URL, wxString& output) {
+    CURL* curl = curl_easy_init();
+    if (!curl) return CURLE_FAILED_INIT;
+
+    struct curlBuff cookie{nullptr, 0};
+    struct curlBuff crumb{nullptr, 0};
+    struct curlBuff quote{nullptr, 0};
+
+    wxString savedCookie = Model_Setting::instance().GetStringSetting("YAHOO_FINANCE_COOKIE", "");
+    wxString savedCrumb = Model_Setting::instance().GetStringSetting("YAHOO_FINANCE_CRUMB", "");
+
+    // Request to get cookies and save them to the cookie buffer
+    curl_set_common_options(curl);
+    curl_set_writedata_options(curl, quote);
+    wxString crumb_url = URL + "&crumb=" + savedCrumb;
+    curl_easy_setopt(curl, CURLOPT_URL, static_cast<const char*>(crumb_url.mb_str()));
+    curl_easy_setopt(curl, CURLOPT_COOKIEJAR, "");
+
+    struct curl_slist* headers = nullptr;
+    headers = curl_slist_append(headers, "Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8");
+    headers = curl_slist_append(headers, "User-Agent: Mozilla/5.0 (Windows NT 10.0; rv:109.0) Gecko/20100101 Firefox/117.0");
+    if (!savedCookie.IsEmpty()) headers = curl_slist_append(headers, static_cast<const char*>(("Cookie: " + savedCookie).mb_str()));
+    curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
+
+    CURLcode res = CURLE_OK;
+    if(!savedCookie.IsEmpty() && !savedCrumb.IsEmpty())
+        res = curl_easy_perform(curl);
+    if (res == CURLE_OK) {
+        if (wxString::FromUTF8(quote.memory).Contains("Unauthorized") || savedCookie.IsEmpty() || savedCrumb.IsEmpty())
+        {
+            curl_set_writedata_options(curl, cookie);
+            curl_easy_setopt(curl, CURLOPT_URL, "https://finance.yahoo.com");
+            res = curl_easy_perform(curl);
+            if (res == CURLE_OK)
+            {
+                wxString response = wxString::FromUTF8(cookie.memory);
+                wxRegEx csrfTokenPattern("csrfToken\" value=\"([^\"]+)\">");
+                if (csrfTokenPattern.Matches(response))
+                {
+                    // Get the csrfToken
+                    wxString csrfToken = csrfTokenPattern.GetMatch(response, 1);
+
+                    wxRegEx sessionIdPattern("sessionId\" value=\"([^\"]+)\">");
+                    if (sessionIdPattern.Matches(response))
+                    {
+                        wxString sessionId = sessionIdPattern.GetMatch(response, 1);
+
+                        wxString postData = "csrfToken=" + csrfToken + "&sessionId=" + sessionId + "&originalDoneUrl=https%3A%2F%2Ffinance.yahoo.com%2F%3Fguccounter%3D1&namespace=yahoo&reject=reject&reject=reject";
+                        curl_easy_setopt(curl, CURLOPT_URL, static_cast<const char*>(("https://consent.yahoo.com/v2/collectConsent?sessionId=" + sessionId).mb_str()));
+                        curl_easy_setopt(curl, CURLOPT_POSTFIELDS, static_cast<const char*>(postData.mb_str()));
+                        res = curl_easy_perform(curl);
+                        curl_easy_setopt(curl, CURLOPT_HTTPGET, 1L);
+                    }
+                }
+
+                if (res == CURLE_OK) {
+                    // Request to get crumb using the saved cookies
+                    curl_set_writedata_options(curl, crumb);
+                    curl_easy_setopt(curl, CURLOPT_URL, "https://query1.finance.yahoo.com/v1/test/getcrumb");
+                    res = curl_easy_perform(curl);
+                    if (res == CURLE_OK) {
+                        struct curlBuff newQuote { nullptr, 0 };
+                        // Request to get the quotes using the crumb and saved cookies
+                        curl_set_writedata_options(curl, newQuote);
+                        crumb_url = URL + "&crumb=" + wxString::FromUTF8(crumb.memory);
+                        curl_easy_setopt(curl, CURLOPT_URL, static_cast<const char*>(crumb_url.mb_str()));
+                        res = curl_easy_perform(curl);
+                        if (res == CURLE_OK) {
+                            output = wxString::FromUTF8(newQuote.memory);
+                            wxString cookieJar;
+                            // Get the cookies from the cookie jar
+                            struct curl_slist* cookies = nullptr;
+                            curl_easy_getinfo(curl, CURLINFO_COOKIELIST, &cookies);
+                            if (cookies) {
+                                for (struct curl_slist* item = cookies; item; item = item->next) {
+                                    wxStringTokenizer tokenizer(wxString::FromUTF8(item->data), "\t");
+                                    int count = 0;
+                                    while (tokenizer.HasMoreTokens()) {
+                                        wxString token = tokenizer.GetNextToken();
+                                        if (count++ < 5) continue;
+                                        cookieJar += token;
+                                        (count < 7) ? cookieJar += "=" : cookieJar += "; ";
+                                    }
+                                }
+                                curl_slist_free_all(cookies);
+                            }
+
+                            Model_Setting::instance().Set("YAHOO_FINANCE_COOKIE", cookieJar);
+                            Model_Setting::instance().Set("YAHOO_FINANCE_CRUMB", wxString::FromUTF8(crumb.memory));
+                        }
+                        free(newQuote.memory);
+                    }
+                }
+            }
+        }
+        else {
+            output = wxString::FromUTF8(quote.memory);
+        }
+    }
+    if (res != CURLE_OK) {
+        output = curl_easy_strerror(res); //TODO: translation
+        wxLogDebug("http_get_data: URL = %s error = %s", URL, output);
+    }
+    curl_slist_free_all(headers);
+    curl_easy_cleanup(curl);
+    free(cookie.memory);
+    free(crumb.memory);
+    free(quote.memory);
+    return res;
+
+}
+
+const wxString getProgramDescription(const int type)
 {
     const wxString bull = L" \u2022 ";
     wxString eol;
@@ -1277,21 +1481,50 @@ const wxString getProgramDescription(int type)
     wxString build_date = wxString() << BUILD_DATE;
     build_date = wxGetTranslation(build_date.SubString(0, 2)) + build_date.Mid(3);
 
+#ifdef __LINUX__
+    wxString desktop_environment;
+
+    if (wxPlatformInfo::Get().GetDesktopEnvironment().Len() > 0) {
+        desktop_environment = wxPlatformInfo::Get().GetDesktopEnvironment();
+    } else if (wxGetenv("XDG_CURRENT_DESKTOP")) {
+        desktop_environment = wxGetenv("XDG_CURRENT_DESKTOP");
+    } else if (wxGetenv("XDG_SESSION_DESKTOP")) {
+        desktop_environment = wxGetenv("XDG_SESSION_DESKTOP");
+    } else if (wxGetenv("DESKTOP_SESSION")) {
+        desktop_environment = wxGetenv("DESKTOP_SESSION");
+    } else {
+        desktop_environment = wxGetenv("GDMSESSION");
+    }
+
+    wxString session_type;
+
+    switch(wxGetDisplayInfo().type) {
+        case wxDisplayX11:
+            session_type = "X11";
+            break;
+        case wxDisplayWayland:
+            session_type = "Wayland";
+            break;
+        case wxDisplayNone:
+        default:
+            session_type = "unknown display protocol";
+    }
+#endif
+
     wxString description;
-    description << wxString::Format(simple ? "Version: %s" : _("Version: %s"), mmex::getTitleProgramVersion()) << eol
-        << bull << (simple ? "Build:" : _("Build on")) << " " << build_date << " " BUILD_TIME << eol
-        << bull << (simple ? "db " : _("Database version: ")) << mmex::version::getDbLatestVersion()
+    description << bull << wxString::Format(simple ? "Version: %s" : _("Version: %s"), mmex::getTitleProgramVersion()) << eol
+        << bull << wxString::Format(simple ? "Built: %1$s %2$s" : _("Built on: %1$s %2$s"), build_date, BUILD_TIME) << eol
+        << bull << wxString::Format(simple ? "db %d" : _("Database version: %d"), mmex::version::getDbLatestVersion())
 #if WXSQLITE3_HAVE_CODEC
-        << bull << " (" << wxSQLite3Cipher::GetCipherName(wxSQLite3Cipher::GetGlobalCipherDefault()) << ")"
+        << " (aes256cbc-hmac-sha512)"
 #endif
         << eol
 
 #ifdef GIT_COMMIT_HASH
-        << bull << (simple ? "git " : _("Git commit: ")) << GIT_COMMIT_HASH
-        << " (" << GIT_COMMIT_DATE << ")" << eol
+        << bull << wxString::Format(simple ? "git %1$s (%2$s)" : _("Git commit: %1$s (%2$s)"), GIT_COMMIT_HASH, GIT_COMMIT_DATE) << eol
 #endif
 #ifdef GIT_BRANCH
-        << bull << (simple ? "" : _("Git branch: ")) << GIT_BRANCH << eol
+        << bull << wxString::Format(simple ? "%s" : _("Git branch: %s"), GIT_BRANCH) << eol
 #endif
         << eol
 
@@ -1307,13 +1540,12 @@ const wxString getProgramDescription(int type)
         << " (SQLite " << wxSQLite3Database::GetVersion() << ")" << eol
         << bull + "RapidJSON " << RAPIDJSON_VERSION_STRING << eol
         << bull + LUA_RELEASE << eol
-        << bull + "lunasvg v2.3.1" << eol
         << bull + curl_version() << eol
         << bull + GETTEXT_VERSION << eol
         << bull + "apexcharts.js" << eol
         << eol
 
-        << (simple ? "Build using:" : _("Build using:")) << eol
+        << (simple ? "Built with:" : _("Built with:")) << eol
         << bull + CMAKE_VERSION << eol
         << bull + MAKE_VERSION << eol
 
@@ -1323,26 +1555,31 @@ const wxString getProgramDescription(int type)
 #endif
         << bull + (simple ? "MSVSC++" : "Microsoft Visual C++ ") + CXX_VERSION << eol
 #elif defined(__clang__)
-        << bull + "Clang " + __VERSION__ << "\n"
+        << bull + "Clang " + __VERSION__ << eol
 #elif (defined(__GNUC__) || defined(__GNUG__)) && !(defined(__clang__) || defined(__INTEL_COMPILER))
-        << bull + "GCC " + __VERSION__
+        << bull + "GCC " + __VERSION__ << eol
 #endif
+
 #ifdef CMAKE_VS_WINDOWS_TARGET_PLATFORM_VERSION
-        << bull + CMAKE_VS_WINDOWS_TARGET_PLATFORM_VERSION
+        << bull + CMAKE_VS_WINDOWS_TARGET_PLATFORM_VERSION << eol
 #endif
-#ifdef LINUX_DISTRO_STRING
-        << bull + LINUX_DISTRO_STRING
-#endif
-        << eol << eol
+        << eol
         << (simple ? "OS:" : _("Running on:")) << eol
+
+#ifdef LINUX_DISTRO_STRING
+        << bull + LINUX_DISTRO_STRING << eol
+#endif
+
 #ifdef __LINUX__
         << bull + wxGetLinuxDistributionInfo().Description
-        << " \"" << wxGetLinuxDistributionInfo().CodeName << "\"\n"
+        << " \"" << wxGetLinuxDistributionInfo().CodeName << "\"" << eol
 #endif
         << bull + wxGetOsDescription() << eol
-        << bull + wxPlatformInfo::Get().GetDesktopEnvironment()
-        << " " << wxLocale::GetLanguageName(wxLocale::GetSystemLanguage())
-        << " (" << wxLocale::GetSystemEncodingName() << ")" << eol;
+#ifdef __LINUX__
+        << bull + desktop_environment << " (" << session_type << ")" << eol
+#endif
+        << bull << wxString::Format(simple ? "System Locale: %s" : _("System Locale: %s"), std::locale("").name()) << eol
+        << bull << wxString::Format(simple ? "User Interface Language: %s" : _("User Interface Language: %s"), wxTranslations::Get()->GetBestTranslation("mmex") + "." + wxLocale::GetSystemEncodingName()) << eol;
 
     for (unsigned int i = 0; i < wxDisplay::GetCount(); i++)
     {
@@ -1351,7 +1588,7 @@ const wxString getProgramDescription(int type)
         if (display->IsPrimary())
         {
 
-            description << wxString::Format(bull + "%ix%i %ibit %ix%ippi\n",
+            description << wxString::Format(bull + "%1$ix%2$i %3$i-bit %4$ix%5$ippi" + "\n",
                 display->GetCurrentMode().GetWidth(),
                 display->GetCurrentMode().GetHeight(),
                 display->GetCurrentMode().bpp,
@@ -1408,7 +1645,6 @@ mmDates::~mmDates()
 mmDates::mmDates()
     : m_date_formats_temp(g_date_formats_map())
     , m_today(wxDate::Today())
-    , m_error_count(0)
 {
     m_date_parsing_stat.clear();
     m_month_ago = wxDate::Today().Subtract(wxDateSpan::Months(1));
@@ -1505,10 +1741,12 @@ const wxString mmSeparator::getSeparator() const
 bool mmSeparator::isStringHasSeparator(const wxString &string)
 {
     bool result = false;
-    bool skip = false;
+
     for (const auto& entry : m_separators)
     {
-        for (const auto& letter : string) {
+        bool skip = false;
+        for (const auto& letter : string)
+        {
             if (letter == '"') {
                 skip = !skip;
             }
@@ -1578,9 +1816,13 @@ const wxString md2html(const wxString& md)
     wxString body = md;
     // ---- Convert Markup
 
+    wxRegEx re(R"(https:\/\/github\.com\/moneymanagerex\/moneymanagerex\/milestone\/(\d+)\?closed=1)", wxRE_EXTENDED);
+    re.Replace(&body, R"(<a href="https://github.com/moneymanagerex/moneymanagerex/milestone/\1?closed=1" target="_blank">The complete list of closed issues is available at this link</a>)");
+    body.Replace("The complete list of closed issues is available at this link", _("The complete list of closed issues is available at this link"));
+
     // img with link
     // skip images hosted via unsupported https
-    wxRegEx re(R"(\[!\[([^]]+)\]\(([ \t]*https:\/\/[^)]+)\)\]\(([^)]+)\))", wxRE_EXTENDED);
+    re.Compile(R"(\[!\[([^]]+)\]\(([ \t]*https:\/\/[^)]+)\)\]\(([^)]+)\))", wxRE_EXTENDED);
     re.Replace(&body, R"(<a href="\3" target="_blank">\1</a>)");
     re.Compile(R"(\[!\[([^]]+)\]\(([^)]+)\)\]\(([^)]+)\))", wxRE_EXTENDED);
     re.Replace(&body, R"(<a href="\3" target="_blank"><img src="\2" alt="\1"></a>)");
@@ -1600,19 +1842,19 @@ const wxString md2html(const wxString& md)
     re.Compile(R"(#([0-9]{4,5}))", wxRE_EXTENDED);
     re.Replace(&body, R"(<a href="https://github.com/moneymanagerex/moneymanagerex/issues/\1" target="_blank">#\1</a>)");
 
-    body.Replace("\n", "\n<p>");
+    body.Replace("\n", "\n<br>");
 
     return body;
 }
 
-wxImageList* createImageList(int size)
+wxImageList* createImageList(const int size)
 {
     int x = (size > 0) ? size : Option::instance().getIconSize();
     return(new wxImageList(x, x, false));   // No mask creation, not needed and causes image correuption on Mac
 
 }
 
-const wxColor* bestFontColour(wxColour background)
+const wxColor* bestFontColour(const wxColour& background)
 {
     // http://stackoverflow.com/a/3943023/112731
 
@@ -1629,12 +1871,12 @@ const wxColor* bestFontColour(wxColour background)
 
 // Ideally we would use wxToolTip::Enable() to enable or disable tooltips globally.
 // but this only works on some platforms! 
-void mmToolTip(wxWindow* widget, wxString tip)
+void mmToolTip(wxWindow* widget, const wxString& tip)
 {
     if (Option::instance().getShowToolTips()) widget->SetToolTip(tip);
 }
 
-int pow10(int y)
+int pow10(const int y)
 {
     switch (y)
     {
@@ -1652,7 +1894,7 @@ int pow10(int y)
     }
 }
 
-wxString HTMLEncode(wxString input)
+wxString HTMLEncode(const wxString& input)
 {
     wxString output;
     for(size_t pos = 0; pos < input.Len(); ++pos)
@@ -1674,16 +1916,6 @@ wxString HTMLEncode(wxString input)
     return output;
 }
 
-const wxString __(const char* c)
-{
-    wxString mystring = wxGetTranslation(wxString::FromUTF8(c));
-    if (mystring.Contains("\t"))
-        mystring.Replace("\t", "...\t", false);
-    else
-        mystring.Append("...");
-    return mystring;
-}
-
 void mmSetSize(wxWindow* w)
 {
     auto name = w->GetName();
@@ -1699,8 +1931,11 @@ void mmSetSize(wxWindow* w)
     else if (name == "mmPayeeDialog") {
         my_size = Model_Infotable::instance().GetSizeSetting("PAYEES_DIALOG_SIZE");
     }
-    else if (name == "Currency Dialog") {
+    else if (name == "Organize Currencies") {
         my_size = Model_Infotable::instance().GetSizeSetting("CURRENCY_DIALOG_SIZE");
+    }
+    else if (name == "Column Order Dialog") {
+        my_size = Model_Infotable::instance().GetSizeSetting("COLUMNORDER_DIALOG_SIZE");
     }
     else if (name == "Themes Dialog") {
         my_size = Model_Infotable::instance().GetSizeSetting("THEMES_DIALOG_SIZE");
@@ -1713,6 +1948,27 @@ void mmSetSize(wxWindow* w)
     }
     else if (name == "mmEditSplitOther") {
         my_size = Model_Infotable::instance().GetSizeSetting("EDITSPLITOTHER_DIALOG_SIZE"); 
+    }
+    else if (name == "Transactions Dialog") {
+        my_size = Model_Infotable::instance().GetSizeSetting("TRANSACTION_DIALOG_SIZE");
+    }
+    else if (name == "Merge categories") {
+        my_size = Model_Infotable::instance().GetSizeSetting("RELOCATECATEG_DIALOG_SIZE");
+    }
+    else if (name == "Merge payees") {
+        my_size = Model_Infotable::instance().GetSizeSetting("RELOCATEPAYEE_DIALOG_SIZE");
+    }
+    else if (name == "Scheduled Transaction Dialog") {
+        my_size = Model_Infotable::instance().GetSizeSetting("RECURRINGTRANS_DIALOG_SIZE");
+    }
+    else if (name == "Transaction Filter") {
+        my_size = Model_Infotable::instance().GetSizeSetting("TRANSACTION_FILTER_SIZE");
+    }
+    else if (name == "Organize Tags") {
+        my_size = Model_Infotable::instance().GetSizeSetting("TAG_DIALOG_SIZE");
+    }
+    else if (name == "Merge tags") {
+        my_size = Model_Infotable::instance().GetSizeSetting("RELOCATETAG_DIALOG_SIZE");
     }
 
     wxSharedPtr<wxDisplay> display(new wxDisplay(w->GetParent()));
@@ -1737,7 +1993,7 @@ void mmFontSize(wxWindow* widget)
     }
 }
 
-bool isValidURI(const wxString validate)
+bool isValidURI(const wxString& validate)
 {
     wxString uri = validate.Lower().Trim();
     wxRegEx pattern(R"(^(?:http(s)?:\/\/)?[\w.-]+(?:\.[\w\.-]+)+[\w\-\._~:/?#[\]@!\$&'\(\)\*\+,;=.]+$)");
@@ -1745,4 +2001,37 @@ bool isValidURI(const wxString validate)
         return true;
 
     return false;
+}
+
+//
+// mmHtmlWindow just adds a right click menu to save text to the system clipboard
+//
+
+mmHtmlWindow::mmHtmlWindow( wxWindow *parent, wxWindowID id, const wxPoint &pos, const wxSize &size
+                    , long style, const wxString &name)
+            : wxHtmlWindow(parent, id, pos, size, style, name)
+{
+    this->Bind(wxEVT_RIGHT_DOWN, &mmHtmlWindow::OnMouseRightClick, this);
+    this->Bind(wxEVT_MENU, &mmHtmlWindow::OnMenuSelected, this);
+}
+
+void mmHtmlWindow::OnMouseRightClick(wxMouseEvent& event)
+{
+    wxMenu menu;
+    menu.Append(wxID_HIGHEST + 1, _("Copy all text to clipboard"));
+    PopupMenu(&menu);
+
+}
+
+void mmHtmlWindow::OnMenuSelected(wxCommandEvent& event)
+{
+    int i = event.GetId() - wxID_HIGHEST;
+    if (i == 1) // There is only one anyway
+    {
+        if (wxTheClipboard->Open())
+        {
+            wxTheClipboard->SetData(new wxTextDataObject(this->ToText()));
+            wxTheClipboard->Close();
+        }
+    }
 }

@@ -1,7 +1,7 @@
 /*******************************************************
  Copyright (C) 2006 Madhan Kanagavel
  Copyright (C) 2013 - 2022 Nikolay Akimov
-Copyright (C) 2022 Mark Whalley (mark@ipx.co.uk)
+ Copyright (C) 2022 Mark Whalley (mark@ipx.co.uk)
 
  This program is free software; you can redistribute it and/or modify
  it under the terms of the GNU General Public License as published by
@@ -32,7 +32,7 @@ class mmGUIFrame;
 class budgetingListCtrl : public mmListCtrl
 {
     DECLARE_NO_COPY_CLASS(budgetingListCtrl)
-    wxDECLARE_EVENT_TABLE();
+        wxDECLARE_EVENT_TABLE();
 
 public:
     budgetingListCtrl(mmBudgetingPanel* cp, wxWindow *parent, const wxWindowID id);
@@ -49,7 +49,7 @@ public:
 private:
     wxSharedPtr<wxListItemAttr> attr3_; // style3
     mmBudgetingPanel* cp_;
-    long selectedIndex_;
+    long selectedIndex_ = -1;
 };
 
 class mmBudgetingPanel : public mmPanelBase
@@ -57,7 +57,7 @@ class mmBudgetingPanel : public mmPanelBase
     wxDECLARE_EVENT_TABLE();
 
 public:
-    mmBudgetingPanel(int budgetYearID
+    mmBudgetingPanel(int64 budgetYearID
         , wxWindow *parent, mmGUIFrame *frame
         , wxWindowID winid = wxID_ANY
         , const wxPoint& pos = wxDefaultPosition
@@ -73,8 +73,8 @@ public:
     /* Getter for Virtual List Control */
     wxString getItem(long item, long column);
 
-    void DisplayBudgetingDetails(int budgetYearID);
-    int GetBudgetYearID()
+    void DisplayBudgetingDetails(int64 budgetYearID);
+    int64 GetBudgetYearID()
     {
         return budgetYearID_;
     }
@@ -84,7 +84,7 @@ public:
     }
     int GetItemImage(long item) const;
     void OnListItemActivated(int selectedIndex);
-    int GetTransID(long item)
+    int64 GetTransID(long item)
     {
         return budget_[item].first;
     }
@@ -101,27 +101,28 @@ private:
         ICON_FOLLOWUP
     };
 
-    mmGUIFrame* m_frame;
-    std::vector<std::pair<int, int> > budget_;
-    std::map<int, std::pair<double, double> > budgetTotals_;
-    std::map<int, std::map<int, Model_Budget::PERIOD_ENUM> > budgetPeriod_;
-    std::map<int, std::map<int, double> > budgetAmt_;
-    std::map<int, std::map<int, wxString> > budgetNotes_;
-    std::map<int, std::map<int, std::map<int, double> > > categoryStats_;
+    mmGUIFrame* m_frame = nullptr;
+    std::vector<std::pair<int64, int64> > budget_;
+    std::map<int64, std::pair<int, bool > > displayDetails_; //map categid to level of the category, whether category is visible, and whether any subtree is visible 
+    std::map<int64, std::pair<double, double> > budgetTotals_;
+    std::map<int64, Model_Budget::PERIOD_ID> budgetPeriod_;
+    std::map<int64, double> budgetAmt_;
+    std::map<int64, wxString> budgetNotes_;
+    std::map<int64, std::map<int,double> > categoryStats_;
     bool monthlyBudget_;
     wxSharedPtr<budgetingListCtrl> listCtrlBudget_;
     wxString currentView_;
-    int budgetYearID_;
+    int64 budgetYearID_;
     wxString m_monthName;
     wxString m_budget_offset_date;
-    wxStaticText* budgetReportHeading_;
-    wxStaticText* income_estimated_;
-    wxStaticText* income_actual_;
-    wxStaticText* income_diff_;
-    wxStaticText* expenses_estimated_;
-    wxStaticText* expenses_actual_;
-    wxStaticText* expenses_diff_;
-    wxButton* m_bitmapTransFilter;
+    wxStaticText* budgetReportHeading_ = nullptr;
+    wxStaticText* income_estimated_ = nullptr;
+    wxStaticText* income_actual_ = nullptr;
+    wxStaticText* income_diff_ = nullptr;
+    wxStaticText* expenses_estimated_ = nullptr;
+    wxStaticText* expenses_actual_ = nullptr;
+    wxStaticText* expenses_diff_ = nullptr;
+    wxButton* m_bitmapTransFilter = nullptr;
 
     bool Create(wxWindow *parent, wxWindowID winid
         , const wxPoint& pos = wxDefaultPosition
@@ -131,9 +132,9 @@ private:
 
     void CreateControls();
     void sortTable();
-    bool DisplayEntryAllowed(int categoryID, int subcategoryID);
+    bool DisplayEntryAllowed(int64 categoryID, int64 subcategoryID);
     void UpdateBudgetHeading();
-    double getEstimate(int category, int subcategory) const;
+    double getEstimate(int64 category) const;
     wxString GetPanelTitle() const;
 
     /* Event handlers for Buttons */
@@ -144,7 +145,6 @@ private:
     {
         COL_ICON = 0,
         COL_CATEGORY,
-        COL_SUBCATEGORY,
         COL_FREQUENCY,
         COL_AMOUNT,
         COL_ESTIMATED,

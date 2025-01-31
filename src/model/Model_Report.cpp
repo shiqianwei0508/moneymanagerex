@@ -26,7 +26,7 @@
 #include "reports/htmlbuilder.h"
 #include "model/Model_Setting.h"
 #include "LuaGlue/LuaGlue.h"
-#include "sqlite3.h"
+#include "sqlite3mc_amalgamation.h"
 #include <wx/fs_mem.h>
 
 #if defined (__WXMSW__)
@@ -80,15 +80,17 @@ Model_Report& Model_Report::instance(wxSQLite3Database* db)
 const std::vector<Model_Report::Values> Model_Report::SqlPlaceHolders()
 {
     const wxString def_date = wxDateTime::Today().FormatISODate();
+    const wxString def_time = wxDateTime::Now().FormatISOTime();
 
     const std::vector<Model_Report::Values> v = {
-    {"&begin_date", "mmDatePickerCtrl", def_date, mmReportsPanel::RepPanel::ID_CHOICE_START_DATE, _("Begin date: ")},
-    {"&single_date", "mmDatePickerCtrl", def_date, mmReportsPanel::RepPanel::ID_CHOICE_START_DATE, _("Date: ")},
-    {"&end_date", "mmDatePickerCtrl", def_date, mmReportsPanel::RepPanel::ID_CHOICE_END_DATE, _("End date: ")},
-    {"&only_years", "wxChoice", def_date, mmReportsPanel::RepPanel::ID_CHOICE_YEAR, _("Year: ")},
+    {"&begin_date", "mmDatePickerCtrl", def_date, mmReportsPanel::RepPanel::ID_CHOICE_START_DATE, _("Begin date:")},
+    {"&single_date", "mmDatePickerCtrl", def_date, mmReportsPanel::RepPanel::ID_CHOICE_START_DATE, _("Date:")},
+    {"&end_date", "mmDatePickerCtrl", def_date, mmReportsPanel::RepPanel::ID_CHOICE_END_DATE, _("End date:")},
+    {"&single_time", "wxTimePickerCtrl", def_time, mmReportsPanel::RepPanel::ID_CHOICE_TIME, _("Time:")},
+    {"&only_years", "wxChoice", def_date, mmReportsPanel::RepPanel::ID_CHOICE_YEAR, _("Year:")},
     };
     return v;
-};
+}
 
 const std::vector<std::pair<wxString, wxString>> Model_Report::getParamNames()
 {
@@ -206,6 +208,11 @@ bool Model_Report::PrepareSQL(wxString& sql, std::map <wxString, wxString>& rep_
                 mmDatePickerCtrl* date = static_cast<mmDatePickerCtrl*>(w);
                 value = date->GetValue().FormatISODate();
             }
+            if (w && entry.type == "wxTimePickerCtrl")
+            {
+                wxTimePickerCtrl* time = static_cast<wxTimePickerCtrl*>(w);
+                value = time->GetValue().FormatISOTime();
+            }
             if (w && entry.type == "wxChoice")
             {
                 wxChoice* year = static_cast<wxChoice*>(w);
@@ -244,7 +251,7 @@ int Model_Report::get_html(const Data* r, wxString& out)
         wxSQLite3Statement stmt = this->db_->PrepareStatement(sql);
         if (!stmt.IsReadOnly())
         {
-            out = wxString::Format(_("The SQL script:\n%s \nwill modify database! aborted!"), r->SQLCONTENT);
+            out = wxString::Format(_("The SQL script:\n%s\nwill modify database! Aborted!"), r->SQLCONTENT);
             return -1;
         }
         else

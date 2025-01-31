@@ -22,21 +22,26 @@
 #include "model/Model_Account.h"
 #include "../resources/addacctwiz.xpm"
 
+BEGIN_EVENT_TABLE(mmNewDatabaseWizard, wxWizard)
+    EVT_WIZARD_CANCEL(wxID_ANY, mmNewDatabaseWizard::OnCancel)
+END_EVENT_TABLE()
+
 mmNewDatabaseWizard::mmNewDatabaseWizard(wxFrame *frame)
     : wxWizard(frame, wxID_ANY, _("New Database Wizard")
         , wxBitmap(addacctwiz_xpm), wxDefaultPosition, wxDEFAULT_DIALOG_STYLE)
 {
     page1 = new wxWizardPageSimple(this);
     wxString displayMsg;
-    displayMsg << _("The next pages will help you create a new database.\n\n"
-        "Your database file is stored with an extension of .mmb.\n"
-        "As this file contains important financial information,\n"
-        "we recommended creating daily backups with the Options\n"
-        "setting: 'Backup before opening', and store your backups\n"
+    displayMsg << wxGetTranslation(wxString::FromUTF8(wxTRANSLATE(
+        "The next pages will help you create a new database.\n\n"
+        "Your database file is stored with an extension of .mmb. "
+        "As this file contains important financial information, "
+        "we recommended creating daily backups with the Options "
+        "setting: “Backup database on startup”, and store your backups "
         "in a separate location.\n\n"
-        "The database can later be encrypted if required, by\n"
-        "using the option: 'Save database as' and changing the\n"
-        "file type before saving.");
+        "The database can later be encrypted if required, by "
+        "using the option: “Save Database As…” and changing the "
+        "file type before saving.")));
     new wxStaticText(page1, wxID_ANY, displayMsg);
 
     mmNewDatabaseWizardPage* page2 = new mmNewDatabaseWizardPage(this);
@@ -49,8 +54,9 @@ mmNewDatabaseWizard::mmNewDatabaseWizard(wxFrame *frame)
     GetPageAreaSizer()->Add(page1);
 }
 
-void mmNewDatabaseWizard::RunIt(bool modal)
+bool mmNewDatabaseWizard::RunIt(bool modal)
 {
+    success_ = true;
     if (modal)
     {
         if (RunWizard(page1))
@@ -66,6 +72,12 @@ void mmNewDatabaseWizard::RunIt(bool modal)
         ShowPage(page1);
         Show(true);
     }
+    return success_;
+}
+
+void mmNewDatabaseWizard::OnCancel(wxWizardEvent&)
+{
+    success_ = false;
 }
 
 BEGIN_EVENT_TABLE(mmNewDatabaseWizardPage, wxWizardPageSimple)
@@ -75,7 +87,6 @@ END_EVENT_TABLE()
 mmNewDatabaseWizardPage::mmNewDatabaseWizardPage(mmNewDatabaseWizard* parent)
     : wxWizardPageSimple(parent)
     , parent_(parent)
-    , currencyID_(-1)
 {
     wxString currName = _("Set Currency");
     const auto base_currency = Model_Currency::instance().GetBaseCurrency();
@@ -94,8 +105,8 @@ mmNewDatabaseWizardPage::mmNewDatabaseWizardPage(mmNewDatabaseWizard* parent)
     mainSizer->Add(itemButtonCurrency_, 0 /* No stretching */, wxALL, 5 /* Border size */);
 
     wxString helpMsg = _("Specify the base (or default) currency to be used for the\n"
-        "database. The base currency can later be changed by using\n"
-        "the options dialog. New accounts, will use this currency by\n"
+        "database. The base currency can later be changed in\n"
+        "Options. New accounts, will use this currency by\n"
         "default, and can be changed when editing account details.");
     helpMsg += "\n";
     mainSizer->Add(new wxStaticText(this, wxID_ANY, helpMsg), 0, wxALL, 5);

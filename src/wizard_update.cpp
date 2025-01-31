@@ -70,7 +70,6 @@ mmUpdateWizard::~mmUpdateWizard()
 
 mmUpdateWizard::mmUpdateWizard(wxWindow* parent, const Document& json_releases, wxArrayInt new_releases, const wxString& top_version)
     : top_version_(top_version)
-    , showUpdateCheckBox_(nullptr)
 {
 
     SetExtraStyle(GetExtraStyle() | wxWS_EX_BLOCK_EVENTS);
@@ -206,8 +205,7 @@ void mmUpdateWizard::CreateControls(const Document& json_releases, wxArrayInt ne
     const auto name = getVFname4print("rep", html);
     browser->LoadURL(name);
 
-    const wxString showAppStartString = wxString::Format(_("Show this window next time %s starts")
-        , mmex::getProgramName());
+    const wxString showAppStartString = wxString::Format(_("&Show this dialog box at startup"));
     showUpdateCheckBox_ = new wxCheckBox(this, wxID_ANY, showAppStartString, wxDefaultPosition, wxDefaultSize, wxCHK_2STATE);
     showUpdateCheckBox_->SetValue(true);
     page1_sizer->Add(showUpdateCheckBox_, g_flagsV);
@@ -317,8 +315,11 @@ struct Version
 //--------------
 void mmUpdate::checkUpdates(wxFrame *frame, bool bSilent)
 {
+    bool is_stable = mmex::version::isStable();
+    const auto url = is_stable ? mmex::weblink::Latest : mmex::weblink::Releases;
+
     wxString resp;
-    CURLcode err_code = http_get_data(mmex::weblink::Releases, resp);
+    CURLcode err_code = http_get_data(url, resp);
     if (err_code != CURLE_OK)
     {
         if (!bSilent)
@@ -332,6 +333,7 @@ void mmUpdate::checkUpdates(wxFrame *frame, bool bSilent)
 
     // https://developer.github.com/v3/repos/releases/#list-releases-for-a-repository
 
+    resp = is_stable ? wxString::Format("[%s]", resp) : resp;
     Document json_releases;
     ParseResult res = json_releases.Parse(resp.utf8_str());
     if (!res || !json_releases.IsArray())
@@ -348,7 +350,6 @@ void mmUpdate::checkUpdates(wxFrame *frame, bool bSilent)
 
     wxLogDebug("======= mmUpdate::checkUpdates =======");
 
-    bool is_stable = mmex::version::isStable();
     bool update_stable = Model_Setting::instance().GetIntSetting("UPDATESOURCE", 0) == 0;
     const int _stable = is_stable ? update_stable : 0;
     const wxString current_tag = ("v" + mmex::version::string).Lower();

@@ -58,7 +58,7 @@ void OptionSettingsView::Create()
     viewsPanelSizer0->Add(view_panel, wxSizerFlags(g_flagsExpand).Proportion(0));
 
     // View Options
-    wxStaticBox* viewStaticBox = new wxStaticBox(view_panel, wxID_STATIC, _("View Options"));
+    wxStaticBox* viewStaticBox = new wxStaticBox(view_panel, wxID_STATIC, _("View"));
     SetBoldFont(viewStaticBox);
 
     wxStaticBoxSizer* viewStaticBoxSizer = new wxStaticBoxSizer(viewStaticBox, wxVERTICAL);
@@ -113,7 +113,7 @@ void OptionSettingsView::Create()
     view_sizer1->Add(m_showMoneyTips, g_flagsH);
 
     // Transaction/Budget options
-    wxStaticBox* trxStaticBox = new wxStaticBox(view_panel, wxID_STATIC, _("Transaction/Budget Options"));
+    wxStaticBox* trxStaticBox = new wxStaticBox(view_panel, wxID_STATIC, _("Transaction/Budget"));
     SetBoldFont(trxStaticBox);
     wxStaticBoxSizer* trxStaticBoxSizer = new wxStaticBoxSizer(trxStaticBox, wxVERTICAL);
     viewsPanelSizer->Add(trxStaticBoxSizer, wxSizerFlags(g_flagsExpand).Proportion(0));
@@ -141,6 +141,14 @@ void OptionSettingsView::Create()
     mmToolTip(m_budget_override, _("If monthly budget exists then use this to override the yearly budget; otherwise combine them"));
     m_budget_override->SetValue(Option::instance().BudgetOverride());
     trxStaticBoxSizer->Add(m_budget_override, g_flagsV);
+
+    // Option to deduct monthly budget from yearly budget for reporting
+    m_budget_deduct_monthly = new wxCheckBox(view_panel, wxID_STATIC
+        , _("Subtract monthly budgets from yearly budget in reporting")
+        , wxDefaultPosition, wxDefaultSize, wxCHK_2STATE);
+    mmToolTip(m_budget_deduct_monthly, _("Yearly budget will be reduced by the amount budgeted monthly.\nTotal estimate for the year will be reported as either the yearly budget OR the sum of the monthly budgets, whichever is greater."));
+    m_budget_deduct_monthly->SetValue(Option::instance().BudgetDeductMonthly());
+    trxStaticBoxSizer->Add(m_budget_deduct_monthly, g_flagsV);
 
     // Allows a year or financial year to start before or after the 1st of the month.
     wxBoxSizer* budget_offset_sizer = new wxBoxSizer(wxHORIZONTAL);
@@ -171,6 +179,10 @@ void OptionSettingsView::Create()
         , wxDefaultPosition, wxDefaultSize, wxCHK_2STATE);
     m_ignore_future_transactions->SetValue(Option::instance().getIgnoreFutureTransactions());
     trxStaticBoxSizer->Add(m_ignore_future_transactions, g_flagsV);
+
+    m_use_trans_date_time = new wxCheckBox(view_panel, wxID_ANY, _("Use 'Time' in transaction recording/reporting"));
+    m_use_trans_date_time->SetValue(Option::instance().UseTransDateTime());
+    trxStaticBoxSizer->Add(m_use_trans_date_time, g_flagsV);
 
     // Colours settings
     wxStaticBox* userColourSettingStBox = new wxStaticBox(view_panel, wxID_ANY, _("Transaction Colors"));
@@ -210,9 +222,9 @@ void OptionSettingsView::Create()
     wxButton* reset = new wxButton(view_panel, wxID_REDO, _("Default"), wxDefaultPosition, wxDefaultSize, 0);
     m_UDFCB7->SetBackgroundColour(mmColors::userDefColor7);
     userColourSettingStBoxSizer->Add(reset, g_flagsH);
-    // UI Appearance
+    // User Interface (UI) Appearance
 
-    wxStaticBox* iconStaticBox = new wxStaticBox(view_panel, wxID_STATIC, _("UI Appearance"));
+    wxStaticBox* iconStaticBox = new wxStaticBox(view_panel, wxID_STATIC, _("User Interface"));
     SetBoldFont(iconStaticBox);
 
     wxStaticBoxSizer* iconStaticBoxSizer = new wxStaticBoxSizer(iconStaticBox, wxVERTICAL);
@@ -230,7 +242,7 @@ void OptionSettingsView::Create()
 
     //
     wxArrayString theme_mode_values;
-    theme_mode_values.Add(_("Auto"));
+    theme_mode_values.Add(_("System"));
     theme_mode_values.Add(_("Light"));
     theme_mode_values.Add(_("Dark"));
 
@@ -238,7 +250,7 @@ void OptionSettingsView::Create()
                         , wxDefaultSize, theme_mode_values);
     mmToolTip(m_theme_mode, _("Specify preferred theme variant to use if supported"));
     m_theme_mode->SetSelection(Option::instance().getThemeMode());
-    view_sizer2->Add(new wxStaticText(view_panel, wxID_STATIC, _("Theme Mode")), g_flagsH);
+    view_sizer2->Add(new wxStaticText(view_panel, wxID_STATIC, _("Theme")), g_flagsH);
     view_sizer2->Add(m_theme_mode, g_flagsH);
 
     //
@@ -262,16 +274,16 @@ void OptionSettingsView::Create()
 
     // Font size
     wxArrayString font_choice;
-    font_choice.Add(wxTRANSLATE("Normal"));
-    font_choice.Add(wxTRANSLATE("Enlarged"));
-    font_choice.Add(wxTRANSLATE("Large"));
-    font_choice.Add(wxTRANSLATE("Huge"));
+    font_choice.Add(_("Normal"));
+    font_choice.Add(_("Enlarged"));
+    font_choice.Add(_("Large"));
+    font_choice.Add(_("Huge"));
 
-    view_sizer2->Add(new wxStaticText(view_panel, wxID_STATIC, _("Font size")), g_flagsH);
-    m_font_size = new wxChoice(view_panel, wxID_RESIZE_FRAME, wxDefaultPosition
+    view_sizer2->Add(new wxStaticText(view_panel, wxID_STATIC, _("Font Size")), g_flagsH);
+    m_font_size_chooser = new wxChoice(view_panel, wxID_RESIZE_FRAME, wxDefaultPosition
         , wxDefaultSize, font_choice);
-    m_font_size->SetSelection(Option::instance().getFontSize());
-    view_sizer2->Add(m_font_size, g_flagsH);
+    m_font_size_chooser->SetSelection(Option::instance().getFontSize());
+    view_sizer2->Add(m_font_size_chooser, g_flagsH);
 
     // Icons
 
@@ -297,7 +309,7 @@ void OptionSettingsView::Create()
     }
 
     view_sizer3->Add(new wxStaticText(view_panel, wxID_STATIC, _("Toolbar Icon Size")), g_flagsH);
-    view_sizer3->Add(new wxStaticText(view_panel, wxID_STATIC, _("Navigation Icon Size")), g_flagsH);
+    view_sizer3->Add(new wxStaticText(view_panel, wxID_STATIC, _("Navigator Icon Size")), g_flagsH);
     view_sizer3->Add(new wxStaticText(view_panel, wxID_STATIC, _("Others Icon Size")), g_flagsH);
 
     view_sizer3->Add(m_toolbar_icon_size, g_flagsH);
@@ -318,7 +330,7 @@ void OptionSettingsView::Create()
 
     Fit();
     view_panel->SetMinSize(view_panel->GetBestVirtualSize());
-    view_panel->SetScrollRate(1, 1);
+    view_panel->SetScrollRate(6, 6);
 
     this->Connect(wxID_ANY, wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(OptionSettingsView::OnNavTreeColorChanged), nullptr, this);
     this->Connect(ID_DIALOG_THEMEMANAGER, wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(OptionSettingsView::OnThemeManagerSelected), nullptr, this);
@@ -365,7 +377,7 @@ void OptionSettingsView::OnNavTreeColorChanged(wxCommandEvent& event)
     }
 }
 
-void OptionSettingsView::OnThemeManagerSelected(wxCommandEvent& event)
+void OptionSettingsView::OnThemeManagerSelected(wxCommandEvent&)
 {
     mmThemesDialog dlg(this);
     dlg.ShowModal();
@@ -393,7 +405,7 @@ bool OptionSettingsView::SaveSettings()
     size = i[size];
     Option::instance().setIconSize(size);
 
-    size = m_font_size->GetSelection();
+    size = m_font_size_chooser->GetSelection();
     Option::instance().setFontSize(size);
 
     size = m_navigation_icon_size->GetSelection();
@@ -408,11 +420,13 @@ bool OptionSettingsView::SaveSettings()
     Option::instance().BudgetIncludeTransfers(m_budget_include_transfers->GetValue());
     Option::instance().BudgetReportWithSummaries(m_budget_summary_without_category->GetValue());
     Option::instance().BudgetOverride(m_budget_override->GetValue());
+    Option::instance().BudgetDeductMonthly(m_budget_deduct_monthly->GetValue());
     Option::instance().setBudgetDaysOffset(m_budget_days_offset->GetValue());
     Option::instance().setReportingFirstDay(m_reporting_firstday->GetValue());
     Option::instance().IgnoreFutureTransactions(m_ignore_future_transactions->GetValue());
     Option::instance().ShowToolTips(m_showToolTips->GetValue());
     Option::instance().ShowMoneyTips(m_showMoneyTips->GetValue());
+    Option::instance().UseTransDateTime(m_use_trans_date_time->GetValue());
 
     mmColors::userDefColor1 = m_UDFCB1->GetBackgroundColour();
     mmColors::userDefColor2 = m_UDFCB2->GetBackgroundColour();

@@ -45,7 +45,7 @@ public:
 
     ~UserTransactionPanel();
 
-    int SaveChecking();
+    int64 SaveChecking();
     bool ValidCheckingAccountEntry();
     wxDateTime TransactionDate();
     void TransactionDate(const wxDateTime& trans_date);
@@ -53,24 +53,27 @@ public:
     void SetTransactionValue(const double& trans_value, bool fixed_value = false);
     void SetTransactionNumber(const wxString& trans_number);
     void SetTransactionAccount(const wxString& trans_account);
+    void SetTransactionStatus(const int trans_status_enum);
+    void SetTransactionPayee(const int64 payeeid);
+    void SetTransactionCategory(const int64 categid);
 
     int TransactionType();
     Model_Translink::CHECKING_TYPE CheckingType();
     void CheckingType(Model_Translink::CHECKING_TYPE ct);
 
 private:
-    Model_Checking::Data* m_checking_entry;
-    int m_transaction_id;
+    Model_Checking::Data* m_checking_entry = nullptr;
+    int64 m_transaction_id = -1;
 
-    int m_account_id;
-    int m_payee_id;
-    int m_category_id;
-    int m_subcategory_id;
+    int64 m_account_id = -1;
+    int64 m_payee_id = -1;
+    int64 m_category_id = -1;
+    int64 m_subcategory_id = -1;
 
 private:
     void Create();
     void DataToControls();
-    void SetLastPayeeAndCategory(const int account_id);
+    void SetLastPayeeAndCategory(const int64 account_id);
 
     void OnTransAccountButton(wxCommandEvent& WXUNUSED(event));
     void OnTransPayeeButton(wxCommandEvent& WXUNUSED(event));
@@ -81,20 +84,21 @@ private:
     void OnAttachments(wxCommandEvent& WXUNUSED(event));
 
 private:
-    mmDatePickerCtrl* m_date_selector;
+    mmDatePickerCtrl* m_date_selector = nullptr;
 
-    wxButton* m_account;
-    wxChoice* m_status_selector;
-    wxChoice* m_type_selector;
-    mmTextCtrl* m_entered_amount;
-    wxCheckBox* m_transfer;
-    wxButton* m_trans_currency;
-    wxButton* m_payee;
-    wxButton* m_category;
-    wxTextCtrl* m_entered_number;
-    wxTextCtrl* m_entered_notes;
+    wxButton* m_account = nullptr;
+    wxChoice* m_status_selector = nullptr;
+    wxChoice* m_type_selector = nullptr;
+    mmTextCtrl* m_entered_amount = nullptr;
+    wxCheckBox* m_transfer = nullptr;
+    wxButton* m_trans_currency = nullptr;
+    wxButton* m_payee = nullptr;
+    wxButton* m_category = nullptr;
+    wxTextCtrl* m_entered_number = nullptr;
+    wxTextCtrl* m_entered_notes = nullptr;
     std::vector<wxString> m_frequent_notes;
-    wxBitmapButton* m_attachment;
+    wxBitmapButton* m_attachment = nullptr;
+    wxButton* frequent_notes = nullptr;
  
     enum
     {

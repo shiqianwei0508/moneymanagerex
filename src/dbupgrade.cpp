@@ -118,7 +118,8 @@ bool dbUpgrade::UpgradeDB(wxSQLite3Database * db, const wxString& DbFileName)
     }
 
     wxMessageBox(wxString::Format(_("MMEX database succesfully upgraded to version %i"), ver) + "\n\n"
-        + _("We suggest a database optimization under Tools -> Database -> Optimize"), _("MMEX database upgrade"), wxOK | wxICON_INFORMATION);
+        + _u("We suggest a database optimization under Tools → Database → Optimize")
+            , _("MMEX database upgrade"), wxOK | wxICON_INFORMATION);
 
     return true;
 }
@@ -156,7 +157,7 @@ void dbUpgrade::BackupDB(const wxString& FileName, int BackupType, int FilesToKe
     if (BackupType != BACKUPTYPE::VERSION_UPGRADE)
     {
         wxSortedArrayString backupFileArray;
-        const auto fileSearch = wxString::Format("%s%s????-??-??.bak", FileName, BackupName[BackupType]);
+        const auto fileSearch = wxString::Format(R"(%s%s????-??-??.bak)", FileName, BackupName[BackupType]);
         wxString backupFile = wxFindFirstFile(fileSearch);
         while (!backupFile.empty())
         {

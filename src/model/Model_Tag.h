@@ -1,5 +1,5 @@
 /*******************************************************
- Copyright (C) 2013,2014 Guan Lisheng (guanlisheng@gmail.com)
+ Copyright (C) 2016 Guan Lisheng (guanlisheng@gmail.com)
 
  This program is free software; you can redistribute it and/or modify
  it under the terms of the GNU General Public License as published by
@@ -16,42 +16,43 @@
  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  ********************************************************/
 
-#ifndef MODEL_SUBCATEGORY_H
-#define MODEL_SUBCATEGORY_H
+#ifndef MODEL_TAG_H
+#define MODEL_TAG_H
 
 #include "Model.h"
-#include "db/DB_Table_Subcategory_V1.h"
+#include "db/DB_Table_Tag_V1.h"
 
-class Model_Subcategory : public Model<DB_Table_SUBCATEGORY_V1>
+class Model_Tag : public Model<DB_Table_TAG_V1>
 {
 public:
-    using Model<DB_Table_SUBCATEGORY_V1>::get;
+    Model_Tag();
+    ~Model_Tag();
 
-public:
-    Model_Subcategory();
-    ~Model_Subcategory();
+    using Model<DB_Table_TAG_V1>::get;
 
 public:
     /**
-    Initialize the global Model_Subcategory table on initial call.
+    Initialize the global Model_Tag table on initial call.
     Resets the global table on subsequent calls.
-    * Return the static instance address for Model_Subcategory table
+    * Return the static instance address for Model_Tag table
     * Note: Assigning the address to a local variable can destroy the instance.
     */
-    static Model_Subcategory& instance(wxSQLite3Database* db);
+    static Model_Tag& instance(wxSQLite3Database* db);
 
     /**
-    * Return the static instance address for Model_Subcategory table
+    * Return the static instance address for Model_Tag table
     * Note: Assigning the address to a local variable can destroy the instance.
     */
-    static Model_Subcategory& instance();
+    static Model_Tag& instance();
 
-public:
-    /** Return the Data record for the given subcategory name and category ID */
-    Data* get(const wxString& name, int category_id);
+    /**
+    * Return the Data record pointer for the given tag name
+    * Returns 0 when tag not found.
+    */
+    Data* get(const wxString& name);
 
-public:
-    static bool is_used(int id);
+    /* Returns 0 if not used, 1 if used, and -1 if used only in deleted transactions */
+    int is_used(int64 id);
 };
 
 #endif // 

@@ -22,6 +22,7 @@
 #include "constants.h"
 #include "option.h"
 #include "paths.h"
+#include "mmcheckingpanel.h"
 
 Model_Setting::Model_Setting()
 : Model<DB_Table_SETTING_V1>()
@@ -93,6 +94,8 @@ void Model_Setting::Set(const wxString& key, const wxString& value)
 
 void Model_Setting::Prepend(const wxString& key, const wxString& value, int limit)
 {
+    if (value.IsEmpty())
+        return;
     Data* setting = this->get_one(SETTINGNAME(key));
     if (!setting) // not cached
     {
@@ -276,7 +279,7 @@ void Model_Setting::SetTheme(const wxString& value)
 //-------------------------------------------------------------------
 wxString Model_Setting::ViewTransactions()
 {
-    return GetStringSetting("VIEWTRANSACTIONS", VIEW_TRANS_ALL_STR);
+    return GetStringSetting("VIEWTRANSACTIONS", mmCheckingPanel::FILTER_STR_ALL);
 }
 
 void Model_Setting::SetViewTransactions(const wxString& value)

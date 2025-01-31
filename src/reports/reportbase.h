@@ -42,14 +42,14 @@ public:
     void date_range(const mmDateRange* date_range, int selection);
     void initial_report(bool initial);
 
-    int getDateSelection() const;
+    int64 getDateSelection() const;
     int getAccountSelection() const;
     int getChartSelection() const;
     int getForwardMonths() const;   
     const wxString getAccountNames() const;
     void chart(int selection);
     void setAccounts(int selection, const wxString& name);
-    void setSelection(int sel);
+    void setSelection(int64 sel);
     void setForwardMonths(int sel);
     void setReportSettings();
     void setReportParameters(int id);
@@ -65,12 +65,13 @@ public:
         NONE = 0
         , SINGLE_DATE = 1
         , DATE_RANGE = 2
-        , MONTHES = 4
-        , BUDGET_DATES = 8
-        , ONLY_YEARS = 16
-        , ACCOUNTS_LIST = 32
-        , CHART = 64
-        , FORWARD_MONTHS = 128
+        , TIME = 4
+        , MONTHES = 8
+        , BUDGET_DATES = 16
+        , ONLY_YEARS = 32
+        , ACCOUNTS_LIST = 64
+        , CHART = 128
+        , FORWARD_MONTHS = 256
     };
 
     enum Reports {
@@ -98,25 +99,25 @@ public:
     };
 
 protected:
-    int m_chart_selection;
-    int m_date_selection;
-    int m_forward_months;
+    int m_chart_selection = 0;
+    int64 m_date_selection = 0;
+    int m_forward_months = 24;
     wxString m_title;
-    const mmDateRange* m_date_range;
+    const mmDateRange* m_date_range = nullptr;
     wxSharedPtr<wxArrayString> accountArray_;
     wxSharedPtr<wxArrayString> selectedAccountArray_;
-    bool m_only_active;
+    bool m_only_active = false;
 
 private:
-    bool m_initial;
-    int m_account_selection;
-    int m_id;
-    int m_parameters;
-    wxString m_settings;
+    bool m_initial = true;
+    int m_account_selection = 0;
+    int m_id = -1;
+    int m_parameters = 0;
+    wxString m_settings = "";
 };
 
-inline void mmPrintableBase::setSelection(int sel) { m_date_selection = sel; }
-inline int mmPrintableBase::getDateSelection() const { return this->m_date_selection; }
+inline void mmPrintableBase::setSelection(int64 sel) { m_date_selection = sel; }
+inline int64 mmPrintableBase::getDateSelection() const { return this->m_date_selection; }
 inline void mmPrintableBase::setForwardMonths(int sel) { m_forward_months = sel; }
 inline int mmPrintableBase::getForwardMonths() const { return this->m_forward_months; }
 inline int mmPrintableBase::getAccountSelection() const { return this->m_account_selection; }

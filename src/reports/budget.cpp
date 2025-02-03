@@ -71,9 +71,9 @@ void mmReportBudget::GetFinancialYearValues(int& day, wxDateTime::Month& month) 
         day = 28;
     }
     else if ( ((day > 30) && (month == wxDateTime::Sep)) ||
-              ((day > 30) && (month == wxDateTime::Apr)) ||
-              ((day > 30) && (month == wxDateTime::Jun)) ||
-              ((day > 30) && (month == wxDateTime::Nov)) )
+        ((day > 30) && (month == wxDateTime::Apr)) ||
+        ((day > 30) && (month == wxDateTime::Jun)) ||
+        ((day > 30) && (month == wxDateTime::Nov)) )
     {
         day = 30;
     }
@@ -97,7 +97,10 @@ const wxString mmReportBudget::AdjustYearValues(int day, wxDateTime::Month month
     else
     {
         const wxString month_str = wxGetTranslation(mmGetMonthName(month));
-        ret = wxString::Format(_("Year: %i Month: %s"), year, month_str);
+        if (Option::instance().BudgetFinancialYears())
+            ret = wxString::Format(_("Financial Year: %i Month: %s"), year, month_str);
+        else
+            ret = wxString::Format(_("Year: %i Month: %s"), year, month_str);
     }
 
     return ret;

@@ -55,16 +55,7 @@ void mmWebAppDialog::OnButtonHelpClick(wxCommandEvent& WXUNUSED(event))
 }
 
 mmWebAppDialog::mmWebAppDialog(wxWindow *parent, const bool startup, const wxString& name) :
-    m_webtran_id(-1)
-    , webtranListBox_(nullptr)
-    , m_maskTextCtrl(nullptr)
-    , url_text_(nullptr)
-    , guid_text_(nullptr)
-    , net_button_(nullptr)
-    , refreshRequested_(false)
-    , isStartup_(false)
-    , isFilledOnce_(false)
-    , autoWebAppDialogTimer_(this, wxID_REFRESH)
+    autoWebAppDialogTimer_(this, wxID_REFRESH)
 {
     isStartup_ = startup;
     Create(parent, name);
@@ -100,7 +91,7 @@ void mmWebAppDialog::CreateControls()
     mmToolTip(net_button_, _("Network status (click to refresh)"));
     flex_sizer->Add(net_button_, g_flagsCenter);
 
-    wxStaticText* url_label = new wxStaticText(this, wxID_STATIC, _("Url"));
+    wxStaticText* url_label = new wxStaticText(this, wxID_STATIC, _("URL"));
     url_text_ = new wxTextCtrl(this, wxID_FILE, wxEmptyString, wxDefaultPosition, wxDefaultSize, wxTE_READONLY);
     url_text_->SetMinSize(wxSize(300, -1));
     url_text_->Enable(false);
@@ -211,7 +202,7 @@ void mmWebAppDialog::fillControls()
         mainBoxSizer_->Hide(loadingSizer_, true);
         if (!isStartup_)
         {
-            wxString msgStr = wxString() << _("Unable to download transactions from webapp.") << "\n" << CurlError;
+            wxString msgStr = wxString() << _("Unable to download transactions from the WebApp.") << "\n" << CurlError;
             wxMessageBox(msgStr, _("Transactions download error"), wxICON_ERROR);
         }
 
@@ -223,8 +214,8 @@ void mmWebAppDialog::fillControls()
     for (const auto& WebTran : WebAppTransactions_)
     {
         wxVector<wxVariant> data;
-        data.push_back(wxVariant(wxString::Format(wxT("%i"), WebTran.ID))); //WEBTRAN_ID
-        data.push_back(wxVariant(mmGetDateForDisplay(WebTran.Date.FormatISODate()))); //WEBTRAN_DATE
+        data.push_back(wxVariant(wxString::Format(wxT("%lld"), WebTran.ID))); //WEBTRAN_ID
+        data.push_back(wxVariant(mmGetDateTimeForDisplay(WebTran.Date.FormatISODate()))); //WEBTRAN_DATE
         data.push_back(wxVariant(WebTran.Account)); //WEBTRAN_ACCOUNT
         data.push_back(wxVariant(WebTran.Status)); //WEBTRAN_STATUS
         data.push_back(wxVariant(wxGetTranslation(WebTran.Type))); //WEBTRAN_TYPE
@@ -242,7 +233,7 @@ void mmWebAppDialog::fillControls()
 
         data.push_back(wxVariant(WebTran.Notes)); //WEBTRAN_NOTES
         data.push_back(wxVariant(WebTran.Attachments)); //WEBTRAN_ATTACHMENTS
-        webtranListBox_->AppendItem(data, static_cast<wxUIntPtr>(WebTran.ID));
+        webtranListBox_->AppendItem(data, static_cast<wxUIntPtr>(WebTran.ID.GetValue()));
     }
 
     if (!WebAppTransactions_.empty())
@@ -280,30 +271,30 @@ void mmWebAppDialog::OnListItemActivated(wxDataViewEvent& event)
 
     if (selected_index >= 0)
     {
-        int WebTrID = static_cast<int>(webtranListBox_->GetItemData(item));
+        int64 WebTrID = static_cast<int64>(webtranListBox_->GetItemData(item));
         mmWebAppDialog::ImportWebTr(WebTrID, true);
         fillControls();
     }
 }
 
-bool mmWebAppDialog::ImportWebTr(int WebTrID, bool open)
+bool mmWebAppDialog::ImportWebTr(int64 WebTrID, bool open)
 {
     mmWebApp::webtran_holder WebTrToImport;
     bool bFound = false;
 
-    for (const auto WebTr : WebAppTransactions_)
+    for (const auto &webTr : WebAppTransactions_)
     {
-        if (WebTr.ID == WebTrID)
+        if (webTr.ID == WebTrID)
         {
             bFound = true;
-            WebTrToImport = WebTr;
-            int InsertedTransactionID = mmWebApp::MMEX_InsertNewTransaction(WebTrToImport);
+            WebTrToImport = webTr;
+            int64 InsertedTransactionID = mmWebApp::MMEX_InsertNewTransaction(WebTrToImport);
             if (InsertedTransactionID > 0)
             {
                 if (open)
                 {
                     //fillControls(); //TODO: Delete transaction from view
-                    mmTransDialog EditTransactionDialog(this, 1, InsertedTransactionID, 0);
+                    mmTransDialog EditTransactionDialog(this, 1, {InsertedTransactionID, false});
                     EditTransactionDialog.ShowModal();
                 }
                 refreshRequested_ = true;
@@ -344,7 +335,7 @@ void mmWebAppDialog::OpenAttachment()
             }
             else
             {
-                wxString msgStr = wxString() << _("Unable to download attachments from webapp.") << "\n" << CurlError;
+                wxString msgStr = wxString() << _("Unable to download attachments from the WebApp.") << "\n" << CurlError;
                 wxMessageBox(msgStr, _("Attachment download error"), wxICON_ERROR);
             }
         }
@@ -364,7 +355,7 @@ void mmWebAppDialog::ImportWebTrSelected(const bool open)
         int selectedIndex_ = webtranListBox_->ItemToRow(Item);
         if (selectedIndex_ >= 0)
         {
-            int WebTrID = static_cast<int>(webtranListBox_->GetItemData(Item));
+            int64 WebTrID = static_cast<int64>(webtranListBox_->GetItemData(Item));
             mmWebAppDialog::ImportWebTr(WebTrID, open);
         }
     }
@@ -384,7 +375,7 @@ void mmWebAppDialog::DeleteWebTr()
         int selectedIndex_ = webtranListBox_->ItemToRow(Item);
         if (selectedIndex_ >= 0)
         {
-            mmWebApp::WebApp_DeleteOneTransaction(static_cast<int>(webtranListBox_->GetItemData(Item)));
+            mmWebApp::WebApp_DeleteOneTransaction(static_cast<int64>(webtranListBox_->GetItemData(Item)));
         }
     }
     fillControls();
@@ -428,7 +419,7 @@ void mmWebAppDialog::ImportAllWebTr(const bool open)
 {
     for (int i = 0; i < webtranListBox_->GetItemCount(); i++)
     {
-        int WebTrID = wxAtoi(webtranListBox_->GetTextValue(i, WEBTRAN_ID));
+        int64 WebTrID = wxAtoi(webtranListBox_->GetTextValue(i, WEBTRAN_ID));
         mmWebAppDialog::ImportWebTr(WebTrID, open);
     }
 }

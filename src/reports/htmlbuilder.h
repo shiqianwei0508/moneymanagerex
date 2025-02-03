@@ -37,7 +37,8 @@ struct GraphSeries
 struct GraphData
 {
     wxString title;
-    enum { BAR = 0, LINE, LINE_DATETIME, PIE, DONUT, RADAR, BARLINE, STACKEDBARLINE, STACKEDAREA } type;
+    enum GraphType { BAR = 0, LINE, LINE_DATETIME, PIE, DONUT, RADAR, BARLINE, STACKEDBARLINE, STACKEDAREA } type;
+    //Keep type aligned in FilterTransDialog CHART_OPTIONS
     std::vector<wxString> labels;
     std::vector<GraphSeries> series;
     std::vector<wxColour> colors;
@@ -93,6 +94,7 @@ public:
     void addTableCellMonth(int month, int year = 0);
     void addColorMarker(const wxString& color, bool center = false);
     const wxString getColor(int i);
+    const wxString getFormattedLink(const wxString& color, const wxString& href_value, const wxString& a_value);
     const wxString getRandomColor(bool positive);
 
     /** Add a Cell value */

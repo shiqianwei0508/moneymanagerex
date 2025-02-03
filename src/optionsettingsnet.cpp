@@ -62,7 +62,7 @@ void OptionSettingsNet::Create()
     networkPanelSizer0->Add(network_panel, wxSizerFlags(g_flagsExpand).Proportion(0));
 
     //WebApp settings
-    wxStaticBox* WebAppStaticBox = new wxStaticBox(network_panel, wxID_STATIC, _("WebApp Settings"));
+    wxStaticBox* WebAppStaticBox = new wxStaticBox(network_panel, wxID_STATIC, _("WebApp"));
     SetBoldFont(WebAppStaticBox);
     wxStaticBoxSizer* WebAppStaticBoxSizer = new wxStaticBoxSizer(WebAppStaticBox, wxVERTICAL);
     wxFlexGridSizer* WebAppStaticBoxSizerGrid = new wxFlexGridSizer(0, 2, 0, 10);
@@ -71,7 +71,7 @@ void OptionSettingsNet::Create()
     networkPanelSizer->Add(WebAppStaticBoxSizer, wxSizerFlags(g_flagsExpand).Proportion(0));
     WebAppStaticBoxSizer->Add(WebAppStaticBoxSizerGrid, wxSizerFlags(g_flagsExpand).Proportion(0));
 
-    WebAppStaticBoxSizerGrid->Add(new wxStaticText(network_panel, wxID_STATIC, _("Url")), g_flagsH);
+    WebAppStaticBoxSizerGrid->Add(new wxStaticText(network_panel, wxID_STATIC, _("URL")), g_flagsH);
     wxString WebAppURL = Model_Infotable::instance().GetStringInfo("WEBAPPURL", "");
     wxTextCtrl* WebAppURLTextCtr = new wxTextCtrl(network_panel, ID_DIALOG_OPTIONS_TEXTCTRL_WEBAPPURL,
         WebAppURL, wxDefaultPosition, wxSize(300, -1));
@@ -83,13 +83,14 @@ void OptionSettingsNet::Create()
     wxTextCtrl* WebAppGUIDTextCtr = new wxTextCtrl(network_panel, ID_DIALOG_OPTIONS_TEXTCTRL_WEBAPPGUID,
         WebAppGUID, wxDefaultPosition, wxSize(300, -1));
     mmToolTip(WebAppGUIDTextCtr, _("Specify the Web App GUID"));
+    WebAppGUIDTextCtr->SetHint("{XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX}");
     WebAppStaticBoxSizerGrid->Add(WebAppGUIDTextCtr, 1, wxEXPAND | wxALL, 5);
 
     wxHyperlinkCtrl* WebAppLink = new wxHyperlinkCtrl(network_panel, wxID_STATIC, _("More information about WebApp"), mmex::weblink::WebApp);
     WebAppStaticBoxSizer->Add(WebAppLink, wxSizerFlags(g_flagsV).Border(wxLEFT, 10));
 
     // Proxy Settings
-    wxStaticBox* proxyStaticBox = new wxStaticBox(network_panel, wxID_STATIC, _("Proxy Settings"));
+    wxStaticBox* proxyStaticBox = new wxStaticBox(network_panel, wxID_STATIC, _("Proxy"));
     SetBoldFont(proxyStaticBox);
     wxStaticBoxSizer* proxyStaticBoxSizer = new wxStaticBoxSizer(proxyStaticBox, wxVERTICAL);
     networkPanelSizer->Add(proxyStaticBoxSizer, wxSizerFlags(g_flagsExpand).Proportion(0));
@@ -115,7 +116,7 @@ void OptionSettingsNet::Create()
     proxyStaticBoxSizer->Add(flex_sizer3, wxSizerFlags(g_flagsExpand).Proportion(0));
 
     //Usage data send
-    wxStaticBox* usageStaticBox = new wxStaticBox(network_panel, wxID_STATIC, _("Usage statistics"));
+    wxStaticBox* usageStaticBox = new wxStaticBox(network_panel, wxID_STATIC, _("Usage Statistics"));
     SetBoldFont(usageStaticBox);
     wxStaticBoxSizer* usageStaticBoxSizer = new wxStaticBoxSizer(usageStaticBox, wxVERTICAL);
     networkPanelSizer->Add(usageStaticBoxSizer, wxSizerFlags(g_flagsExpand).Proportion(0));
@@ -189,7 +190,7 @@ void OptionSettingsNet::Create()
 
     Fit();
     network_panel->SetMinSize(network_panel->GetBestVirtualSize());
-    network_panel->SetScrollRate(1, 1);
+    network_panel->SetScrollRate(6, 6);
 }
 
 void OptionSettingsNet::OnProxyChanged(wxCommandEvent& WXUNUSED(event))
@@ -204,14 +205,14 @@ void OptionSettingsNet::OnUpdateCheckChanged(wxCommandEvent& WXUNUSED(event))
 
 bool OptionSettingsNet::SaveSettings()
 {
-    Model_Setting::instance().Set("PROXYIP", m_proxy_address->GetValue());
+    Model_Setting::instance().Set("PROXYIP", m_proxy_address->GetValue().Trim(false).Trim());
     Model_Setting::instance().Set("PROXYPORT", m_proxy_port->GetValue());
 
     wxTextCtrl* WebAppURL = static_cast<wxTextCtrl*>(FindWindow(ID_DIALOG_OPTIONS_TEXTCTRL_WEBAPPURL));
-    Model_Infotable::instance().Set("WEBAPPURL", WebAppURL->GetValue());
+    Model_Infotable::instance().Set("WEBAPPURL", WebAppURL->GetValue().Trim(false).Trim());
 
     wxTextCtrl* WebAppGUID = static_cast<wxTextCtrl*>(FindWindow(ID_DIALOG_OPTIONS_TEXTCTRL_WEBAPPGUID));
-    Model_Infotable::instance().Set("WEBAPPGUID", WebAppGUID->GetValue());
+    Model_Infotable::instance().Set("WEBAPPGUID", WebAppGUID->GetValue().Trim(false).Trim());
 
     Option::instance().SendUsageStatistics(m_send_data->GetValue());
     Option::instance().CheckNewsOnStartup(m_check_news->GetValue());

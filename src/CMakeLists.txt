@@ -109,6 +109,8 @@ add_executable(${MMEX_EXE} WIN32 MACOSX_BUNDLE
     filtertrans.h
     filtertransdialog.cpp
     filtertransdialog.h
+    fusedtransaction.cpp
+    fusedtransaction.h
     general_report_manager.cpp
     general_report_manager.h
     images_list.cpp
@@ -174,6 +176,8 @@ add_executable(${MMEX_EXE} WIN32 MACOSX_BUNDLE
     relocatecategorydialog.h
     relocatepayeedialog.cpp
     relocatepayeedialog.h
+    relocatetagdialog.cpp
+    relocatetagdialog.h
     resource.h
     singleton.h
     sharetransactiondialog.cpp
@@ -186,6 +190,8 @@ add_executable(${MMEX_EXE} WIN32 MACOSX_BUNDLE
     stockspanel.h
     stocks_list.cpp
     stocks_list.h
+    tagdialog.cpp
+    tagdialog.h
     themes.cpp
     themes.h
     transdialog.cpp
@@ -243,7 +249,8 @@ add_executable(${MMEX_EXE} WIN32 MACOSX_BUNDLE
     db/DB_Table_Splittransactions_V1.h
     db/DB_Table_Stockhistory_V1.h
     db/DB_Table_Stock_V1.h
-    db/DB_Table_Subcategory_V1.h
+    db/DB_Table_Tag_V1.h
+    db/DB_Table_Taglink_V1.h
     db/DB_Table_Translink_V1.h
     db/DB_Table_Usage_V1.h
 
@@ -324,8 +331,10 @@ add_executable(${MMEX_EXE} WIN32 MACOSX_BUNDLE
     model/Model_Stock.h
     model/Model_StockHistory.cpp
     model/Model_StockHistory.h
-    model/Model_Subcategory.cpp
-    model/Model_Subcategory.h
+    model/Model_Tag.cpp
+    model/Model_Tag.h
+    model/Model_Taglink.cpp
+    model/Model_Taglink.h
     model/Model_Translink.cpp
     model/Model_Translink.h
     model/Model_Usage.cpp
@@ -374,7 +383,6 @@ target_link_libraries(${MMEX_EXE} PUBLIC
     HTML-template
     CURL::libcurl
     fmt
-    lunasvg
     LuaGlue
     Lua)
 

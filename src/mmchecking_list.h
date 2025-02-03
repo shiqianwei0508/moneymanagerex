@@ -2,7 +2,7 @@
 Copyright (C) 2006 Madhan Kanagavel
 Copyright (C) 2011, 2012 Stefano Giorgio
 Copyright (C) 2013, 2014, 2020, 2021 Nikolay Akimov
-Copyright (C) 2021, 2022 Mark Whalley (mark@ipx.co.uk)
+Copyright (C) 2021-2024 Mark Whalley (mark@ipx.co.uk)
 
  This program is free software; you can redistribute it and/or modify
  it under the terms of the GNU General Public License as published by
@@ -24,55 +24,60 @@ Copyright (C) 2021, 2022 Mark Whalley (mark@ipx.co.uk)
 
 #include "mmpanelbase.h"
 #include "mmcheckingpanel.h"
+#include "fusedtransaction.h"
 
 class mmCheckingPanel;
 
 class TransactionListCtrl : public mmListCtrl
 {
 public:
-
     TransactionListCtrl(mmCheckingPanel* cp
         , wxWindow* parent
         , const wxWindowID id = wxID_ANY);
 
     ~TransactionListCtrl();
 
-    void createColumns(mmListCtrl &lst);
-    Model_Checking::Full_Data_Set m_trans;
+    Fused_Transaction::Full_Data_Set m_trans;
     void markSelectedTransaction();
     void DeleteTransactionsByStatus(const wxString& status);
-    void DeleteViewedTransactions();
+    void resetColumns();
+
 public:
     enum EColumn
     {
         COL_IMGSTATUS = 0,
         COL_ID,
         COL_DATE,
+        COL_TIME,
         COL_NUMBER,
         COL_ACCOUNT,
         COL_PAYEE_STR,
         COL_STATUS,
         COL_CATEGORY,
+        COL_TAGS,
         COL_WITHDRAWAL,
         COL_DEPOSIT,
         COL_BALANCE,
         COL_CREDIT,
         COL_NOTES,
+        COL_DELETEDTIME,
         COL_UDFC01,
         COL_UDFC02,
         COL_UDFC03,
         COL_UDFC04,
         COL_UDFC05,
-        COL_MAX, // number of columns
-        COL_DEF_SORT = COL_DATE, // don't omit any columns before this
-        COL_DEF_SORT2 = COL_ID 
+        COL_UPDATEDTIME,
+        COL_SN,
+        COL_size, // number of columns
+        COL_def_sort = COL_DATE, // don't omit any columns before this
+        COL_def_sort2 = COL_ID 
     };
-    EColumn toEColumn(long col);
-public:
-    EColumn g_sortcol; // index of primary column to sort by
-    EColumn prev_g_sortcol; // index of secondary column to sort by
-    bool g_asc; // asc\desc sorting for primary sort column
-    bool prev_g_asc; // asc\desc sorting for secondary sort column
+    EColumn toEColumn(const unsigned long col);
+
+    EColumn g_sortcol = COL_def_sort; // index of primary column to sort by
+    EColumn prev_g_sortcol = COL_def_sort2; // index of secondary column to sort by
+    bool g_asc = true; // asc\desc sorting for primary sort column
+    bool prev_g_asc = true; // asc\desc sorting for secondary sort column
 
     bool getSortOrder() const;
     EColumn getSortColumn() const { return m_sortCol; }
@@ -84,11 +89,14 @@ public:
     void setColumnImage(EColumn col, int image);
 public:
     void OnNewTransaction(wxCommandEvent& event);
-    void OnNewTransferTransaction(wxCommandEvent& event);
     void OnDeleteTransaction(wxCommandEvent& event);
+    void OnRestoreTransaction(wxCommandEvent& event);
     void OnDeleteViewedTransaction(wxCommandEvent& event);
+    void OnRestoreViewedTransaction(wxCommandEvent&);
     void OnEditTransaction(wxCommandEvent& event);
     void OnDuplicateTransaction(wxCommandEvent& event);
+    void OnEnterScheduled(wxCommandEvent& event);
+    void OnSkipScheduled(wxCommandEvent& event);
     void OnSetUserColour(wxCommandEvent& event);
     void OnMoveTransaction(wxCommandEvent& event);
     void OnOpenAttachment(wxCommandEvent& event);
@@ -100,10 +108,9 @@ public:
     void refreshVisualList(bool filter = true);
     void sortTable();
 public:
-    std::vector<int> getSelectedForCopy() const;
-
-    std::vector<int> getSelectedId() const;
-    void setSelectedID(int v);
+    std::vector<Fused_Transaction::IdRepeat> getSelectedForCopy() const;
+    std::vector<Fused_Transaction::IdRepeat> getSelectedId() const;
+    void setSelectedID(Fused_Transaction::IdRepeat sel_id);
     void doSearchText(const wxString& value);
     /* Getter for Virtual List Control */
     const wxString getItem(long item, long column, bool realenum = false) const;
@@ -115,9 +122,9 @@ protected:
 private:
     void markItem(long selectedItem);
 
-    std::vector<int> m_selectedForCopy; // the copied transactions (held for pasting)
-    std::vector<int> m_pasted_id;       // the last pasted transactions
-    std::vector<int> m_selected_id;     // the selected transactions
+    std::vector<Fused_Transaction::IdRepeat> m_selectedForCopy; // the copied transactions (held for pasting)
+    std::vector<Fused_Transaction::IdRepeat> m_pasted_id;       // the last pasted transactions
+    std::vector<Fused_Transaction::IdRepeat> m_selected_id;     // the selected transactions
     enum
     {
         MENU_TREEPOPUP_MARKRECONCILED = wxID_HIGHEST + 150,
@@ -131,6 +138,8 @@ private:
         MENU_TREEPOPUP_VIEW_SPLIT_CATEGORIES,
         MENU_TREEPOPUP_ORGANIZE_ATTACHMENTS,
         MENU_TREEPOPUP_CREATE_REOCCURANCE,
+        MENU_TREEPOPUP_FIND,
+        MENU_TREEPOPUP_COPYTEXT,
         MENU_SUBMENU_MARK_ALL,
 
         MENU_VIEW_,
@@ -142,6 +151,8 @@ private:
         MENU_ON_PASTE_TRANSACTION,
         MENU_ON_NEW_TRANSACTION,
         MENU_ON_DUPLICATE_TRANSACTION,
+        MENU_ON_ENTER_SCHEDULED,
+        MENU_ON_SKIP_SCHEDULED,
 
         MENU_ON_SET_UDC0, //Default color
         MENU_ON_SET_UDC1, //User defined color 1
@@ -152,22 +163,24 @@ private:
         MENU_ON_SET_UDC6, //User defined color 6
         MENU_ON_SET_UDC7, //User defined color 7
 
-        MENU_TREEPOPUP_NEW_WITHDRAWAL,
-        MENU_TREEPOPUP_NEW_DEPOSIT,
-        MENU_TREEPOPUP_NEW_TRANSFER,
+        MENU_TREEPOPUP_WITHDRAWAL,
+        MENU_TREEPOPUP_DEPOSIT,
+        MENU_TREEPOPUP_TRANSFER,
         MENU_TREEPOPUP_EDIT2,
         MENU_TREEPOPUP_MOVE2,
         MENU_TREEPOPUP_DELETE2,
         MENU_TREEPOPUP_DELETE_VIEWED,
         MENU_TREEPOPUP_DELETE_FLAGGED,
         MENU_TREEPOPUP_DELETE_UNRECONCILED,
+        MENU_TREEPOPUP_RESTORE,
+        MENU_TREEPOPUP_RESTORE_VIEWED,
         ID_PANEL_CHECKING_STATIC_BITMAP_VIEW,
     };
 private:
     DECLARE_NO_COPY_CLASS(TransactionListCtrl)
     wxDECLARE_EVENT_TABLE();
 
-    mmCheckingPanel* m_cp;
+    mmCheckingPanel* m_cp = nullptr;
 
     wxSharedPtr<wxListItemAttr> m_attr1;  // style1
     wxSharedPtr<wxListItemAttr> m_attr2;  // style2
@@ -188,8 +201,8 @@ private:
 
     void OnMouseRightClick(wxMouseEvent& event);
     void OnListLeftClick(wxMouseEvent& event);
-    void OnListItemSelected(wxListEvent& event);
-    void OnListItemDeSelected(wxListEvent& event);
+    void OnListItemSelected(wxListEvent&);
+    void OnListItemDeSelected(wxListEvent&);
     void OnListItemActivated(wxListEvent& event);
     void OnMarkTransaction(wxCommandEvent& event);
     void OnListKeyDown(wxListEvent& event);
@@ -198,41 +211,88 @@ private:
     void OnCopy(wxCommandEvent& WXUNUSED(event));
     void OnPaste(wxCommandEvent& WXUNUSED(event));
     void OnListItemFocused(wxListEvent& WXUNUSED(event));
-    int OnPaste(Model_Checking::Data* tran);
+    int64 OnPaste(Model_Checking::Data* tran);
 
-    bool TransactionLocked(int AccountID, const wxString& transdate);
+    bool TransactionLocked(int64 AccountID, const wxString& transdate);
     void FindSelectedTransactions();
     bool CheckForClosedAccounts();
-    void setExtraTransactionData(bool single);
+    void setExtraTransactionData(const bool single);
+    template<class Compare>
+    void SortBy(Compare comp, bool ascend);
     void SortTransactions(int sortcol, bool ascend);
+    void findInAllTransactions(wxCommandEvent&);
+    void OnCopyText(wxCommandEvent&);
+    int getColumnFromPosition(int xPos);
 private:
     /* The topmost visible item - this will be used to set
     where to display the list again after refresh */
-    long m_topItemIndex;
-    EColumn m_sortCol;
+    long m_topItemIndex = -1;
+    EColumn m_sortCol = COL_def_sort;
     wxString m_today;
-    bool m_firstSort;
+    bool m_firstSort = true;
+    wxString rightClickFilter_;
+    wxString copyText_;
 };
 
 //----------------------------------------------------------------------------
 
 inline bool TransactionListCtrl::getSortOrder() const { return m_asc; }
-inline std::vector<int> TransactionListCtrl::getSelectedForCopy() const { return m_selectedForCopy; }
+inline std::vector<Fused_Transaction::IdRepeat> TransactionListCtrl::getSelectedForCopy() const { return m_selectedForCopy; }
 
-inline std::vector<int> TransactionListCtrl::getSelectedId() const { return m_selected_id; }
+inline std::vector<Fused_Transaction::IdRepeat> TransactionListCtrl::getSelectedId() const { return m_selected_id; }
 
 inline void TransactionListCtrl::setVisibleItemIndex(long v) { m_topItemIndex = v; }
 
 #endif // MM_EX_CHECKING_LIST_H_
 
-inline static bool SorterByUDFC01(const Model_Checking::Full_Data& i, const Model_Checking::Full_Data& j) { return (i.UDFC01 < j.UDFC01); }
-inline static bool SorterByUDFC02(const Model_Checking::Full_Data& i, const Model_Checking::Full_Data& j) { return (i.UDFC02 < j.UDFC02); }
-inline static bool SorterByUDFC03(const Model_Checking::Full_Data& i, const Model_Checking::Full_Data& j) { return (i.UDFC03 < j.UDFC03); }
-inline static bool SorterByUDFC04(const Model_Checking::Full_Data& i, const Model_Checking::Full_Data& j) { return (i.UDFC04 < j.UDFC04); }
-inline static bool SorterByUDFC05(const Model_Checking::Full_Data& i, const Model_Checking::Full_Data& j) { return (i.UDFC05 < j.UDFC05); }
+inline static bool SorterByUDFC01(
+    const Model_Checking::Full_Data& i, const Model_Checking::Full_Data& j
+) {
+    return (i.UDFC_content[0] < j.UDFC_content[0]);
+}
+inline static bool SorterByUDFC02(
+    const Model_Checking::Full_Data& i, const Model_Checking::Full_Data& j
+) {
+    return (i.UDFC_content[1] < j.UDFC_content[1]);
+}
+inline static bool SorterByUDFC03(
+    const Model_Checking::Full_Data& i, const Model_Checking::Full_Data& j
+) {
+    return (i.UDFC_content[2] < j.UDFC_content[2]);
+}
+inline static bool SorterByUDFC04(
+    const Model_Checking::Full_Data& i, const Model_Checking::Full_Data& j
+) {
+    return (i.UDFC_content[3] < j.UDFC_content[3]);
+}
+inline static bool SorterByUDFC05(
+    const Model_Checking::Full_Data& i, const Model_Checking::Full_Data& j
+) {
+    return (i.UDFC_content[4] < j.UDFC_content[4]);
+}
 
-inline static bool SorterByUDFC01_val(const Model_Checking::Full_Data& i, const Model_Checking::Full_Data& j) { return (i.UDFC01_val < j.UDFC01_val); }
-inline static bool SorterByUDFC02_val(const Model_Checking::Full_Data& i, const Model_Checking::Full_Data& j) { return (i.UDFC02_val < j.UDFC02_val); }
-inline static bool SorterByUDFC03_val(const Model_Checking::Full_Data& i, const Model_Checking::Full_Data& j) { return (i.UDFC03_val < j.UDFC03_val); }
-inline static bool SorterByUDFC04_val(const Model_Checking::Full_Data& i, const Model_Checking::Full_Data& j) { return (i.UDFC04_val < j.UDFC04_val); }
-inline static bool SorterByUDFC05_val(const Model_Checking::Full_Data& i, const Model_Checking::Full_Data& j) { return (i.UDFC05_val < j.UDFC05_val); }
+inline static bool SorterByUDFC01_val(
+    const Model_Checking::Full_Data& i, const Model_Checking::Full_Data& j
+) {
+    return (i.UDFC_value[0] < j.UDFC_value[0]);
+}
+inline static bool SorterByUDFC02_val(
+    const Model_Checking::Full_Data& i, const Model_Checking::Full_Data& j
+) {
+    return (i.UDFC_value[1] < j.UDFC_value[1]);
+}
+inline static bool SorterByUDFC03_val(
+    const Model_Checking::Full_Data& i, const Model_Checking::Full_Data& j
+) {
+    return (i.UDFC_value[2] < j.UDFC_value[2]);
+}
+inline static bool SorterByUDFC04_val(
+    const Model_Checking::Full_Data& i, const Model_Checking::Full_Data& j
+) {
+    return (i.UDFC_value[3] < j.UDFC_value[3]);
+}
+inline static bool SorterByUDFC05_val(
+    const Model_Checking::Full_Data& i, const Model_Checking::Full_Data& j
+) {
+    return (i.UDFC_value[4] < j.UDFC_value[4]);
+}

@@ -34,7 +34,6 @@ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #include <wx/mstream.h>
 #include <wx/tokenzr.h>
 #include <memory>
-//#include "../3rd/lunasvg/include/lunasvg.h"
 
 #include <array>
 
@@ -47,7 +46,8 @@ static const std::map<std::string, std::pair<int, bool>> iconName2enum = {
     { "CATEGORY.svg", { CATEGORY, false } },
     { "PAYEE.svg", { PAYEE, false } },
     { "CURR.svg", { CURR, false } },
-    { "FILTER.svg", { FILTER, false } }, 
+    { "TAG.svg", { TAG, false } },
+    { "FILTER.svg", { FILTER, false } },
     { "GRM.svg", { GRM, false } },
     { "OPTIONS.svg", { OPTIONS, false } },
     { "NEW_TRX.svg", { NEW_TRX, false } },
@@ -75,9 +75,10 @@ static const std::map<std::string, std::pair<int, bool>> iconName2enum = {
     { "ASSET_NORMAL.svg", { ASSET_NORMAL, true } },
     { "ACCOUNT_CLOSED.svg", { ACCOUNT_CLOSED, true } },
     { "RECURRING.svg", { RECURRING, true } },
+    { "TRASH.svg", { TRASH, true } },
     { "BUDGET.svg", { BUDGET, true } },
     { "PIE_CHART.svg", { PIE_CHART, true } },
-     
+
     // Status
     { "UNRECONCILED.svg", { UNRECONCILED, false } },
     { "RECONCILED.svg", { RECONCILED, false } },
@@ -103,6 +104,7 @@ static const std::map<std::string, std::pair<int, bool>> iconName2enum = {
     { "OTHER.svg", { OTHER, false } },
 
     //Controls
+    { "CALCULATOR.svg", { CALCULATOR, false } },
     { "CLEAR.svg", { CLEAR, false } },
     { "CLIP.svg", { CLIP, false } },
     { "DOWNARROW.svg", { DOWNARROW, false } },
@@ -186,7 +188,6 @@ const std::vector<std::pair<int, int> > sizes = { {0, 16}, {1, 24}, {2, 32}, {3,
 const int mmBitmapButtonSize = 16;
 bool darkFound, darkMode;
 
-//static wxSharedPtr<wxBitmap> programIcons[numSizes][MAX_PNG];
 Document metaData_doc;
 
 // Using SVG and wxBitmapBundle for better HiDPI support.
@@ -200,6 +201,7 @@ static const std::map<int, wxBitmapBundle> navtree_images(const int size)
         { HOUSE_PNG, mmBitmapBundle(png::NAV_HOME, size) }
         , { ALLTRANSACTIONS_PNG, mmBitmapBundle(png::ALLTRANSACTIONS, size) }
         , { SCHEDULE_PNG, mmBitmapBundle(png::RECURRING, size) }
+        , { TRASH_PNG, mmBitmapBundle(png::TRASH, size) }
         , { CALENDAR_PNG, mmBitmapBundle(png::BUDGET, size) }
         , { PIECHART_PNG, mmBitmapBundle(png::PIE_CHART, size) }
         , { HELP_PNG, mmBitmapBundle(png::NAV_HELP, size) }
@@ -241,8 +243,6 @@ static const std::map<int, wxBitmapBundle> acc_images(int size)
 }
 
 
-//std::map<int, wxBitmap> gCachedBitmaps;
-
 wxVector<wxBitmapBundle> navtree_images_list(const int size)
 {
     int x = (size > 0) ? size : Option::instance().getIconSize();
@@ -256,53 +256,8 @@ wxVector<wxBitmapBundle> navtree_images_list(const int size)
     return (images);
 }
 
-/*wxImageList* navtree_images_list(const int size, const double dpiScale)
-{
-    int x = (size > 0) ? size : Option::instance().getIconSize();
-    if (x < 16) x = 16;
-    if (x > 48) x = 48;
-    wxImageList* imageList = createImageList(x);
-    for (const auto& img : navtree_images(x))
-    {
-        auto &bundle = img.second;
-        wxSize size = bundle.GetDefaultSize();
-        wxASSERT(size.GetHeight() == x && size.GetWidth() == x);
 
-        gCachedBitmaps[img.first] = bundle.GetBitmap(size*dpiScale);
-        imageList->Add(gCachedBitmaps[img.first]);
-    }
-    for (const auto& img : acc_images(x))
-    {
-        auto &bundle = img.second;
-        wxSize size = bundle.GetDefaultSize();
-        wxASSERT(size.GetHeight() == x && size.GetWidth() == x);
-
-        gCachedBitmaps[img.first] = bundle.GetBitmap(size*dpiScale);
-        imageList->Add(gCachedBitmaps[img.first]);
-    }
-
-    return imageList;
-}*/
-
-/*wxBitmap* CreateBitmapFromRGBA(unsigned char *rgba, int size)
-{
-    int totalSize = size * size;
-    unsigned char *data = static_cast<unsigned char *> (malloc (totalSize * 3));
-    unsigned char *alpha = static_cast<unsigned char *> (malloc (totalSize));
-
-    for (int i = 0; i < totalSize; i++)
-    {
-        data[(3 * i)] = rgba[(4 * i)];
-        data[(3 * i) + 1] = rgba[(4 * i) + 1];
-        data[(3 * i) + 2] = rgba[(4 * i) + 2];
-        alpha[i] = rgba[(4 * i) + 3];
-    }
-
-    wxImage image (size, size, data, alpha);
-    return (new wxBitmap (image));
-}*/
-
-static unsigned int getIconSizeIdx(const int iconSize)
+static int getIconSizeIdx(const int iconSize)
 {
     const int x = (iconSize > 0) ? iconSize : Option::instance().getIconSize();
     auto it = find_if(sizes.begin(), sizes.end(), [x](const std::pair<int, int>& p) { return p.second == x; });
@@ -426,11 +381,6 @@ bool processThemes(wxString themeDir, wxString myTheme, bool metaPhase)
                 themeStream.Read(memOut);
                 const wxStreamBuffer* buffer = memOut.GetOutputStreamBuffer();
 
-
-                //std::unique_ptr<lunasvg::Document> document = lunasvg::Document::loadFromData(static_cast<char *>(buffer->GetBufferStart()), buffer->GetBufferSize());
-                //if (!document)
-                //    continue;
-
                 int svgEnum = iconName2enum.find(fileName)->second.first;
                 for(const auto &sizePair : sizes)
                 {
@@ -442,23 +392,6 @@ bool processThemes(wxString themeDir, wxString myTheme, bool metaPhase)
                                                                 )
                                                   );
                 }
-
-                /*std::uint32_t bgColor = 0;
-                if (iconName2enum.find(fileName)->second.second)
-                    bgColor = bgStringConv;
-
-                lunasvg::Bitmap bitmap;
-
-                // Generate bitmaps at the resolutions used by the program - 16, 24, 32, 48
-
-                for (const auto& i : sizes)
-                {
-                    bitmap = document->renderToBitmap(i.second, i.second, bgColor);
-                    if (!bitmap.valid())
-                        continue;
-                    programIcons[i.first][svgEnum] = CreateBitmapFromRGBA(bitmap.data(), i.second);
-                }*/
-
             }
         }
         cont = directory.GetNext(&filename);
@@ -476,9 +409,9 @@ bool checkThemeContents(wxArrayString *filesinTheme)
     
     for (int i = 0; !neededFiles[i].IsEmpty(); i++)
     {
-        wxString realName = (darkFound && darkMode) ? neededFiles[i].AfterLast('-') : neededFiles[i];
+        const wxString realName = (darkFound && darkMode) ? neededFiles[i].AfterLast('-') : neededFiles[i];
         if (wxNOT_FOUND == filesinTheme->Index(realName)) {
-            wxMessageBox(wxString::Format(_("File '%s' missing or invalid in chosen theme '%s'")
+            wxMessageBox(wxString::Format(_("File '%1$s' missing or invalid in chosen theme '%2$s'")
                 , neededFiles[i], Model_Setting::instance().Theme()), _("Warning"), wxOK | wxICON_WARNING);
             success = false;
         }
@@ -489,7 +422,7 @@ bool checkThemeContents(wxArrayString *filesinTheme)
     {
         if (std::get<2>(it.second) && mmThemeMetaString(it.first).IsEmpty())
         {
-            wxMessageBox(wxString::Format(_("Metadata '%s' missing in chosen theme '%s'")
+            wxMessageBox(wxString::Format(_("Metadata '%1$s' missing in chosen theme '%2$s'")
                 , std::get<0>(it.second), Model_Setting::instance().Theme()), _("Warning"), wxOK | wxICON_WARNING);
             success = false;
         }
@@ -522,9 +455,9 @@ bool checkThemeContents(wxArrayString *filesinTheme)
     {
         missingIcons.RemoveLast(2);
         if (erroredIcons > maxCutOff) {
-            missingIcons << " " << _("and more...");
+            missingIcons << " " << _u("and more…");
         }
-        wxMessageBox(wxString::Format(_("There are %d missing or invalid icons in chosen theme '%s': %s")
+        wxMessageBox(wxString::Format(_("There are %1$d missing or invalid icons in chosen theme '%2$s': %3$s")
             , erroredIcons, Model_Setting::instance().Theme(), missingIcons), _("Warning"), wxOK | wxICON_WARNING);
     }
     return success;

@@ -62,7 +62,7 @@ void OptionSettingsAttachment::Create()
     attachmentPanelSizer0->Add(attachment_panel, wxSizerFlags(g_flagsExpand).Proportion(0));
 
     //Attachments
-    wxStaticBox* attachmentStaticBox = new wxStaticBox(attachment_panel, wxID_ANY, _("Attachments Settings"));
+    wxStaticBox* attachmentStaticBox = new wxStaticBox(attachment_panel, wxID_ANY, _("Attachments"));
     SetBoldFont(attachmentStaticBox);
     wxStaticBoxSizer* attachmentStaticBoxSizer = new wxStaticBoxSizer(attachmentStaticBox, wxVERTICAL);
 
@@ -92,7 +92,7 @@ void OptionSettingsAttachment::Create()
     m_attachments_path->ChangeValue(attachmentFolder);
 
     wxButton* AttachmentsFolderButton = new wxButton(attachment_panel, ID_DIALOG_OPTIONS_BUTTON_ATTACHMENTSFOLDER, "..."
-        , wxDefaultPosition, wxSize(Option::instance().getIconSize(), -1), 0);
+        , wxDefaultPosition, m_attachments_path->GetSizeFromTextSize(GetTextExtent("...")), 0);
     mmToolTip(AttachmentsFolderButton, _("Browse for folder"));
 
     attachDefinedSizer->Add(m_attachments_path, g_flagsExpand);
@@ -109,10 +109,10 @@ void OptionSettingsAttachment::Create()
     wxStaticBoxSizer* attachmentStaticBoxSizerLegend = new wxStaticBoxSizer(attachmentStaticBoxLegend, wxVERTICAL);
     attachmentStaticBoxSizer->Add(attachmentStaticBoxSizerLegend, wxSizerFlags(g_flagsExpand).Proportion(0));
 
-    wxString legend = wxString::Format(_("%s -> User document directory"), ATTACHMENTS_FOLDER_DOCUMENTS);
-    legend += "\n" + wxString::Format(_("%s -> User profile folder"), ATTACHMENTS_FOLDER_USERPROFILE);
-    legend += "\n" + wxString::Format(_("%s -> Folder of .MMB database file"), ATTACHMENTS_FOLDER_DATABASE);
-    legend += "\n" + wxString::Format(_("%s -> MMEX Application data folder"), ATTACHMENTS_FOLDER_APPDATA);
+    wxString legend = wxString::Format(_("%s : User document directory"), ATTACHMENTS_FOLDER_DOCUMENTS);
+    legend += "\n" + wxString::Format(_("%s : User profile folder"), ATTACHMENTS_FOLDER_USERPROFILE);
+    legend += "\n" + wxString::Format(_("%s : Folder of .MMB database file"), ATTACHMENTS_FOLDER_DATABASE);
+    legend += "\n" + wxString::Format(_("%s : MMEX Application data folder"), ATTACHMENTS_FOLDER_APPDATA);
     wxStaticText* legendStaticText = new wxStaticText(attachment_panel, wxID_STATIC, legend);
     attachmentStaticBoxSizerLegend->Add(legendStaticText);
     //End legend
@@ -128,23 +128,27 @@ void OptionSettingsAttachment::Create()
     const wxString attachmentFolderMac = Model_Infotable::instance().GetStringInfo("ATTACHMENTSFOLDER:Mac", FolderNotSet);
     const wxString attachmentFolderUnix = Model_Infotable::instance().GetStringInfo("ATTACHMENTSFOLDER:Uni", FolderNotSet);
 
-    if (mmPlatformType() != "Win")
+    const auto os = mmPlatformType();
+    if (os != "win")
     {
-        wxStaticText* attachmentFolderWinText = new wxStaticText(attachment_panel, wxID_STATIC, _("Windows folder -> ") + attachmentFolderWin.Left(50));
+        wxStaticText* attachmentFolderWinText = new wxStaticText(attachment_panel, wxID_STATIC
+            , wxString::Format(_("Windows folder: %s"), attachmentFolderWin.Left(50)));
         mmToolTip(attachmentFolderWinText, attachmentFolderWin);
         attachmentStaticBoxSizerInfo->Add(attachmentFolderWinText);
     }
 
-    if (mmPlatformType() != "Mac")
+    if (os != "mac")
     {
-        wxStaticText* attachmentFolderMacText = new wxStaticText(attachment_panel, wxID_STATIC, _("Mac folder -> ") + attachmentFolderMac.Left(50));
+        wxStaticText* attachmentFolderMacText = new wxStaticText(attachment_panel, wxID_STATIC
+            , wxString::Format(_("Mac folder: %s"), attachmentFolderMac.Left(50)));
         mmToolTip(attachmentFolderMacText, attachmentFolderMac);
         attachmentStaticBoxSizerInfo->Add(attachmentFolderMacText);
     }
 
-    if (mmPlatformType() != "Uni")
+    if (os != "uni")
     {
-        wxStaticText* attachmentFolderUnixText = new wxStaticText(attachment_panel, wxID_STATIC, _("Unix folder -> ") + attachmentFolderUnix.Left(50));
+        wxStaticText* attachmentFolderUnixText = new wxStaticText(attachment_panel, wxID_STATIC
+            , wxString::Format(_("Unix folder: %s"), attachmentFolderUnix.Left(50)));
         mmToolTip(attachmentFolderUnixText, attachmentFolderUnix);
         attachmentStaticBoxSizerInfo->Add(attachmentFolderUnixText);
     }
@@ -182,7 +186,7 @@ void OptionSettingsAttachment::Create()
 
     Fit();
     attachment_panel->SetMinSize(attachment_panel->GetBestVirtualSize());
-    attachment_panel->SetScrollRate(1, 1);
+    attachment_panel->SetScrollRate(6, 6);
 }
 
 void OptionSettingsAttachment::OnAttachmentsButton(wxCommandEvent& WXUNUSED(event))

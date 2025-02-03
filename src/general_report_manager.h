@@ -61,7 +61,7 @@ public:
 private:
     bool Create(wxWindow* parent
         , wxWindowID id = wxID_ANY
-        , const wxString& caption = _("General Reports Manager")
+        , const wxString& caption = _("General Report Manager")
         , const wxString& name = "General Reports Manager"
         , const wxPoint& pos = wxDefaultPosition
         , const wxSize& size = wxDefaultSize
@@ -80,12 +80,14 @@ private:
     void OnSqlTest(wxCommandEvent& event);
     void OnNewTemplate(wxCommandEvent& event);
     void OnItemRightClick(wxTreeEvent& event);
+    void OnRightClick(wxMouseEvent& event);
     void OnSelChanged(wxTreeEvent& event);
     //void OnLabelChanged(wxTreeEvent& event);
     void viewControls(bool enable);
-    void renameReport(int id);
-    bool DeleteReport(int id);
-    bool changeReportGroup(int id, bool ungroup);
+    void renameReport(int64 id);
+    bool DeleteReport(int64 id);
+    bool changeReportGroup(int64 id, bool ungroup);
+    void changeReportState(int64 id);
     bool renameReportGroup(const wxString& GroupName);
     void OnMenuSelected(wxCommandEvent& event);
     void newReport(int sample = ID_NEW_EMPTY);
@@ -101,19 +103,19 @@ private:
 
     std::vector <std::vector <wxString> > m_sqlQueryData;
 
-    wxSQLite3Database* m_db;
-    wxWebView* browser_;
+    wxSQLite3Database* m_db = nullptr;
+    wxWebView* browser_ = nullptr;
 
-    wxButton* m_buttonOpen;
-    wxButton* m_buttonSave;
-    wxButton* m_buttonSaveAs;
-    wxButton* m_buttonRun;
-    wxTreeCtrl* m_treeCtrl;
-    wxTreeCtrl *m_dbView;
-    sqlListCtrl* m_sqlListBox;
+    wxButton* m_buttonOpen = nullptr;
+    wxButton* m_buttonSave = nullptr;
+    wxButton* m_buttonSaveAs = nullptr;
+    wxButton* m_buttonRun = nullptr;
+    wxTreeCtrl* m_treeCtrl = nullptr;
+    wxTreeCtrl* m_dbView = nullptr;
+    sqlListCtrl* m_sqlListBox = nullptr;
     wxTreeItemId m_rootItem;
     wxTreeItemId m_selectedItemID;
-    int m_selectedReportID;
+    int64 m_selectedReportID = 0;
     wxString m_selectedGroup;
 
 #if wxUSE_DRAG_AND_DROP
@@ -143,6 +145,7 @@ private:
         ID_TEMPLATE,
         ID_DESCRIPTION,
         ID_REPORT_LIST,
+        ID_ACTIVE
     };
 
 };

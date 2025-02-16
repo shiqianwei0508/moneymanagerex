@@ -86,6 +86,28 @@ public:
         ICON_DOWNARROW
     };
 
+    enum EColumn
+    {
+        COL_ICON = 0,
+        COL_ID,
+        COL_PAYMENT_DATE,
+        COL_DUE_DATE,
+        COL_ACCOUNT,
+        COL_PAYEE,
+        COL_STATUS,
+        COL_CATEGORY,
+        COL_TAGS,
+        COL_TYPE,
+        COL_AMOUNT,
+        COL_FREQUENCY,
+        COL_REPEATS,
+        COL_AUTO,
+        COL_DAYS,
+        COL_NUMBER,
+        COL_NOTES,
+        COL_MAX, // number of columns
+    };
+
     mmBillsDepositsPanel(wxWindow *parent
         , wxWindowID winid = wxID_ANY
         , const wxPoint& pos = wxDefaultPosition
@@ -100,7 +122,7 @@ public:
     void updateBottomPanelData(int selIndex);
     void enableEditDeleteButtons(bool en);
     /* updates the Repeating transactions panel data */
-    int initVirtualListControl(int id = -1);
+    int initVirtualListControl(int64 id = -1);
     /* Getter for Virtual List Control */
     wxString getItem(long item, long column);
     void RefreshList();
@@ -108,12 +130,13 @@ public:
     int col_sort();
 
     const wxString GetFrequency(const Model_Billsdeposits::Data* item) const;
+    int GetNumRepeats(const Model_Billsdeposits::Data* item) const;
     const wxString GetRemainingDays(const Model_Billsdeposits::Data* item) const;
 
     wxString BuildPage() const;
     wxDate getToday() const;
 
-    void do_delete_custom_values(int id);
+    void do_delete_custom_values(int64 id);
 
 private:
     void CreateControls();
@@ -140,35 +163,14 @@ private:
 
 private:
     wxSharedPtr<mmFilterTransactionsDialog> transFilterDlg_;
-    billsDepositsListCtrl* listCtrlAccount_;
-    wxStaticText* m_infoText;
-    wxStaticText* m_infoTextMini;
+    billsDepositsListCtrl* listCtrlAccount_ = nullptr;
+    wxStaticText* m_infoText = nullptr;
+    wxStaticText* m_infoTextMini = nullptr;
     wxDate m_today;
-
-    enum EColumn
-    {
-        COL_ICON = 0,
-        COL_ID,
-        COL_PAYMENT_DATE,
-        COL_DUE_DATE,
-        COL_ACCOUNT,
-        COL_PAYEE,
-        COL_STATUS,
-        COL_CATEGORY,
-        COL_TYPE,
-        COL_AMOUNT,
-        COL_FREQUENCY,
-        COL_REPEATS,
-        COL_AUTO,
-        COL_DAYS,
-        COL_NUMBER,
-        COL_NOTES,
-        COL_MAX, // number of columns
-    };
 
     bool transFilterActive_;
     void OnFilterTransactions(wxCommandEvent& WXUNUSED(event));
-    wxButton* m_bitmapTransFilter;
+    wxButton* m_bitmapTransFilter = nullptr;
 
     wxArrayString tips_;
 };

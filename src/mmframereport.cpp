@@ -24,6 +24,7 @@
 #include "images_list.h"
 #include "mmframe.h"
 #include "reports/allreport.h"
+#include "mmTreeItemData.h"
 #include "model/Model_Budgetyear.h"
 #include "model/Model_Report.h"
 
@@ -116,7 +117,7 @@ private:
 
 void mmGUIFrame::DoUpdateReportNavigation(wxTreeItemId& parent_item)
 {
-    wxArrayString hidden_reports = Model_Infotable::instance().GetArrayStringSetting("HIDDEN_REPORTS");
+    wxArrayString hidden_reports = Model_Infotable::instance().getArrayString("HIDDEN_REPORTS");
 
     if (hidden_reports.Index("Cash Flow") == wxNOT_FOUND)
     {
@@ -165,7 +166,7 @@ void mmGUIFrame::DoUpdateReportNavigation(wxTreeItemId& parent_item)
 
     if (hidden_reports.Index("Income vs Expenses") == wxNOT_FOUND)
     {
-        wxTreeItemId incexpOverTime = m_nav_tree_ctrl->AppendItem(parent_item, _("Income vs Expenses"), img::PIECHART_PNG, img::PIECHART_PNG);
+        wxTreeItemId incexpOverTime = m_nav_tree_ctrl->AppendItem(parent_item, _("Income vs. Expenses"), img::PIECHART_PNG, img::PIECHART_PNG);
         m_nav_tree_ctrl->SetItemData(incexpOverTime, new mmTreeItemData("Income vs Expenses", new mmReportIncomeExpenses()));
 
         wxTreeItemId incexpMonthly = m_nav_tree_ctrl->AppendItem(incexpOverTime, _("Monthly"), img::PIECHART_PNG, img::PIECHART_PNG);
@@ -222,7 +223,7 @@ void mmGUIFrame::DoUpdateReportNavigation(wxTreeItemId& parent_item)
 
     ///////////////////////////////////////////////////////////////////
 
-    Model_Account::Data_Set investments_account = Model_Account::instance().find(Model_Account::ACCOUNTTYPE(Model_Account::all_type()[Model_Account::INVESTMENT], EQUAL));
+    Model_Account::Data_Set investments_account = Model_Account::instance().find(Model_Account::ACCOUNTTYPE(Model_Account::TYPE_STR_INVESTMENT, EQUAL));
     if (!investments_account.empty())
     {
         if (hidden_reports.Index("Stocks Report") == wxNOT_FOUND)
@@ -240,7 +241,7 @@ void mmGUIFrame::DoUpdateReportNavigation(wxTreeItemId& parent_item)
 void mmGUIFrame::DoUpdateGRMNavigation(wxTreeItemId& parent_item)
 {
     /*GRM Reports*/
-    auto records = Model_Report::instance().all();
+    auto records = Model_Report::instance().find(Model_Report::ACTIVE(1, EQUAL));
     //Sort by group name and report name
     std::sort(records.begin(), records.end(), SorterByREPORTNAME());
     std::stable_sort(records.begin(), records.end(), SorterByGROUPNAME());
@@ -253,6 +254,7 @@ void mmGUIFrame::DoUpdateGRMNavigation(wxTreeItemId& parent_item)
         if (group_name != record.GROUPNAME && !no_group)
         {
             group = m_nav_tree_ctrl->AppendItem(parent_item, wxGetTranslation(record.GROUPNAME), img::CUSTOMSQL_GRP_PNG, img::CUSTOMSQL_GRP_PNG);
+            m_nav_tree_ctrl->SetItemBold(group, true);
             m_nav_tree_ctrl->SetItemData(group, new mmTreeItemData(new mmGeneralGroupReport(record.GROUPNAME), record.GROUPNAME));
             group_name = record.GROUPNAME;
         }
@@ -266,7 +268,7 @@ void mmGUIFrame::DoUpdateGRMNavigation(wxTreeItemId& parent_item)
 void mmGUIFrame::DoUpdateFilterNavigation(wxTreeItemId& parent_item)
 {
 
-    wxArrayString filter_settings = Model_Infotable::instance().GetArrayStringSetting("TRANSACTIONS_FILTER", true);
+    wxArrayString filter_settings = Model_Infotable::instance().getArrayString("TRANSACTIONS_FILTER", true);
     for (const auto& data : filter_settings)
     {
         Document j_doc;
@@ -299,7 +301,7 @@ void mmGUIFrame::mmDoHideReportsDialog()
         "Stocks Report",
     };
 
-    wxArrayString stored_items = Model_Infotable::instance().GetArrayStringSetting("HIDDEN_REPORTS");
+    wxArrayString stored_items = Model_Infotable::instance().getArrayString("HIDDEN_REPORTS");
     wxArrayInt hidden_reports;
     wxArrayString reports_name;
     wxArrayString reports_name_i10n;
@@ -317,12 +319,12 @@ void mmGUIFrame::mmDoHideReportsDialog()
 
     if (reports.ShowModal() == wxID_OK)
     {
-        Model_Infotable::instance().Set("HIDDEN_REPORTS", "[]");
+        Model_Infotable::instance().setString("HIDDEN_REPORTS", "[]");
         const auto sel = reports.GetSelections();
         for (const auto& i : sel)
         {
             const auto& report_name = reports_name[i];
-            Model_Infotable::instance().Prepend("HIDDEN_REPORTS", report_name, -1);
+            Model_Infotable::instance().prependArrayItem("HIDDEN_REPORTS", report_name, -1);
         }
     }
     DoRecreateNavTreeControl();

@@ -1,7 +1,7 @@
 /*******************************************************
  Copyright (C) 2006 Madhan Kanagavel
  Copyright (C) 2012 - 2021 Nikolay Akimov
- Copyright (C) 2021 Mark Whalley (mark@ipx.co.uk)
+ Copyright (C) 2021,2024 Mark Whalley (mark@ipx.co.uk)
 
  This program is free software; you can redistribute it and/or modify
  it under the terms of the GNU General Public License as published by
@@ -38,7 +38,7 @@ mmAboutDialog::mmAboutDialog()
 mmAboutDialog::~mmAboutDialog()
 {
     const bool v = m_send_data->GetValue();
-    Option::instance().SendUsageStatistics(v);
+    Option::instance().setSendUsageStats(v);
 }
 
 
@@ -46,9 +46,8 @@ mmAboutDialog::mmAboutDialog(wxWindow* parent, int tabToOpenNo)
 {
     const wxString caption = (tabToOpenNo == 4)
         ? _("License agreement")
-        : wxString::Format("%s - %s", ::mmex::getProgramName(), ::mmex::getTitleProgramVersion());
+        : wxString::Format("%s %s", ::mmex::getProgramName(), ::mmex::getTitleProgramVersion());
     createWindow(parent, caption, tabToOpenNo);
-    SetMinClientSize(wxSize(300, 400));
 }
 
 bool mmAboutDialog::createWindow(wxWindow* parent
@@ -69,8 +68,10 @@ bool mmAboutDialog::createWindow(wxWindow* parent
     {
         createControls(tabToOpenNo);
         initControls();
+        SetMinSize(wxSize(400, 600));
         this->SetIcon(::mmex::getProgramIcon());
-        this->Centre();
+        Fit();
+        Centre();
     }
 
     return ok;
@@ -201,27 +202,27 @@ void mmAboutDialog::createControls(int tabToOpenNo)
     wxBoxSizer *privacySizer = new wxBoxSizer(wxVERTICAL);
     privacyTab->SetSizer(privacySizer);
 
-    aboutText_ = new wxHtmlWindow(aboutTab
+    aboutText_ = new mmHtmlWindow(aboutTab
         , wxID_ANY, wxDefaultPosition, wxDefaultSize
         , wxHW_SCROLLBAR_AUTO | wxSUNKEN_BORDER | wxHSCROLL | wxVSCROLL);
     aboutSizer->Add(aboutText_, g_flagsExpand);
 
-    authorsText_ = new wxHtmlWindow(authorsTab
+    authorsText_ = new mmHtmlWindow(authorsTab
         , wxID_ANY, wxDefaultPosition, wxDefaultSize
         , wxHW_SCROLLBAR_AUTO | wxSUNKEN_BORDER | wxHSCROLL | wxVSCROLL);
     authorsSizer->Add(authorsText_, g_flagsExpand);
 
-    sponsorsText_ = new wxHtmlWindow(sponsorsTab
+    sponsorsText_ = new mmHtmlWindow(sponsorsTab
         , wxID_ANY, wxDefaultPosition, wxDefaultSize
         , wxHW_SCROLLBAR_AUTO | wxSUNKEN_BORDER | wxHSCROLL | wxVSCROLL);
     sponsorsSizer->Add(sponsorsText_, g_flagsExpand);
 
-    licenseText_ = new wxHtmlWindow(licenseTab
+    licenseText_ = new mmHtmlWindow(licenseTab
         , wxID_ANY, wxDefaultPosition, wxDefaultSize
         , wxHW_SCROLLBAR_AUTO | wxSUNKEN_BORDER | wxHSCROLL | wxVSCROLL);
     licenseSizer->Add(licenseText_, g_flagsExpand);
 
-    privacyText_ = new wxHtmlWindow(privacyTab
+    privacyText_ = new mmHtmlWindow(privacyTab
         , wxID_ANY, wxDefaultPosition, wxDefaultSize
         , wxHW_SCROLLBAR_AUTO | wxSUNKEN_BORDER | wxHSCROLL | wxVSCROLL);
     privacySizer->Add(privacyText_, g_flagsExpand);
@@ -241,7 +242,7 @@ void mmAboutDialog::createControls(int tabToOpenNo)
     buttonPanelSizer->Add(m_send_data, g_flagsV);
 
     m_send_data->Show(tabToOpenNo == 4);
-    m_send_data->SetValue(Option::instance().SendUsageStatistics());
+    m_send_data->SetValue(Option::instance().getSendUsageStats());
 
     wxButton* buttonOk = new wxButton(buttonPanel, wxID_OK, _("&OK "));
     buttonOk->SetDefault();
@@ -249,8 +250,6 @@ void mmAboutDialog::createControls(int tabToOpenNo)
     buttonPanelSizer->Add(buttonOk, g_flagsCenter);
 
     aboutNotebook->ChangeSelection(tabToOpenNo);
-
-    GetSizer()->Fit(this);
 }
 
 void mmAboutDialog::handleLink(wxHtmlLinkEvent& event)

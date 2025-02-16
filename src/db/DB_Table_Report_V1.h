@@ -1,7 +1,7 @@
 ﻿// -*- C++ -*-
 //=============================================================================
 /**
- *      Copyright: (c) 2013 - 2022 Guan Lisheng (guanlisheng@gmail.com)
+ *      Copyright: (c) 2013 - 2025 Guan Lisheng (guanlisheng@gmail.com)
  *      Copyright: (c) 2017 - 2018 Stefano Giorgio (stef145g)
  *      Copyright: (c) 2022 Mark Whalley (mark@ipx.co.uk)
  *
@@ -12,7 +12,7 @@
  *      @brief
  *
  *      Revision History:
- *          AUTO GENERATED at 2022-09-28 23:10:47.317664.
+ *          AUTO GENERATED at 2025-02-04 16:22:14.834591.
  *          DO NOT EDIT!
  */
 //=============================================================================
@@ -49,7 +49,7 @@ struct DB_Table_REPORT_V1 : public DB_Table
 
     /** A container to hold a list of Data record pointers for the table in memory*/
     typedef std::vector<Self::Data*> Cache;
-    typedef std::map<int, Self::Data*> Index_By_Id;
+    typedef std::map<int64, Self::Data*> Index_By_Id;
     Cache cache_;
     Index_By_Id index_by_id_;
     Data* fake_; // in case the entity not found
@@ -64,7 +64,7 @@ struct DB_Table_REPORT_V1 : public DB_Table
     /** Removes all records stored in memory (cache) for the table*/ 
     void destroy_cache()
     {
-        std::for_each(cache_.begin(), cache_.end(), std::mem_fun(&Data::destroy));
+        std::for_each(cache_.begin(), cache_.end(), std::mem_fn(&Data::destroy));
         cache_.clear();
         index_by_id_.clear(); // no memory release since it just stores pointer and the according objects are in cache
     }
@@ -112,10 +112,10 @@ struct DB_Table_REPORT_V1 : public DB_Table
         db->Commit();
     }
     
-    struct REPORTID : public DB_Column<int>
+    struct REPORTID : public DB_Column<int64>
     { 
         static wxString name() { return "REPORTID"; } 
-        explicit REPORTID(const int &v, OP op = EQUAL): DB_Column<int>(v, op) {}
+        explicit REPORTID(const int64 &v, OP op = EQUAL): DB_Column<int64>(v, op) {}
     };
     
     struct REPORTNAME : public DB_Column<wxString>
@@ -130,10 +130,10 @@ struct DB_Table_REPORT_V1 : public DB_Table
         explicit GROUPNAME(const wxString &v, OP op = EQUAL): DB_Column<wxString>(v, op) {}
     };
     
-    struct ACTIVE : public DB_Column<int>
+    struct ACTIVE : public DB_Column<int64>
     { 
         static wxString name() { return "ACTIVE"; } 
-        explicit ACTIVE(const int &v, OP op = EQUAL): DB_Column<int>(v, op) {}
+        explicit ACTIVE(const int64 &v, OP op = EQUAL): DB_Column<int64>(v, op) {}
     };
     
     struct SQLCONTENT : public DB_Column<wxString>
@@ -174,7 +174,7 @@ struct DB_Table_REPORT_V1 : public DB_Table
     };
 
     /** Returns the column name as a string*/
-    static wxString column_to_name(COLUMN col)
+    static wxString column_to_name(const COLUMN col)
     {
         switch(col)
         {
@@ -214,21 +214,21 @@ struct DB_Table_REPORT_V1 : public DB_Table
         /** This is a instance pointer to itself in memory. */
         Self* table_;
     
-        int REPORTID;//  primary key
+        int64 REPORTID;//  primary key
         wxString REPORTNAME;
         wxString GROUPNAME;
-        int ACTIVE;
+        int64 ACTIVE;
         wxString SQLCONTENT;
         wxString LUACONTENT;
         wxString TEMPLATECONTENT;
         wxString DESCRIPTION;
 
-        int id() const
+        int64 id() const
         {
             return REPORTID;
         }
 
-        void id(int id)
+        void id(const int64 id)
         {
             REPORTID = id;
         }
@@ -243,7 +243,20 @@ struct DB_Table_REPORT_V1 : public DB_Table
             return this->id() < r->id();
         }
 
-        explicit Data(Self* table = 0) 
+        bool equals(const Data* r) const
+        {
+            if(REPORTID != r->REPORTID) return false;
+            if(!REPORTNAME.IsSameAs(r->REPORTNAME)) return false;
+            if(!GROUPNAME.IsSameAs(r->GROUPNAME)) return false;
+            if(ACTIVE != r->ACTIVE) return false;
+            if(!SQLCONTENT.IsSameAs(r->SQLCONTENT)) return false;
+            if(!LUACONTENT.IsSameAs(r->LUACONTENT)) return false;
+            if(!TEMPLATECONTENT.IsSameAs(r->TEMPLATECONTENT)) return false;
+            if(!DESCRIPTION.IsSameAs(r->DESCRIPTION)) return false;
+            return true;
+        }
+        
+        explicit Data(Self* table = nullptr ) 
         {
             table_ = table;
         
@@ -251,19 +264,21 @@ struct DB_Table_REPORT_V1 : public DB_Table
             ACTIVE = -1;
         }
 
-        explicit Data(wxSQLite3ResultSet& q, Self* table = 0)
+        explicit Data(wxSQLite3ResultSet& q, Self* table = nullptr )
         {
             table_ = table;
         
-            REPORTID = q.GetInt(0); // REPORTID
+            REPORTID = q.GetInt64(0); // REPORTID
             REPORTNAME = q.GetString(1); // REPORTNAME
             GROUPNAME = q.GetString(2); // GROUPNAME
-            ACTIVE = q.GetInt(3); // ACTIVE
+            ACTIVE = q.GetInt64(3); // ACTIVE
             SQLCONTENT = q.GetString(4); // SQLCONTENT
             LUACONTENT = q.GetString(5); // LUACONTENT
             TEMPLATECONTENT = q.GetString(6); // TEMPLATECONTENT
             DESCRIPTION = q.GetString(7); // DESCRIPTION
         }
+
+        Data(const Data& other) = default;
 
         Data& operator=(const Data& other)
         {
@@ -281,7 +296,7 @@ struct DB_Table_REPORT_V1 : public DB_Table
         }
 
         template<typename C>
-        bool match(const C &c) const
+        bool match(const C &) const
         {
             return false;
         }
@@ -343,13 +358,13 @@ struct DB_Table_REPORT_V1 : public DB_Table
         void as_json(PrettyWriter<StringBuffer>& json_writer) const
         {
             json_writer.Key("REPORTID");
-            json_writer.Int(this->REPORTID);
+            json_writer.Int64(this->REPORTID.GetValue());
             json_writer.Key("REPORTNAME");
             json_writer.String(this->REPORTNAME.utf8_str());
             json_writer.Key("GROUPNAME");
             json_writer.String(this->GROUPNAME.utf8_str());
             json_writer.Key("ACTIVE");
-            json_writer.Int(this->ACTIVE);
+            json_writer.Int64(this->ACTIVE.GetValue());
             json_writer.Key("SQLCONTENT");
             json_writer.String(this->SQLCONTENT.utf8_str());
             json_writer.Key("LUACONTENT");
@@ -363,10 +378,10 @@ struct DB_Table_REPORT_V1 : public DB_Table
         row_t to_row_t() const
         {
             row_t row;
-            row(L"REPORTID") = REPORTID;
+            row(L"REPORTID") = REPORTID.GetValue();
             row(L"REPORTNAME") = REPORTNAME;
             row(L"GROUPNAME") = GROUPNAME;
-            row(L"ACTIVE") = ACTIVE;
+            row(L"ACTIVE") = ACTIVE.GetValue();
             row(L"SQLCONTENT") = SQLCONTENT;
             row(L"LUACONTENT") = LUACONTENT;
             row(L"TEMPLATECONTENT") = TEMPLATECONTENT;
@@ -376,10 +391,10 @@ struct DB_Table_REPORT_V1 : public DB_Table
 
         void to_template(html_template& t) const
         {
-            t(L"REPORTID") = REPORTID;
+            t(L"REPORTID") = REPORTID.GetValue();
             t(L"REPORTNAME") = REPORTNAME;
             t(L"GROUPNAME") = GROUPNAME;
-            t(L"ACTIVE") = ACTIVE;
+            t(L"ACTIVE") = ACTIVE.GetValue();
             t(L"SQLCONTENT") = SQLCONTENT;
             t(L"LUACONTENT") = LUACONTENT;
             t(L"TEMPLATECONTENT") = TEMPLATECONTENT;
@@ -459,7 +474,7 @@ struct DB_Table_REPORT_V1 : public DB_Table
         wxString sql = wxEmptyString;
         if (entity->id() <= 0) //  new & insert
         {
-            sql = "INSERT INTO REPORT_V1(REPORTNAME, GROUPNAME, ACTIVE, SQLCONTENT, LUACONTENT, TEMPLATECONTENT, DESCRIPTION) VALUES(?, ?, ?, ?, ?, ?, ?)";
+            sql = "INSERT INTO REPORT_V1(REPORTNAME, GROUPNAME, ACTIVE, SQLCONTENT, LUACONTENT, TEMPLATECONTENT, DESCRIPTION, REPORTID) VALUES(?, ?, ?, ?, ?, ?, ?, ?)";
         }
         else
         {
@@ -477,8 +492,7 @@ struct DB_Table_REPORT_V1 : public DB_Table
             stmt.Bind(5, entity->LUACONTENT);
             stmt.Bind(6, entity->TEMPLATECONTENT);
             stmt.Bind(7, entity->DESCRIPTION);
-            if (entity->id() > 0)
-                stmt.Bind(8, entity->REPORTID);
+            stmt.Bind(8, entity->id() > 0 ? entity->REPORTID : newId());
 
             stmt.ExecuteUpdate();
             stmt.Finalize();
@@ -501,14 +515,14 @@ struct DB_Table_REPORT_V1 : public DB_Table
 
         if (entity->id() <= 0)
         {
-            entity->id((db->GetLastRowId()).ToLong());
+            entity->id(db->GetLastRowId());
             index_by_id_.insert(std::make_pair(entity->id(), entity));
         }
         return true;
     }
 
     /** Remove the Data record from the database and the memory table (cache) */
-    bool remove(int id, wxSQLite3Database* db)
+    bool remove(const int64 id, wxSQLite3Database* db)
     {
         if (id <= 0) return false;
         try
@@ -579,12 +593,12 @@ struct DB_Table_REPORT_V1 : public DB_Table
     * Search the memory table (Cache) for the data record.
     * If not found in memory, search the database and update the cache.
     */
-    Self::Data* get(int id, wxSQLite3Database* db)
+    Self::Data* get(const int64 id, wxSQLite3Database* db)
     {
         if (id <= 0) 
         {
             ++ skip_;
-            return 0;
+            return nullptr;
         }
 
         Index_By_Id::iterator it = index_by_id_.find(id);
@@ -595,7 +609,7 @@ struct DB_Table_REPORT_V1 : public DB_Table
         }
         
         ++ miss_;
-        Self::Data* entity = 0;
+        Self::Data* entity = nullptr;
         wxString where = wxString::Format(" WHERE %s = ?", PRIMARY::name().utf8_str());
         try
         {
@@ -624,12 +638,50 @@ struct DB_Table_REPORT_V1 : public DB_Table
  
         return entity;
     }
+    /**
+    * Search the database for the data record, bypassing the cache.
+    */
+    Self::Data* get_record(const int64 id, wxSQLite3Database* db)
+    {
+        if (id <= 0) 
+        {
+            ++ skip_;
+            return nullptr;
+        }
+
+        Self::Data* entity = nullptr;
+        wxString where = wxString::Format(" WHERE %s = ?", PRIMARY::name().utf8_str());
+        try
+        {
+            wxSQLite3Statement stmt = db->PrepareStatement(this->query() + where);
+            stmt.Bind(1, id);
+
+            wxSQLite3ResultSet q = stmt.ExecuteQuery();
+            if(q.NextRow())
+            {
+                entity = new Self::Data(q, this);
+            }
+            stmt.Finalize();
+        }
+        catch(const wxSQLite3Exception &e) 
+        { 
+            wxLogError("%s: Exception %s", this->name().utf8_str(), e.GetMessage().utf8_str());
+        }
+        
+        if (!entity) 
+        {
+            entity = this->fake_;
+            // wxLogError("%s: %d not found", this->name().utf8_str(), id);
+        }
+ 
+        return entity;
+    }
 
     /**
     * Return a list of Data records (Data_Set) derived directly from the database.
     * The Data_Set is sorted based on the column number.
     */
-    const Data_Set all(wxSQLite3Database* db, COLUMN col = COLUMN(0), bool asc = true)
+    const Data_Set all(wxSQLite3Database* db, const COLUMN col = COLUMN(0), const bool asc = true)
     {
         Data_Set result;
         try

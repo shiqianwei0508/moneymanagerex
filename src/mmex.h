@@ -23,6 +23,7 @@
 #include <wx/app.h>
 #include <wx/debugrpt.h>
 #include <wx/snglinst.h>
+#include <wx/sharedptr.h>
 
 //----------------------------------------------------------------------------
 class mmGUIFrame;
@@ -39,7 +40,7 @@ public:
     bool setGUILanguage(wxLanguage lang);
     virtual void OnInitCmdLine(wxCmdLineParser& parser);
     virtual bool OnCmdLineParsed(wxCmdLineParser& parser);
-    mmGUIFrame* m_frame;
+    mmGUIFrame* m_frame = nullptr;
     const wxString GetOptParam() const;
     const wxString GetIniParam() const;
     bool GetSilentParam() const;
@@ -49,8 +50,8 @@ public:
 private:
     wxString m_optParam1;
     wxString m_optParam2;
-    bool m_optParamSilent;
-    wxSQLite3Database* m_setting_db;
+    bool m_optParamSilent = false;
+    wxSharedPtr<wxSQLite3Database> m_setting_db;
     void ReportFatalException(wxDebugReport::Context);
     bool OnInit();
     int OnExit();
@@ -63,7 +64,7 @@ private:
     wxLocale m_locale;
 };
 
-inline wxSQLite3Database* mmGUIApp::GetSettingDB() const { return m_setting_db; }
+inline wxSQLite3Database* mmGUIApp::GetSettingDB() const { return m_setting_db.get(); }
 inline const wxString mmGUIApp::GetOptParam() const { return m_optParam1; }
 inline const wxString mmGUIApp::GetIniParam() const { return m_optParam2; }
 inline bool mmGUIApp::GetSilentParam() const { return m_optParamSilent; }

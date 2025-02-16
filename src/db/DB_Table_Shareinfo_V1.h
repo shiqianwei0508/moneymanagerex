@@ -1,7 +1,7 @@
 ﻿// -*- C++ -*-
 //=============================================================================
 /**
- *      Copyright: (c) 2013 - 2022 Guan Lisheng (guanlisheng@gmail.com)
+ *      Copyright: (c) 2013 - 2025 Guan Lisheng (guanlisheng@gmail.com)
  *      Copyright: (c) 2017 - 2018 Stefano Giorgio (stef145g)
  *      Copyright: (c) 2022 Mark Whalley (mark@ipx.co.uk)
  *
@@ -12,7 +12,7 @@
  *      @brief
  *
  *      Revision History:
- *          AUTO GENERATED at 2022-09-28 23:10:47.317664.
+ *          AUTO GENERATED at 2025-02-04 16:22:14.834591.
  *          DO NOT EDIT!
  */
 //=============================================================================
@@ -49,7 +49,7 @@ struct DB_Table_SHAREINFO_V1 : public DB_Table
 
     /** A container to hold a list of Data record pointers for the table in memory*/
     typedef std::vector<Self::Data*> Cache;
-    typedef std::map<int, Self::Data*> Index_By_Id;
+    typedef std::map<int64, Self::Data*> Index_By_Id;
     Cache cache_;
     Index_By_Id index_by_id_;
     Data* fake_; // in case the entity not found
@@ -64,7 +64,7 @@ struct DB_Table_SHAREINFO_V1 : public DB_Table
     /** Removes all records stored in memory (cache) for the table*/ 
     void destroy_cache()
     {
-        std::for_each(cache_.begin(), cache_.end(), std::mem_fun(&Data::destroy));
+        std::for_each(cache_.begin(), cache_.end(), std::mem_fn(&Data::destroy));
         cache_.clear();
         index_by_id_.clear(); // no memory release since it just stores pointer and the according objects are in cache
     }
@@ -112,16 +112,16 @@ struct DB_Table_SHAREINFO_V1 : public DB_Table
         db->Commit();
     }
     
-    struct SHAREINFOID : public DB_Column<int>
+    struct SHAREINFOID : public DB_Column<int64>
     { 
         static wxString name() { return "SHAREINFOID"; } 
-        explicit SHAREINFOID(const int &v, OP op = EQUAL): DB_Column<int>(v, op) {}
+        explicit SHAREINFOID(const int64 &v, OP op = EQUAL): DB_Column<int64>(v, op) {}
     };
     
-    struct CHECKINGACCOUNTID : public DB_Column<int>
+    struct CHECKINGACCOUNTID : public DB_Column<int64>
     { 
         static wxString name() { return "CHECKINGACCOUNTID"; } 
-        explicit CHECKINGACCOUNTID(const int &v, OP op = EQUAL): DB_Column<int>(v, op) {}
+        explicit CHECKINGACCOUNTID(const int64 &v, OP op = EQUAL): DB_Column<int64>(v, op) {}
     };
     
     struct SHARENUMBER : public DB_Column<double>
@@ -160,7 +160,7 @@ struct DB_Table_SHAREINFO_V1 : public DB_Table
     };
 
     /** Returns the column name as a string*/
-    static wxString column_to_name(COLUMN col)
+    static wxString column_to_name(const COLUMN col)
     {
         switch(col)
         {
@@ -196,19 +196,19 @@ struct DB_Table_SHAREINFO_V1 : public DB_Table
         /** This is a instance pointer to itself in memory. */
         Self* table_;
     
-        int SHAREINFOID;//  primary key
-        int CHECKINGACCOUNTID;
+        int64 SHAREINFOID;//  primary key
+        int64 CHECKINGACCOUNTID;
         double SHARENUMBER;
         double SHAREPRICE;
         double SHARECOMMISSION;
         wxString SHARELOT;
 
-        int id() const
+        int64 id() const
         {
             return SHAREINFOID;
         }
 
-        void id(int id)
+        void id(const int64 id)
         {
             SHAREINFOID = id;
         }
@@ -223,7 +223,18 @@ struct DB_Table_SHAREINFO_V1 : public DB_Table
             return this->id() < r->id();
         }
 
-        explicit Data(Self* table = 0) 
+        bool equals(const Data* r) const
+        {
+            if(SHAREINFOID != r->SHAREINFOID) return false;
+            if(CHECKINGACCOUNTID != r->CHECKINGACCOUNTID) return false;
+            if(SHARENUMBER != r->SHARENUMBER) return false;
+            if(SHAREPRICE != r->SHAREPRICE) return false;
+            if(SHARECOMMISSION != r->SHARECOMMISSION) return false;
+            if(!SHARELOT.IsSameAs(r->SHARELOT)) return false;
+            return true;
+        }
+        
+        explicit Data(Self* table = nullptr ) 
         {
             table_ = table;
         
@@ -234,17 +245,19 @@ struct DB_Table_SHAREINFO_V1 : public DB_Table
             SHARECOMMISSION = 0.0;
         }
 
-        explicit Data(wxSQLite3ResultSet& q, Self* table = 0)
+        explicit Data(wxSQLite3ResultSet& q, Self* table = nullptr )
         {
             table_ = table;
         
-            SHAREINFOID = q.GetInt(0); // SHAREINFOID
-            CHECKINGACCOUNTID = q.GetInt(1); // CHECKINGACCOUNTID
+            SHAREINFOID = q.GetInt64(0); // SHAREINFOID
+            CHECKINGACCOUNTID = q.GetInt64(1); // CHECKINGACCOUNTID
             SHARENUMBER = q.GetDouble(2); // SHARENUMBER
             SHAREPRICE = q.GetDouble(3); // SHAREPRICE
             SHARECOMMISSION = q.GetDouble(4); // SHARECOMMISSION
             SHARELOT = q.GetString(5); // SHARELOT
         }
+
+        Data(const Data& other) = default;
 
         Data& operator=(const Data& other)
         {
@@ -260,7 +273,7 @@ struct DB_Table_SHAREINFO_V1 : public DB_Table
         }
 
         template<typename C>
-        bool match(const C &c) const
+        bool match(const C &) const
         {
             return false;
         }
@@ -312,9 +325,9 @@ struct DB_Table_SHAREINFO_V1 : public DB_Table
         void as_json(PrettyWriter<StringBuffer>& json_writer) const
         {
             json_writer.Key("SHAREINFOID");
-            json_writer.Int(this->SHAREINFOID);
+            json_writer.Int64(this->SHAREINFOID.GetValue());
             json_writer.Key("CHECKINGACCOUNTID");
-            json_writer.Int(this->CHECKINGACCOUNTID);
+            json_writer.Int64(this->CHECKINGACCOUNTID.GetValue());
             json_writer.Key("SHARENUMBER");
             json_writer.Double(this->SHARENUMBER);
             json_writer.Key("SHAREPRICE");
@@ -328,8 +341,8 @@ struct DB_Table_SHAREINFO_V1 : public DB_Table
         row_t to_row_t() const
         {
             row_t row;
-            row(L"SHAREINFOID") = SHAREINFOID;
-            row(L"CHECKINGACCOUNTID") = CHECKINGACCOUNTID;
+            row(L"SHAREINFOID") = SHAREINFOID.GetValue();
+            row(L"CHECKINGACCOUNTID") = CHECKINGACCOUNTID.GetValue();
             row(L"SHARENUMBER") = SHARENUMBER;
             row(L"SHAREPRICE") = SHAREPRICE;
             row(L"SHARECOMMISSION") = SHARECOMMISSION;
@@ -339,8 +352,8 @@ struct DB_Table_SHAREINFO_V1 : public DB_Table
 
         void to_template(html_template& t) const
         {
-            t(L"SHAREINFOID") = SHAREINFOID;
-            t(L"CHECKINGACCOUNTID") = CHECKINGACCOUNTID;
+            t(L"SHAREINFOID") = SHAREINFOID.GetValue();
+            t(L"CHECKINGACCOUNTID") = CHECKINGACCOUNTID.GetValue();
             t(L"SHARENUMBER") = SHARENUMBER;
             t(L"SHAREPRICE") = SHAREPRICE;
             t(L"SHARECOMMISSION") = SHARECOMMISSION;
@@ -420,7 +433,7 @@ struct DB_Table_SHAREINFO_V1 : public DB_Table
         wxString sql = wxEmptyString;
         if (entity->id() <= 0) //  new & insert
         {
-            sql = "INSERT INTO SHAREINFO_V1(CHECKINGACCOUNTID, SHARENUMBER, SHAREPRICE, SHARECOMMISSION, SHARELOT) VALUES(?, ?, ?, ?, ?)";
+            sql = "INSERT INTO SHAREINFO_V1(CHECKINGACCOUNTID, SHARENUMBER, SHAREPRICE, SHARECOMMISSION, SHARELOT, SHAREINFOID) VALUES(?, ?, ?, ?, ?, ?)";
         }
         else
         {
@@ -436,8 +449,7 @@ struct DB_Table_SHAREINFO_V1 : public DB_Table
             stmt.Bind(3, entity->SHAREPRICE);
             stmt.Bind(4, entity->SHARECOMMISSION);
             stmt.Bind(5, entity->SHARELOT);
-            if (entity->id() > 0)
-                stmt.Bind(6, entity->SHAREINFOID);
+            stmt.Bind(6, entity->id() > 0 ? entity->SHAREINFOID : newId());
 
             stmt.ExecuteUpdate();
             stmt.Finalize();
@@ -460,14 +472,14 @@ struct DB_Table_SHAREINFO_V1 : public DB_Table
 
         if (entity->id() <= 0)
         {
-            entity->id((db->GetLastRowId()).ToLong());
+            entity->id(db->GetLastRowId());
             index_by_id_.insert(std::make_pair(entity->id(), entity));
         }
         return true;
     }
 
     /** Remove the Data record from the database and the memory table (cache) */
-    bool remove(int id, wxSQLite3Database* db)
+    bool remove(const int64 id, wxSQLite3Database* db)
     {
         if (id <= 0) return false;
         try
@@ -538,12 +550,12 @@ struct DB_Table_SHAREINFO_V1 : public DB_Table
     * Search the memory table (Cache) for the data record.
     * If not found in memory, search the database and update the cache.
     */
-    Self::Data* get(int id, wxSQLite3Database* db)
+    Self::Data* get(const int64 id, wxSQLite3Database* db)
     {
         if (id <= 0) 
         {
             ++ skip_;
-            return 0;
+            return nullptr;
         }
 
         Index_By_Id::iterator it = index_by_id_.find(id);
@@ -554,7 +566,7 @@ struct DB_Table_SHAREINFO_V1 : public DB_Table
         }
         
         ++ miss_;
-        Self::Data* entity = 0;
+        Self::Data* entity = nullptr;
         wxString where = wxString::Format(" WHERE %s = ?", PRIMARY::name().utf8_str());
         try
         {
@@ -583,12 +595,50 @@ struct DB_Table_SHAREINFO_V1 : public DB_Table
  
         return entity;
     }
+    /**
+    * Search the database for the data record, bypassing the cache.
+    */
+    Self::Data* get_record(const int64 id, wxSQLite3Database* db)
+    {
+        if (id <= 0) 
+        {
+            ++ skip_;
+            return nullptr;
+        }
+
+        Self::Data* entity = nullptr;
+        wxString where = wxString::Format(" WHERE %s = ?", PRIMARY::name().utf8_str());
+        try
+        {
+            wxSQLite3Statement stmt = db->PrepareStatement(this->query() + where);
+            stmt.Bind(1, id);
+
+            wxSQLite3ResultSet q = stmt.ExecuteQuery();
+            if(q.NextRow())
+            {
+                entity = new Self::Data(q, this);
+            }
+            stmt.Finalize();
+        }
+        catch(const wxSQLite3Exception &e) 
+        { 
+            wxLogError("%s: Exception %s", this->name().utf8_str(), e.GetMessage().utf8_str());
+        }
+        
+        if (!entity) 
+        {
+            entity = this->fake_;
+            // wxLogError("%s: %d not found", this->name().utf8_str(), id);
+        }
+ 
+        return entity;
+    }
 
     /**
     * Return a list of Data records (Data_Set) derived directly from the database.
     * The Data_Set is sorted based on the column number.
     */
-    const Data_Set all(wxSQLite3Database* db, COLUMN col = COLUMN(0), bool asc = true)
+    const Data_Set all(wxSQLite3Database* db, const COLUMN col = COLUMN(0), const bool asc = true)
     {
         Data_Set result;
         try

@@ -18,6 +18,7 @@
  ********************************************************/
 
 #include "Model_Shareinfo.h"
+#include "Model_Checking.h"
 
 Model_Shareinfo::Model_Shareinfo()
 : Model<DB_Table_SHAREINFO_V1>()
@@ -48,7 +49,7 @@ Model_Shareinfo& Model_Shareinfo::instance()
     return Singleton<Model_Shareinfo>::instance();
 }
 
-Model_Shareinfo::Data_Set Model_Shareinfo::ShareList(const int checking_id)
+Model_Shareinfo::Data_Set Model_Shareinfo::ShareList(const int64 checking_id)
 {
     // SQL equivalent statement:
     // select * from Model_Shareinfo where CHECKINGACCOUNTID = checking_account_id;
@@ -58,32 +59,36 @@ Model_Shareinfo::Data_Set Model_Shareinfo::ShareList(const int checking_id)
     return trans_list;
 }
 
-Model_Shareinfo::Data* Model_Shareinfo::ShareEntry(const int checking_id)
+Model_Shareinfo::Data* Model_Shareinfo::ShareEntry(const int64 checking_id)
 {
     Data_Set list = Model_Shareinfo::ShareList(checking_id);
     if (!list.empty())
     {
         return Model_Shareinfo::instance().get(list.at(0).SHAREINFOID);
     }
-    return NULL;
+    return nullptr;
 }
 
-void Model_Shareinfo::ShareEntry(int checking_id
+void Model_Shareinfo::ShareEntry(int64 checking_id
     , double share_number
     , double share_price
     , double share_commission
     , const wxString& share_lot)
 {
-    Data* share_entry = NULL;
+    bool updateTimestamp = false;
+    Data old_entry;
+    Data* share_entry = nullptr;
     Data_Set share_list = ShareList(checking_id);
 
     if (share_list.empty())
     {
         share_entry = Model_Shareinfo::instance().create();
         share_entry->CHECKINGACCOUNTID = checking_id;
+        updateTimestamp = true;
     }
     else
     {
+        old_entry = share_list[0];
         share_entry = &share_list[0];
     }
 
@@ -92,9 +97,12 @@ void Model_Shareinfo::ShareEntry(int checking_id
     share_entry->SHARECOMMISSION = share_commission;
     share_entry->SHARELOT = share_lot;
     Model_Shareinfo::instance().save(share_entry);
+
+    if(updateTimestamp || !share_entry->equals(&old_entry))
+        Model_Checking::instance().updateTimestamp(checking_id);
 }
 
-void Model_Shareinfo::RemoveShareEntry(const int checking_id)
+void Model_Shareinfo::RemoveShareEntry(const int64 checking_id)
 {
     Data_Set list = ShareList(checking_id);
     if (!list.empty())

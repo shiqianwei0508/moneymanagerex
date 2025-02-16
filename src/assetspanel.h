@@ -43,13 +43,13 @@ public:
     void OnViewAssetTrans(wxCommandEvent& WXUNUSED(event));
     void OnGotoAssetAccount(wxCommandEvent& WXUNUSED(event));
 
-    void doRefreshItems(int trx_id = -1);
+    void doRefreshItems(int64 trx_id = -1);
 
 protected:
     virtual void OnColClick(wxListEvent& event);
 
 private:
-    mmAssetsPanel* m_panel;
+    mmAssetsPanel* m_panel = nullptr;
 
     /* required overrides for virtual style list control */
     virtual wxString OnGetItemText(long item, long column) const;
@@ -93,15 +93,28 @@ public:
         ICON_DOWNARROW
     };
 
+    enum EColumn
+    {
+        COL_ICON = 0,
+        COL_ID,
+        COL_NAME,
+        COL_DATE,
+        COL_TYPE,
+        COL_VALUE_INITIAL,
+        COL_VALUE_CURRENT,
+        COL_NOTES,
+        COL_MAX, // number of columns
+    };
+
     mmAssetsPanel(mmGUIFrame* frame, wxWindow *parent, wxWindowID winid, const wxString& name="mmAssetsPanel");
-    mmGUIFrame* m_frame;
+    mmGUIFrame* m_frame = nullptr;
 
     void updateExtraAssetData(int selIndex);
-    int initVirtualListControl(int trx_id = -1, int col = 0, bool asc = true);
+    int initVirtualListControl(int64 trx_id = -1, int col = 0, bool asc = true);
     wxString getItem(long item, long column);
 
     Model_Asset::Data_Set m_assets;
-    Model_Asset::TYPE m_filter_type;
+    Model_Asset::TYPE_ID m_filter_type;
     int col_max() { return COL_MAX; }
     int col_sort() { return COL_DATE; }
 
@@ -110,14 +123,15 @@ public:
     void AddAssetTrans(const int selected_index);
     void ViewAssetTrans(const int selected_index);
     void GotoAssetAccount(const int selected_index);
+    void RefreshList();
 
 private:
     void enableEditDeleteButtons(bool enable);
     void OnSearchTxtEntered(wxCommandEvent& event);
     
-    mmAssetsListCtrl* m_listCtrlAssets;
-    wxButton* m_bitmapTransFilter;
-    wxStaticText* header_text_;
+    mmAssetsListCtrl* m_listCtrlAssets = nullptr;
+    wxButton* m_bitmapTransFilter = nullptr;
+    wxStaticText* header_text_ = nullptr;
 
     bool Create(wxWindow *parent
         , wxWindowID winid
@@ -146,16 +160,6 @@ private:
         IDC_PANEL_ASSET_STATIC_DETAILS = wxID_HIGHEST + 1220,
         IDC_PANEL_ASSET_STATIC_DETAILS_MINI,
     };
-    enum EColumn
-    {
-        COL_ICON = 0,
-        COL_ID,
-        COL_NAME,
-        COL_DATE,
-        COL_TYPE,
-        COL_VALUE_INITIAL,
-        COL_VALUE_CURRENT,
-        COL_NOTES,
-        COL_MAX, // number of columns
-    };
 };
+
+inline void mmAssetsPanel::RefreshList(){ m_listCtrlAssets->doRefreshItems(); }

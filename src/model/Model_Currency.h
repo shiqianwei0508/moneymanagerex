@@ -48,17 +48,26 @@ public:
     static Model_Currency& instance();
 
 public:
-    enum CURRENCYTYPE { FIAT = 0, CRYPTO };
-    static const std::vector<std::pair<CURRENCYTYPE, wxString> > CURRENCYTYPE_CHOICES;
-    static wxArrayString all_currencytype();
-    static const wxString FIAT_STR;
-    static const wxString CRYPTO_STR;
-    static CURRENCYTYPE currencytype(const Data* r);
-    static CURRENCYTYPE currencytype(const Data& r);
-    static DB_Table_CURRENCYFORMATS_V1::CURRENCY_TYPE CURRENCY_TYPE(CURRENCYTYPE currencytype, OP op = EQUAL);
+    enum TYPE_ID
+    {
+        TYPE_ID_FIAT = 0,
+        TYPE_ID_CRYPTO
+    };
+    static wxArrayString TYPE_STR;
+    static const wxString TYPE_STR_FIAT;
+    static const wxString TYPE_STR_CRYPTO;
+
+private:
+    static const std::vector<std::pair<TYPE_ID, wxString> > TYPE_CHOICES;
+    static wxArrayString type_str_all();
+
+public:
+    static TYPE_ID type_id(const Data* r);
+    static TYPE_ID type_id(const Data& r);
+    static DB_Table_CURRENCYFORMATS_V1::CURRENCY_TYPE CURRENCY_TYPE(TYPE_ID currencytype, OP op = EQUAL);
 
     const wxArrayString all_currency_names();
-    const std::map<wxString, int>  all_currency();
+    const std::map<wxString, int64>  all_currency();
     const wxArrayString all_currency_symbols();
 
     /** Return the Data record of the base currency.*/
@@ -75,9 +84,9 @@ public:
     * Remove the Data record from memory and the database.
     * Delete also all currency history
     */
-    bool remove(int id);
+    bool remove(int64 id);
 
-    static std::map<wxDateTime,int> DateUsed(int CurrencyID);
+    static std::map<wxDateTime,int> DateUsed(int64 CurrencyID);
 
     /** Add prefix and suffix characters to string value */
     static const wxString toCurrency(double value, const Data* currency = GetBaseCurrency(), int precision = -1);
@@ -91,6 +100,6 @@ public:
     static bool fromString(wxString s, double& val, const Data* currency = GetBaseCurrency());
     static int precision(const Data* r);
     static int precision(const Data& r);
-    static int precision(int account_id);
+    static int precision(int64 account_id);
 };
 #endif // 

@@ -43,16 +43,7 @@ wxEND_EVENT_TABLE()
 
 mmCustomFieldEditDialog::mmCustomFieldEditDialog(wxWindow* parent, Model_CustomField::Data* field)
     : m_field(field)
-    , m_fieldRefType(Model_Attachment::instance().all_type()[Model_Attachment::REFTYPE::TRANSACTION])
-    , m_itemDescription(nullptr)
-    , m_itemType(nullptr)
-    , m_itemUDFC(nullptr)
-    , m_itemTooltip(nullptr)
-    , m_itemRegEx(nullptr)
-    , m_itemAutocomplete(nullptr)
-    , m_itemDefault(nullptr)
-    , m_itemChoices(nullptr)
-    , m_itemDigitScale(nullptr)
+    , m_fieldRefType(Model_Attachment::REFTYPE_STR_TRANSACTION)
 {
     this->SetFont(parent->GetFont());
     Create(parent);
@@ -84,7 +75,7 @@ void mmCustomFieldEditDialog::dataToControls()
     if (this->m_field)
     {
         m_itemDescription->SetValue(m_field->DESCRIPTION);
-        m_itemType->SetSelection(Model_CustomField::type(m_field));
+        m_itemType->SetSelection(Model_CustomField::type_id(m_field));
         m_itemReference->SetSelection(Model_CustomField::getReference(m_field->REFTYPE));
         m_itemTooltip->SetValue(Model_CustomField::getTooltip(m_field->PROPERTIES));
         m_itemRegEx->SetValue(Model_CustomField::getRegEx(m_field->PROPERTIES));
@@ -104,7 +95,7 @@ void mmCustomFieldEditDialog::dataToControls()
     else
     {
         m_itemReference->SetSelection(Model_CustomField::getReference(m_fieldRefType));
-        m_itemType->SetSelection(Model_CustomField::STRING);
+        m_itemType->SetSelection(Model_CustomField::TYPE_ID_STRING);
         m_itemUDFC->SetSelection(0);
     }
     wxCommandEvent evt;
@@ -133,7 +124,7 @@ void mmCustomFieldEditDialog::CreateControls()
     itemFlexGridSizer6->Add(new wxStaticText(itemPanel5, wxID_STATIC, _("Attribute of")), g_flagsH);
     m_itemReference = new wxChoice(itemPanel5, wxID_HIGHEST);
     for (const auto& type : Model_Attachment::REFTYPE_CHOICES) {
-        if (type.first != Model_Attachment::BILLSDEPOSIT)
+        if (type.first != Model_Attachment::REFTYPE_ID_BILLSDEPOSIT)
             m_itemReference->Append(wxGetTranslation(type.second), new wxStringClientData(type.second));
     }
     mmToolTip(m_itemReference, _("Select the item that the custom field is associated with"));
@@ -149,12 +140,12 @@ void mmCustomFieldEditDialog::CreateControls()
 
     itemFlexGridSizer6->Add(new wxStaticText(itemPanel5, wxID_STATIC, _("Field Type")), g_flagsH);
     m_itemType = new wxChoice(itemPanel5, wxID_HIGHEST);
-    for (const auto& type : Model_CustomField::all_type())
+    for (const auto& type : Model_CustomField::TYPE_STR)
         m_itemType->Append(wxGetTranslation(type), new wxStringClientData(type));
     mmToolTip(m_itemType, _("Select type of custom field"));
     itemFlexGridSizer6->Add(m_itemType, g_flagsExpand);
 
-    itemFlexGridSizer6->Add(new wxStaticText(itemPanel5, wxID_STATIC, _("ToolTip")), g_flagsH);
+    itemFlexGridSizer6->Add(new wxStaticText(itemPanel5, wxID_STATIC, _("Tooltip")), g_flagsH);
     m_itemTooltip = new wxTextCtrl(itemPanel5, wxID_ANY, "");
     mmToolTip(m_itemTooltip, _("Enter the tooltip that will be shown"));
     itemFlexGridSizer6->Add(m_itemTooltip, g_flagsExpand);
@@ -223,18 +214,24 @@ void mmCustomFieldEditDialog::OnOk(wxCommandEvent& WXUNUSED(event))
         ArrChoices.Add(token.GetNextToken());
     }
 
+    int itemType = m_itemType->GetSelection();
+    if (ArrChoices.IsEmpty() && (itemType == Model_CustomField::TYPE_ID_SINGLECHOICE || itemType == Model_CustomField::TYPE_ID_MULTICHOICE))
+    {
+        return mmErrorDialogs::ToolTip4Object(m_itemChoices, _("Empty value"), _("Choices"));
+    }
+
     if (!this->m_field)
     {
         this->m_field = Model_CustomField::instance().create();
     }
-    else if (m_field->TYPE != Model_CustomField::fieldtype_desc(m_itemType->GetSelection()))
+    else if (m_field->TYPE != Model_CustomField::TYPE_STR[m_itemType->GetSelection()])
     {
         auto DataSet = Model_CustomFieldData::instance().find(Model_CustomFieldData::FIELDID(m_field->FIELDID));
         if (DataSet.size() > 0)
         {
             int DeleteResponse = wxMessageBox(
                 _("Changing field type will delete all content!") + "\n"
-                + _("Do you want to proceed?") << "\n"
+                + _("Do you want to continue?") << "\n"
                 , _("Custom Field Change")
                 , wxYES_NO | wxNO_DEFAULT | wxICON_ERROR);
             if (DeleteResponse != wxYES)
@@ -255,8 +252,8 @@ void mmCustomFieldEditDialog::OnOk(wxCommandEvent& WXUNUSED(event))
         if (DataSet.size() > 0)
         {
             int DeleteResponse = wxMessageBox(
-                _("You have modified choices: ones removed will be cleaned!") + "\n"
-                + _("Do you want to proceed?") << "\n"
+                _("Modified choices available: ones removed will be cleaned!") + "\n"
+                + _("Do you want to continue?") << "\n"
                 , _("Custom Field Change")
                 , wxYES_NO | wxNO_DEFAULT | wxICON_EXCLAMATION);
             if (DeleteResponse != wxYES)
@@ -283,7 +280,7 @@ void mmCustomFieldEditDialog::OnOk(wxCommandEvent& WXUNUSED(event))
 
     m_field->REFTYPE = m_fieldRefType;
     m_field->DESCRIPTION = name;
-    m_field->TYPE = Model_CustomField::fieldtype_desc(m_itemType->GetSelection());
+    m_field->TYPE = Model_CustomField::TYPE_STR[m_itemType->GetSelection()];
     m_field->PROPERTIES = Model_CustomField::formatProperties(
         m_itemTooltip->GetValue(),
         regexp,
@@ -336,31 +333,31 @@ void mmCustomFieldEditDialog::OnChangeType(wxCommandEvent& WXUNUSED(event), bool
     //Enable specific fields
     switch (m_itemType->GetSelection())
     {
-    case Model_CustomField::STRING:
+    case Model_CustomField::TYPE_ID_STRING:
     {
         m_itemDefault->Enable(true);
         m_itemRegEx->Enable(true);
         m_itemAutocomplete->Enable(true);
         break;
     }
-    case Model_CustomField::SINGLECHOICE:
+    case Model_CustomField::TYPE_ID_SINGLECHOICE:
     {
         m_itemChoices->Enable(true);
         m_itemDefault->Enable(true);
         break;
     }
-    case Model_CustomField::MULTICHOICE:
+    case Model_CustomField::TYPE_ID_MULTICHOICE:
     {
         m_itemChoices->Enable(true);
         break;
     }
-    case Model_CustomField::INTEGER:
+    case Model_CustomField::TYPE_ID_INTEGER:
     {
         m_itemDefault->Enable(true);
         m_itemRegEx->Enable(true);
         break;
     }
-    case Model_CustomField::DECIMAL:
+    case Model_CustomField::TYPE_ID_DECIMAL:
     {
         m_itemDefault->Enable(true);
         m_itemRegEx->Enable(true);

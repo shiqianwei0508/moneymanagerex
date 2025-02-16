@@ -41,13 +41,7 @@ wxBEGIN_EVENT_TABLE( mmCustomFieldListDialog, wxDialog )
 wxEND_EVENT_TABLE()
 
 
-mmCustomFieldListDialog::mmCustomFieldListDialog (wxWindow* parent) :
-    m_field_id(-1)
-    #ifdef _DEBUG
-        , debug_(true)
-    #else
-        , debug_(false)
-    #endif
+mmCustomFieldListDialog::mmCustomFieldListDialog (wxWindow* parent)
 {
     if (debug_) ColName_[FIELD_ID] = _("#");
     ColName_[FIELD_REF] = _("Attribute of");
@@ -64,7 +58,7 @@ void mmCustomFieldListDialog::Create(wxWindow* parent)
     SetExtraStyle(GetExtraStyle()|wxWS_EX_BLOCK_EVENTS);
     long style = wxCAPTION | wxCLOSE_BOX | wxRESIZE_BORDER;
 
-    wxString WindowTitle = wxString::Format(_("Personalize custom fields"));
+    wxString WindowTitle = wxString::Format(_("Custom Field Manager"));
     if (!wxDialog::Create(parent, wxID_ANY, WindowTitle, wxDefaultPosition, wxDefaultSize, style))
         return;
     CreateControls();
@@ -111,12 +105,12 @@ void mmCustomFieldListDialog::fillControls()
     if (fields.empty()) return;
 
     std::sort(fields.begin(), fields.end(), SorterByDESCRIPTION());
-    int firstInTheListID = -1;
+    int64 firstInTheListID = -1;
     for (const auto& entry : fields)
     {
         if (firstInTheListID == -1) firstInTheListID = entry.FIELDID;
         wxVector<wxVariant> data;
-        if (debug_) data.push_back(wxVariant(wxString::Format("%i", entry.FIELDID)));
+        if (debug_) data.push_back(wxVariant(wxString::Format("%lld", entry.FIELDID)));
         data.push_back(wxVariant(wxGetTranslation(entry.REFTYPE)));
         data.push_back(wxVariant(entry.DESCRIPTION));
         data.push_back(wxVariant(wxGetTranslation(entry.TYPE)));
@@ -125,7 +119,7 @@ void mmCustomFieldListDialog::fillControls()
         Properties.Replace("\n", "", true);
         data.push_back(wxVariant(Properties));
 
-        fieldListBox_->AppendItem(data, static_cast<wxUIntPtr>(entry.FIELDID));
+        fieldListBox_->AppendItem(data, static_cast<wxUIntPtr>(entry.FIELDID.GetValue()));
     }
 
     m_field_id = firstInTheListID;
@@ -137,7 +131,7 @@ void mmCustomFieldListDialog::OnListItemSelected(wxDataViewEvent& event)
     int selected_index = fieldListBox_->ItemToRow(item);
 
     if (selected_index >= 0)
-        m_field_id = static_cast<int>(fieldListBox_->GetItemData(item));
+        m_field_id = static_cast<int64>(fieldListBox_->GetItemData(item));
     else
         m_field_id = -1;
 }
@@ -168,7 +162,7 @@ void mmCustomFieldListDialog::DeleteField()
     if (field)
     {
         int DeleteResponse = wxMessageBox(
-            _("Do you really want to delete this custom field and all its data?")
+            _("Do you want to delete the custom field and all its data?")
             , _("Confirm Custom Field Deletion")
             , wxYES_NO | wxNO_DEFAULT | wxICON_ERROR);
         if (DeleteResponse == wxYES)
@@ -199,8 +193,8 @@ void mmCustomFieldListDialog::UpdateField()
     if (txtSearch == "")
     {
         int Response = wxMessageBox(
-            _("Do you want to update blank content?\n"
-                "Press no if you want to abort replace procedure!")
+            _("Do you want to update blank custom field content?\n"
+                "Select No if you want to abort the replace procedure.")
             , _("Update Custom Field Content")
             , wxYES_NO | wxNO_DEFAULT | wxICON_WARNING);
         if (Response != wxYES)
@@ -211,8 +205,8 @@ void mmCustomFieldListDialog::UpdateField()
     if (txtReplace == "")
     {
         int Response = wxMessageBox(
-            _("Do you want to update to blank?\n"
-                "Press no if you want to abort replace procedure!")
+            _("Do you want to update blank custom field content?\n"
+                "Select No if you want to abort the replace procedure.")
             , _("Update Custom Field Content")
             , wxYES_NO | wxNO_DEFAULT | wxICON_WARNING);
         if (Response != wxYES)

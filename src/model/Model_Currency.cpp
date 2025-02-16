@@ -30,6 +30,18 @@
 #include <fmt/format.h>
 
 constexpr auto LIMIT = 1e-10;
+static wxString s_locale;
+static wxString s_use_locale;
+
+const std::vector<std::pair<Model_Currency::TYPE_ID, wxString> > Model_Currency::TYPE_CHOICES =
+{
+    { Model_Currency::TYPE_ID_FIAT,   wxString(wxTRANSLATE("Fiat")) },
+    { Model_Currency::TYPE_ID_CRYPTO, wxString(wxTRANSLATE("Crypto")) }
+};
+
+wxArrayString Model_Currency::TYPE_STR = type_str_all();
+const wxString Model_Currency::TYPE_STR_FIAT   = TYPE_STR[TYPE_ID_FIAT];
+const wxString Model_Currency::TYPE_STR_CRYPTO = TYPE_STR[TYPE_ID_CRYPTO];
 
 Model_Currency::Model_Currency()
     : Model<DB_Table_CURRENCYFORMATS_V1>()
@@ -51,6 +63,8 @@ Model_Currency& Model_Currency::instance(wxSQLite3Database* db)
     ins.ensure(db);
     ins.destroy_cache();
     ins.preload();
+    s_locale = wxEmptyString;
+    s_use_locale = wxEmptyString;
     return ins;
 }
 
@@ -60,39 +74,35 @@ Model_Currency& Model_Currency::instance()
     return Singleton<Model_Currency>::instance();
 }
 
-const std::vector<std::pair<Model_Currency::CURRENCYTYPE, wxString> > Model_Currency::CURRENCYTYPE_CHOICES =
-{
-    {Model_Currency::FIAT, wxString(wxTRANSLATE("Fiat"))}
-    , {Model_Currency::CRYPTO, wxString(wxTRANSLATE("Crypto"))}
-};
-
-const wxString Model_Currency::FIAT_STR = all_currencytype()[FIAT];
-const wxString Model_Currency::CRYPTO_STR = all_currencytype()[CRYPTO];
-
-wxArrayString Model_Currency::all_currencytype()
+wxArrayString Model_Currency::type_str_all()
 {
     wxArrayString types;
-    for (const auto& item : CURRENCYTYPE_CHOICES) types.Add(wxGetTranslation(item.second));
+    int i = 0;
+    for (const auto& item : TYPE_CHOICES)
+    {
+        wxASSERT_MSG(item.first == i++, "Wrong order in Model_Currency::TYPE_CHOICES");
+        types.Add(item.second);
+    }
     return types;
 }
 
-Model_Currency::CURRENCYTYPE Model_Currency::currencytype(const Data* r)
+Model_Currency::TYPE_ID Model_Currency::type_id(const Data* r)
 {
-    for (const auto &entry : CURRENCYTYPE_CHOICES)
+    for (const auto &entry : TYPE_CHOICES)
     {
         if (r->CURRENCY_TYPE.CmpNoCase(entry.second) == 0) return entry.first;
     }
-    return FIAT;
+    return TYPE_ID_FIAT;
 }
 
-Model_Currency::CURRENCYTYPE Model_Currency::currencytype(const Data& r)
+Model_Currency::TYPE_ID Model_Currency::type_id(const Data& r)
 {
-    return currencytype(&r);
+    return type_id(&r);
 }
 
-DB_Table_CURRENCYFORMATS_V1::CURRENCY_TYPE Model_Currency::CURRENCY_TYPE(CURRENCYTYPE currencytype, OP op)
+DB_Table_CURRENCYFORMATS_V1::CURRENCY_TYPE Model_Currency::CURRENCY_TYPE(TYPE_ID currencytype, OP op)
 {
-    return DB_Table_CURRENCYFORMATS_V1::CURRENCY_TYPE(all_currencytype()[currencytype], op);
+    return DB_Table_CURRENCYFORMATS_V1::CURRENCY_TYPE(Model_Currency::TYPE_STR[currencytype], op);
 }
 
 const wxArrayString Model_Currency::all_currency_names()
@@ -104,9 +114,9 @@ const wxArrayString Model_Currency::all_currency_names()
 }
 
 
-const std::map<wxString, int> Model_Currency::all_currency()
+const std::map<wxString, int64> Model_Currency::all_currency()
 {
-    std::map<wxString, int> currencies;
+    std::map<wxString, int64> currencies;
     for (const auto& curr : this->all(COL_CURRENCYNAME))
     {
         currencies[curr.CURRENCYNAME] = curr.CURRENCYID;
@@ -125,7 +135,7 @@ const wxArrayString Model_Currency::all_currency_symbols()
 // Getter
 Model_Currency::Data* Model_Currency::GetBaseCurrency()
 {
-    int currency_id = Option::instance().getBaseCurrencyID();
+    int64 currency_id = Option::instance().getBaseCurrencyID();
     Model_Currency::Data* currency = Model_Currency::instance().get(currency_id);
     return currency;
 }
@@ -163,28 +173,28 @@ Model_Currency::Data* Model_Currency::GetCurrencyRecord(const wxString& currency
     return record;
 }
 
-std::map<wxDateTime, int> Model_Currency::DateUsed(int CurrencyID)
+std::map<wxDateTime, int> Model_Currency::DateUsed(int64 CurrencyID)
 {
     wxDateTime dt;
     std::map<wxDateTime, int> datesList;
     const auto &accounts = Model_Account::instance().find(CURRENCYID(CurrencyID));
     for (const auto &account : accounts)
     {
-        if (Model_Account::type(account) == Model_Account::TYPE::INVESTMENT)
+        if (Model_Account::type_id(account) == Model_Account::TYPE_ID_INVESTMENT)
         {
-            for (const auto trans : Model_Stock::instance().find(Model_Stock::HELDAT(account.ACCOUNTID)))
+            for (const auto& tran : Model_Stock::instance().find(Model_Stock::HELDAT(account.ACCOUNTID)))
             {
-                dt.ParseDate(trans.PURCHASEDATE);
+                dt.ParseDate(tran.PURCHASEDATE);
                 datesList[dt] = 1;
             }
         }
         else
         {
-            for (const auto& trans : Model_Checking::instance()
+            for (const auto& tran : Model_Checking::instance()
                 .find_or(Model_Checking::ACCOUNTID(account.ACCOUNTID)
                 , Model_Checking::TOACCOUNTID(account.ACCOUNTID)))
             {
-                dt.ParseDate(trans.TRANSDATE);
+                dt.ParseDate(tran.TRANSDATE);
                 datesList[dt] = 1;
             }
         }
@@ -195,7 +205,7 @@ std::map<wxDateTime, int> Model_Currency::DateUsed(int CurrencyID)
 * Remove the Data record from memory and the database.
 * Delete also all currency history
 */
-bool Model_Currency::remove(int id)
+bool Model_Currency::remove(int64 id)
 {
     this->Savepoint();
     for (const auto& r : Model_CurrencyHistory::instance().find(Model_CurrencyHistory::CURRENCYID(id)))
@@ -217,7 +227,7 @@ const wxString Model_Currency::toCurrency(double value, const Data* currency, in
 const wxString Model_Currency::toStringNoFormatting(double value, const Data* currency, int precision)
 {
     const Data* curr = currency ? currency : GetBaseCurrency();
-    precision = (precision >= 0) ? precision : log10(curr->SCALE);
+    precision = (precision >= 0) ? precision : log10(curr->SCALE.GetValue());
     wxString s = wxString::FromCDouble(value, precision);
     s.Replace(".", curr->DECIMAL_POINT);
 
@@ -226,35 +236,39 @@ const wxString Model_Currency::toStringNoFormatting(double value, const Data* cu
 
 const wxString Model_Currency::toString(double value, const Data* currency, int precision)
 {
-    static wxString locale;
     static wxString d; //default Locale Support Y/N
-    static wxString use_locale;
 
-    if (locale.empty()) {
-        locale = Model_Infotable::instance().GetStringInfo("LOCALE", " ");
-        if (locale.empty()) {
-            locale = " ";
+    if (s_locale.empty()) {
+        s_locale = Model_Infotable::instance().getString("LOCALE", " ");
+        if (s_locale.empty()) {
+            s_locale = " ";
         }
     }
 
-    if (use_locale.empty()) {
-        use_locale = locale == " " ? "N" : "Y";
-        if (use_locale == "Y")
+    if (s_use_locale.empty()) {
+        s_use_locale = s_locale == " " ? "N" : "Y";
+        if (s_use_locale == "Y")
         {
             try {
-                fmt::format(std::locale(locale.c_str()), "{:L}", 123);
+                fmt::format(std::locale(s_locale.c_str()), "{:L}", 123);
             }
             catch (...) {
-                locale = " ";
-                use_locale = "N";
+                s_locale = " ";
+                s_use_locale = "N";
             }
         }
     }
+
+// Default locale. Windows requires only "en_US" (see #5852) but others require "en_US.UTF-8" (see #6074)
+    std::string default_locale = "en_US";
+#ifndef __WXMSW__
+    default_locale = "en_US.UTF-8";
+#endif
 
     if (d.empty())
     {
         try {
-            fmt::format(std::locale("en_US.UTF-8"), "{:L}", 123);
+            fmt::format(std::locale(default_locale), "{:L}", 123);
             d = "Y";
         }
         catch (...) {
@@ -263,10 +277,10 @@ const wxString Model_Currency::toString(double value, const Data* currency, int 
     }
 
     if (precision < 0) {
-        precision = log10(currency ? currency->SCALE : GetBaseCurrency()->SCALE);
+        precision = log10(currency ? currency->SCALE.GetValue() : GetBaseCurrency()->SCALE.GetValue());
     }
 
-    auto l = (use_locale == "Y" ? std::locale(locale.c_str()) : std::locale("en_US.UTF-8"));
+    auto l = (s_use_locale == "Y" ? std::locale(s_locale.c_str()) : (d == "Y" ? std::locale(default_locale) : std::locale()));
     std::string s;
     value += LIMIT; //to ignore the negative sign on values of zero #564
 
@@ -313,7 +327,7 @@ const wxString Model_Currency::toString(double value, const Data* currency, int 
     }
 #endif
 
-    if (use_locale == "N")
+    if (s_use_locale == "N")
     {
         wxString out(s);
         out.Replace(".", "\x05");
@@ -335,7 +349,7 @@ const wxString Model_Currency::fromString2CLocale(const wxString &s, const Data*
     wxRegEx pattern(R"([^0-9.,+-/*()])");
     pattern.ReplaceAll(&str, wxEmptyString);
 
-    auto locale = Model_Infotable::instance().GetStringInfo("LOCALE", "en_US.UTF8");
+    auto locale = Model_Infotable::instance().getString("LOCALE", "");
 
     if (locale.empty())
     {
@@ -376,7 +390,7 @@ bool Model_Currency::fromString(wxString s, double& val, const Data* currency)
 
 int Model_Currency::precision(const Data* r)
 {
-    return static_cast<int>(log10(static_cast<double>(r->SCALE)));
+    return static_cast<int>(log10(static_cast<double>(r->SCALE.GetValue())));
 }
 
 int Model_Currency::precision(const Data& r)
@@ -384,7 +398,7 @@ int Model_Currency::precision(const Data& r)
     return precision(&r);
 }
 
-int Model_Currency::precision(int account_id)
+int Model_Currency::precision(int64 account_id)
 {
     const Model_Account::Data* trans_account = Model_Account::instance().get(account_id);
     if (account_id > 0)

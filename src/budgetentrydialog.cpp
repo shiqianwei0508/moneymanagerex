@@ -41,9 +41,6 @@ mmBudgetEntryDialog::mmBudgetEntryDialog(wxWindow* parent
     , const wxString& CategoryActual)
     : catEstimateAmountStr_(categoryEstimate)
     , catActualAmountStr_(CategoryActual)
-    , m_choiceItem()
-    , m_textAmount()
-    , m_choiceType()
 {
     budgetEntry_ = entry;
     long style = wxCAPTION | wxSYSTEM_MENU | wxCLOSE_BOX;
@@ -65,15 +62,15 @@ bool mmBudgetEntryDialog::Create(wxWindow* parent
     this->SetInitialSize();
     SetIcon(mmex::getProgramIcon());
     Centre();
-    return TRUE;
+    return true;
 }
 
 void mmBudgetEntryDialog::fillControls()
 {
     double amt = budgetEntry_->AMOUNT;
-    int period = Model_Budget::period(budgetEntry_);
+    int period = Model_Budget::period_id(budgetEntry_);
     m_choiceItem->SetSelection(period);
-    if (period == Model_Budget::NONE && amt == 0.0)
+    if (period == Model_Budget::PERIOD_ID_NONE && amt == 0.0)
         m_choiceItem->SetSelection(DEF_FREQ_MONTHLY);
 
     if (amt <= 0.0)
@@ -101,23 +98,17 @@ void mmBudgetEntryDialog::CreateControls()
     itemPanel7->SetSizer(itemGridSizer2);
     
     const Model_Category::Data* category = Model_Category::instance().get(budgetEntry_->CATEGID);
-    const Model_Subcategory::Data* sub_category = (budgetEntry_->SUBCATEGID != -1 ? Model_Subcategory::instance().get(budgetEntry_->SUBCATEGID) : 0);
-
+    wxASSERT(category);
+    
     wxStaticText* itemTextEstCatAmt = new wxStaticText(itemPanel7, wxID_STATIC, catEstimateAmountStr_);
     wxStaticText* itemTextActCatAmt = new wxStaticText(itemPanel7, wxID_STATIC, catActualAmountStr_);
     
     itemGridSizer2->Add(new wxStaticText(itemPanel7, wxID_STATIC, _("Category: ")), g_flagsH);
-    itemGridSizer2->Add(new wxStaticText(itemPanel7, wxID_STATIC, category->CATEGNAME), wxSizerFlags(g_flagsH).Align(wxALIGN_RIGHT));
-    // only add the subcategory if it exists.
-    if (budgetEntry_->SUBCATEGID >= 0) {
-        wxStaticText* itemTextSubCatTag = new wxStaticText(itemPanel7, wxID_STATIC
-            , _("Sub Category: "));
-        wxStaticText* itemTextSubCatName = new wxStaticText(itemPanel7, wxID_STATIC
-            , sub_category->SUBCATEGNAME);
-        
-        itemGridSizer2->Add(itemTextSubCatTag, g_flagsH);
-        itemGridSizer2->Add(itemTextSubCatName, wxSizerFlags(g_flagsH).Align(wxALIGN_RIGHT));
-    }
+    wxString categname = Model_Category::full_name(category);
+    wxStaticText* categNameLabel = new wxStaticText(itemPanel7, wxID_STATIC,
+        (categname.size() > 50 ? wxString::FromUTF8("\u2026") + categname.substr(categname.size() - 50) : categname));
+    if (categname.size() > 50) categNameLabel->SetToolTip(categname);
+    itemGridSizer2->Add(categNameLabel, wxSizerFlags(g_flagsH).Align(wxALIGN_RIGHT));
     itemGridSizer2->Add(new wxStaticText(itemPanel7, wxID_STATIC, _("Estimated:")), g_flagsH);
     itemGridSizer2->Add(itemTextEstCatAmt, wxSizerFlags(g_flagsH).Align(wxALIGN_RIGHT));
     itemGridSizer2->Add(new wxStaticText(itemPanel7, wxID_STATIC, _("Actual:")), g_flagsH);
@@ -137,7 +128,7 @@ void mmBudgetEntryDialog::CreateControls()
     itemGridSizer2->Add(new wxStaticText(itemPanel7, wxID_STATIC, _("Frequency:")), g_flagsH);
 
     m_choiceItem = new wxChoice(itemPanel7, wxID_ANY
-        , wxDefaultPosition, wxDefaultSize, Model_Budget::all_period());
+        , wxDefaultPosition, wxDefaultSize, Model_Budget::period_loc_all());
     itemGridSizer2->Add(m_choiceItem, g_flagsExpand);
     mmToolTip(m_choiceItem, _("Specify the frequency of the expense or deposit"));
     m_choiceItem->Connect(wxID_ANY, wxEVT_CHAR, wxKeyEventHandler(mmBudgetEntryDialog::onChoiceChar), nullptr, this);
@@ -170,13 +161,13 @@ void mmBudgetEntryDialog::CreateControls()
 void mmBudgetEntryDialog::OnOk(wxCommandEvent& event)
 {
     int typeSelection = m_choiceType->GetSelection();    
-    wxString period = Model_Budget::PERIOD_ENUM_CHOICES[m_choiceItem->GetSelection()].second;
+    wxString period = Model_Budget::PERIOD_STR[m_choiceItem->GetSelection()];
     double amt = 0.0;
 
     if (!m_textAmount->checkValue(amt))
         return;
 
-    if (period == Model_Budget::PERIOD_ENUM_CHOICES[Model_Budget::NONE].second && amt > 0) {
+    if (period == Model_Budget::PERIOD_STR[Model_Budget::PERIOD_ID_NONE] && amt > 0) {
         m_choiceItem->SetFocus();
         m_choiceItem->SetSelection(DEF_FREQ_MONTHLY);
         event.Skip();
@@ -184,7 +175,7 @@ void mmBudgetEntryDialog::OnOk(wxCommandEvent& event)
     }
     
     if (amt == 0.0)
-        period = Model_Budget::PERIOD_ENUM_CHOICES[Model_Budget::NONE].second;
+        period = Model_Budget::PERIOD_STR[Model_Budget::PERIOD_ID_NONE];
 
     if (typeSelection == DEF_TYPE_EXPENSE)
         amt = -amt;

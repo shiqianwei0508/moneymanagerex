@@ -31,6 +31,7 @@ class wxSQLite3Database;
 class wxSQLite3ResultSet;
 
 typedef wxDateTime wxDate;
+typedef std::vector<int64> wxArrayInt64;
 
 #if (wxMAJOR_VERSION == 3 && wxMINOR_VERSION >= 1)
 // wx 3.1 has implemented such hash
@@ -53,7 +54,7 @@ class ModelBase
 public:
     ModelBase() :db_(0) {};
     virtual ~ModelBase() {};
-
+    
 public:
     void Begin()
     {
@@ -77,14 +78,14 @@ public:
     }
 
 protected:
-    static wxDate to_date(const wxString& str_date)
+    static wxDateTime to_date(const wxString& str_date)
     {
-        static std::unordered_map<wxString, wxDate> cache;
+        static std::unordered_map<wxString, wxDateTime> cache;
         const auto it = cache.find(str_date);
         if (it != cache.end()) return it->second;
 
-        wxDate date;
-        date.ParseISODate(str_date); // the date in ISO 8601 format "YYYY-MM-DD".
+        wxDateTime date;
+        date.ParseISOCombined(str_date) || date.ParseISODate(str_date); // the date in ISO 8601 format "YYYY-MM-DD".
         cache.insert(std::make_pair(str_date, date));
         return date;
     }
@@ -92,6 +93,7 @@ protected:
 public:
     virtual wxString  GetTableStatsAsJson() const = 0;
     virtual void show_statistics() const = 0;
+    virtual void destroyCache() = 0;
 
 protected:
     wxSQLite3Database* db_;
@@ -104,6 +106,7 @@ public:
     using DB_TABLE::all;
     using DB_TABLE::get;
     using DB_TABLE::save;
+    using DB_TABLE::get_record;
     using DB_TABLE::remove;
 
     typedef typename DB_TABLE::COLUMN COLUMN;
@@ -120,7 +123,7 @@ public:
     Args: One or more Specialised Parameters creating SQL statement conditions used after the WHERE statement.
     Specialised Parameters: Table_Column_Name(content)[, Table_Column_Name(content)[, ...]]
     Example:
-    Model_Asset::ASSETID(2), Model_Asset::ASSETTYPE(Model_Asset::TYPE_JEWELLERY)
+    Model_Asset::ASSETID(2), Model_Asset::ASSETTYPE(Model_Asset::TYPE_ID_JEWELLERY)
     produces SQL statement condition: ASSETID = 2 AND ASSETTYPE = "Jewellery"
     * Returns a Data_Set containing the addresses of the items found.
     * The Data_Set is empty when nothing found.
@@ -136,7 +139,7 @@ public:
     Args: One or more Specialised Parameters creating SQL statement conditions used after the WHERE statement.
     Specialised Parameters: Table_Column_Name(content)[, Table_Column_Name(content)[, ...]]
     Example:
-    Model_Asset::ASSETID(2), Model_Asset::ASSETTYPE(Model_Asset::TYPE_JEWELLERY)
+    Model_Asset::ASSETID(2), Model_Asset::ASSETTYPE(Model_Asset::TYPE_ID_JEWELLERY)
     produces SQL statement condition: ASSETID = 2 OR ASSETTYPE = "Jewellery"
     * Returns a Data_Set containing the addresses of the items found.
     * The Data_Set is empty when nothing found.
@@ -150,13 +153,25 @@ public:
     * Return the Data record pointer for the given ID
     * from either memory cache or the database.
     */
-    typename DB_TABLE::Data* get(int id)
+    typename DB_TABLE::Data* get(int64 id)
     {
         return this->get(id, this->db_);
     }
+    typename DB_TABLE::Data* get(wxLongLong_t id)
+    {
+        return this->get(int64(id));
+    }
+
+    /**
+    * Return the Data record for the given ID directly from the database, bypassing the cache.
+    */
+    typename DB_TABLE::Data* get_record(int64 id)
+    {
+        return this->get_record(id, this->db_);
+    }
 
     /** Save the Data record memory instance to the database. */
-    int save(typename DB_TABLE::Data* r)
+    int64 save(typename DB_TABLE::Data* r)
     {
         r->save(this->db_);
         return r->id();
@@ -192,7 +207,7 @@ public:
     }
 
     /** Remove the Data record instance from memory and the database. */
-    bool remove(int id)
+    bool remove(int64 id)
     {
         return this->remove(id, db_);
     }
@@ -232,6 +247,11 @@ public:
         wxLogDebug("%s", wxString::FromUTF8(json_buffer.GetString()));
 
         return wxString::FromUTF8(json_buffer.GetString());
+    }
+
+    void destroyCache()
+    {
+        if (this->cache_.size() > 0) this->destroy_cache();
     }
 
     /** Show table statistics*/

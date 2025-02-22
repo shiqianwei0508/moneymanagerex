@@ -27,7 +27,7 @@ EVT_TEXT_ENTER(wxID_ANY, mmTextCtrl::OnTextEntered)
 EVT_KILL_FOCUS(mmTextCtrl::OnKillFocus)
 wxEND_EVENT_TABLE()
 
-void mmTextCtrl::OnTextEntered(wxCommandEvent& event)
+void mmTextCtrl::OnTextEntered(wxCommandEvent& )
 {
     Calculate( (m_alt_precision != -1) ? m_alt_precision 
                             : Model_Currency::precision(m_currency));
@@ -35,7 +35,8 @@ void mmTextCtrl::OnTextEntered(wxCommandEvent& event)
 
 void mmTextCtrl::OnKillFocus(wxFocusEvent& event)
 {
-    Calculate( (m_alt_precision != -1) ? m_alt_precision 
+    if (!ignore_focus_)
+        Calculate( (m_alt_precision != -1) ? m_alt_precision 
                             : Model_Currency::precision(m_currency));
     event.Skip();
 }
@@ -58,13 +59,13 @@ void mmTextCtrl::SetValueNoEvent(double value, int precision)
 void mmTextCtrl::SetValue(double value, const Model_Account::Data* account, int precision)
 {
     if (account) m_currency = Model_Currency::instance().get(account->CURRENCYID);
-    this->SetValue(value, precision > -1 ? precision : log10(m_currency->SCALE));
+    this->SetValue(value, precision > -1 ? precision : log10(m_currency->SCALE.GetValue()));
 }
 
 void mmTextCtrl::SetValue(double value, const Model_Currency::Data* currency, int precision)
 {
     m_currency = (currency ? currency : Model_Currency::GetBaseCurrency());
-    this->SetValue(value, precision > -1 ? precision : log10(m_currency->SCALE));
+    this->SetValue(value, precision > -1 ? precision : log10(m_currency->SCALE.GetValue()));
 }
 
 bool mmTextCtrl::Calculate(int alt_precision)
@@ -84,13 +85,13 @@ bool mmTextCtrl::Calculate(int alt_precision)
         {
             err = pattern.GetMatch(err, 1);
         }
-        mmErrorDialogs::ToolTip4Object(this, err, _("Invalid Value"));
+        mmErrorDialogs::ToolTip4Object(this, err, _t("Invalid Value"));
         this->ChangeValue(str);
         return false;
     }
 
     double res = state.invokeFunction<double>("calc");
-    int precision = alt_precision >= 0 ? alt_precision : log10(m_currency->SCALE);
+    int precision = alt_precision >= 0 ? alt_precision : log10(m_currency->SCALE.GetValue());
     const wxString res_str = Model_Currency::toString(res, m_currency, precision);
     this->ChangeValue(res_str);
     this->SetInsertionPoint(res_str.Len());
@@ -110,10 +111,10 @@ bool mmTextCtrl::checkValue(double &amount, bool positive_value)
     if (!GetDouble(amount) || (positive_value && amount < 0))
     {
         mmErrorDialogs::ToolTip4Object(this
-            , wxString(positive_value ? _("Please enter a positive or calculated value.") : _("Please enter a calculated value."))
+            , wxString(positive_value ? _t("Please enter a positive or calculated value.") : _t("Please enter a calculated value."))
             + "\n\n"
-            + _("Tip: For calculations, enter expressions like (2+2)*(2+2)\nCalculations will be evaluated and the result used as the entry.")
-            , _("Invalid Amount.")
+            + _t("Tip: For calculations, enter expressions like (2+2)*(2+2)\nCalculations will be evaluated and the result used as the entry.")
+            , _t("Invalid Amount.")
             , wxICON_ERROR);
         //SetFocus();
         return false;
@@ -123,12 +124,29 @@ bool mmTextCtrl::checkValue(double &amount, bool positive_value)
 
 wxChar mmTextCtrl::GetDecimalPoint()
 {
-    wxChar dp;
-    if (!m_currency->DECIMAL_POINT.empty()) {
-        dp = m_currency->DECIMAL_POINT[0];
+    wxString dp;
+
+    auto localeStr = Model_Infotable::instance().getString("LOCALE", "");
+
+    // If there is no defined locale, use the currency decimal
+    if (localeStr.empty())
+    {
+        if (!m_currency->DECIMAL_POINT.empty())
+        {
+            dp = m_currency->DECIMAL_POINT;
+        }
+        else
+        {
+            dp = Model_Currency::GetBaseCurrency()->DECIMAL_POINT;
+        }
     }
-    else {
-        dp = Model_Currency::GetBaseCurrency()->DECIMAL_POINT[0];
+    else 
+    {
+        // Locale is set, so use the locale decimal
+        dp = Model_Currency::toString(1.0);
+        wxRegEx pattern2(R"([^.,])");
+        pattern2.ReplaceAll(&dp, wxEmptyString);
     }
-    return dp;
+
+    return dp.IsEmpty() ? '.' : dp[0];
 }

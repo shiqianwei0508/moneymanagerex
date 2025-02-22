@@ -47,15 +47,15 @@ private:
 
     std::vector<ThemeEntry> m_themes;
 
-    wxListBox* m_themesListBox_;
-    wxHtmlWindow* m_themePanel;
-    wxButton* m_importButton;
-    wxButton* m_deleteButton;
-    wxButton* m_useButton;
-    wxButton* m_okButton;
+    wxListBox* m_themesListBox_ = nullptr;
+    wxHtmlWindow* m_themePanel = nullptr;
+    wxButton* m_importButton = nullptr;
+    wxButton* m_deleteButton = nullptr;
+    wxButton* m_useButton = nullptr;
+    wxButton* m_okButton = nullptr;
 
 private:
-    mmThemesDialog() {};
+    mmThemesDialog() {}
 
     void Create(wxWindow* parent, const wxString &name);
     void CreateControls();
@@ -64,12 +64,12 @@ private:
     void addThemes(const wxString& themeDir, bool isSystem);
     ThemeEntry getThemeEntry(const wxString& name);
  
-    void OnOk(wxCommandEvent& event);
-    void OnImport(wxCommandEvent& event);
+    void OnOk(wxCommandEvent&);
+    void OnImport(wxCommandEvent&);
     void OnDelete(wxCommandEvent& event);
-    void OnUse(wxCommandEvent& event);
+    void OnUse(wxCommandEvent&);
     void OnHtmlLink(wxHtmlLinkEvent& event);
-    void OnThemeView(wxCommandEvent& event);
+    void OnThemeView(wxCommandEvent&);
 
     enum
     {

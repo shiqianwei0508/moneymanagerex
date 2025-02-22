@@ -39,15 +39,39 @@ namespace tags
 </body>
 <script>
     $(".toggle").click(function() {
-        var kids = $(this).nextUntil(".toggle")
-        kids.toggle(kids.first().is(":hidden"))
+		var text = $("td a", this).text();
+        if ($(this).next("tr").is(":hidden")) {
+            $("tr[data-row-pid='" + $(this).data("row-id") + "']").show();
+            $("td a", this).text(text.replace(text[0],"\u2212"));
+        } else {
+            $("td a", this).text(text.replace(text[0],"+"));
+            $("tr[data-row-pid^='" + $(this).data("row-id") + "']").each(function(){
+                if($(this).hasClass('toggle')){
+                    text = $("td a", this).text();
+                    $("td a", this).text(text.replace(text[0],"+"));
+                }
+                $(this).hide();
+            });
+        }
     })
+
     function expandAllToggles() {
-        $(".xtoggle").show();
+        $("tr.toggle td a").each(function(){
+            var text = $(this).text();
+            $(this).text(text.replace(text[0],"\u2212"));
+        });
+        $("tr").show();
     }
+
     function collapseAllToggles() {
-        $(".xtoggle").hide();
+    	$("tr.toggle td a").each(function(){
+            var text = $(this).text();
+            $(this).text(text.replace(text[0],"+"));
+        });
+        $("tr.toggle[data-row-pid!='0.']").hide();
+        $("tr.xtoggle").hide();
     }
+
     collapseAllToggles();
     var elements = document.getElementsByClassName('money');
     for (var i = 0; i < elements.length; i++) {
@@ -75,7 +99,7 @@ namespace tags
 <script src = 'memory:sorttable.js'></script>
 <script src = 'memory:jquery.min.js'></script>
 <style>
-    /* Sortable tables */
+     * Sortable tables */
     table.sortable thead {cursor: default;}
     body { font-size: %s%%; }
 %s
@@ -90,8 +114,8 @@ namespace tags
     static const wxString DIV_COL3 = "<div class='col-xs-3'></div>\n<div class='col-xs-6'>\n"; //25_50%
     static const wxString DIV_COL1 = "<div class='col-xs-1'></div>\n<div class='col-xs-10'>\n"; //8%
     static const wxString DIV_END = "</div>\n";
-    static const wxString TABLE_START = "<table class='table table-bordered'>\n";
-    static const wxString SORTTABLE_START = "<table class='sortable table'>\n";
+    static const wxString TABLE_START = "<table class='table table-bordered report-table'>\n";
+    static const wxString SORTTABLE_START = "<table class='sortable table report-table'>\n";
     static const wxString TABLE_END = "</table>\n";
     static const wxString THEAD_START = "<thead>\n";
     static const wxString THEAD_END = "</thead>\n";
@@ -107,6 +131,7 @@ namespace tags
     static const wxString MONEY_CELL = "<td class='money'>";
     static const wxString TABLE_CELL_END = "</td>\n";
     static const wxString TABLE_CELL_LINK = R"(<a href="%s" target="_blank">%s</a>)";
+    static const wxString TABLE_CELL_LINK_COLOR = R"(<a style="color: %s;" href="%s" target="_blank">%s</a>)";
     static const wxString TABLE_HEADER = "<th%s>";
     static const wxString HEADER = "<h%i>%s</h%i>";
     static const wxString TABLE_HEADER_END = "</th>\n";
@@ -126,8 +151,8 @@ namespace tags
 mmHTMLBuilder::mmHTMLBuilder()
 {
     today_.date = wxDateTime::Now();
-    today_.todays_date = wxString::Format(_("Report Generated %s %s")
-        , mmGetDateForDisplay(today_.date.FormatISODate())
+    today_.todays_date = wxString::Format(_t("Report Generated %1$s %2$s")
+        , mmGetDateTimeForDisplay(today_.date.FormatISODate())
         , today_.date.FormatISOTime());
 }
 
@@ -144,7 +169,7 @@ void mmHTMLBuilder::init(bool simple, const wxString& extra_style)
     {
         html_ = wxString::Format(tags::HTML
             , mmex::getProgramName()
-            , wxString::Format("%d", Option::instance().getHtmlFontSize())
+            , wxString::Format("%d", Option::instance().getHtmlScale())
             , extra_style);
     }
 }
@@ -152,8 +177,8 @@ void mmHTMLBuilder::init(bool simple, const wxString& extra_style)
 void mmHTMLBuilder::showUserName()
 {
     //Show user name if provided
-    if (Option::instance().UserName() != "")
-        addHeader(2, Option::instance().UserName());
+    if (Option::instance().getUserName() != "")
+        addHeader(2, Option::instance().getUserName());
 }
 
 void mmHTMLBuilder::addReportHeader(const wxString& name, int startDay, bool futureIgnored)
@@ -187,12 +212,12 @@ void mmHTMLBuilder::DisplayDateHeading(const wxDateTime& startDate, const wxDate
 {
     wxString sDate;
     if (withDateRange && startDate.IsValid() && endDate.IsValid()) {
-        sDate << wxString::Format(_("From %s till %s")
-            , mmGetDateForDisplay(startDate.FormatISODate())
-            , withNoEndDate ? _("Future") : mmGetDateForDisplay(endDate.FormatISODate()));
+        sDate << wxString::Format(_t("From %1$s till %2$s")
+            , mmGetDateTimeForDisplay(startDate.FormatISODate())
+            , withNoEndDate ? _t("Future") : mmGetDateTimeForDisplay(endDate.FormatISODate()));
     }
     else if (!withDateRange) {
-        sDate << _("Over Time");
+        sDate << _t("Over Time");
     }
     else
         wxASSERT(false);
@@ -216,21 +241,21 @@ void mmHTMLBuilder::addReportCurrency()
     wxString base_currency_symbol;
     wxASSERT_MSG(Model_Currency::GetBaseCurrencySymbol(base_currency_symbol), "Could not find base currency symbol");
 
-    addHeader(5, wxString::Format("%s: %s", _("Currency"), base_currency_symbol));  
+    addHeader(5, wxString::Format("%s: %s", _t("Currency"), base_currency_symbol));  
 }
 
 void mmHTMLBuilder::addOffsetIndication(int startDay)
 {       
     if (startDay > 1)
         addHeader(5, wxString::Format ("%s: %d"
-            , _("User specified start day")
+            , _t("User specified start day")
             , startDay));
 }
 
 void mmHTMLBuilder::addFutureIgnoredIndication(bool ignore)
 {       
     if (ignore)
-        addHeader(5, _("Future Transactions have been ignored"));
+        addHeader(5, _t("Future Transactions have been ignored"));
 }
 
 void mmHTMLBuilder::addDateNow()
@@ -352,7 +377,7 @@ void mmHTMLBuilder::addTableCellDate(const wxString& iso_date)
 {
     html_ += wxString::Format(tags::TABLE_CELL
         , wxString::Format(" class='text-left' sorttable_customkey = '%s' nowrap", iso_date));
-    html_ += mmGetDateForDisplay(iso_date);
+    html_ += mmGetDateTimeForDisplay(iso_date);
     this->endTableCell();
 }
 
@@ -385,6 +410,21 @@ const wxString mmHTMLBuilder::getColor(int i)
     std::vector<wxColour> colours = mmThemeMetaColourArray(meta::COLOR_REPORT_PALETTE);
     int c = i % colours.size();
     return colours.at(c).GetAsString(wxC2S_HTML_SYNTAX);
+}
+
+const wxString mmHTMLBuilder::getFormattedLink(const wxString& color, const wxString& href_value, const wxString& a_value)
+{
+    // Check if color is provided
+    if (color.IsEmpty())
+    {
+        // Use the standard link format
+        return wxString::Format(tags::TABLE_CELL_LINK, href_value, a_value);
+    }
+    else
+    {
+        // Use the color link format
+        return wxString::Format(tags::TABLE_CELL_LINK_COLOR, color, href_value, a_value);
+    }
 }
 
 const wxString mmHTMLBuilder::getRandomColor(bool positive)
@@ -460,15 +500,15 @@ void mmHTMLBuilder::endTable()
 void mmHTMLBuilder::endThead()
 {
     html_ += tags::THEAD_END;
-};
+}
 void mmHTMLBuilder::endTbody()
 {
     html_ += tags::TBODY_END;
-};
+}
 void mmHTMLBuilder::endTfoot()
 {
     html_ += tags::TFOOT_END;
-};
+}
 
 void mmHTMLBuilder::startTableRow()
 {
@@ -581,7 +621,7 @@ void mmHTMLBuilder::addChart(const GraphData& gd)
             gtype = "line";
             if (gd.labels.size() < 5)
                 chartWidth = 70;
-    };
+    }
 
     addDivContainer("shadowGraph"); 
 
@@ -593,23 +633,49 @@ void mmHTMLBuilder::addChart(const GraphData& gd)
                     , chartWidth);
     htmlChart += wxString::Format(", title: { text: '%s'}", gd.title);
 
-    wxString toolTipFormatter;
+    wxString locale = Model_Infotable::instance().getString("LOCALE", "");
+
+    if (locale.IsEmpty())
+    {
+            locale = "undefined";
+    }
+    else
+    {
+            // Locale format for charts: en-US
+            // Some locale format on Linux are different, e.g. en_US or even en_US.UTF-8
+            // -> underscore (_) needs to be replaced with dash (-) and .UTF_8 suffix needs to be removed, if present
+            locale.Append("'").Prepend("'");
+            locale.Replace("_", "-");
+            locale.Replace(".UTF-8", "");
+    }
+
     if (gd.type == GraphData::PIE || gd.type == GraphData::DONUT) 
     {
         htmlChart += ", plotOptions: { pie: { customScale: 0.8 } }";
-
-        const wxString pieFunctionToolTip = wxString::Format("function(value, opts) { return chart_%s[opts.dataPointIndex] }\n", divid);
-        toolTipFormatter = wxString::Format(", y: { formatter: %s }", pieFunctionToolTip); 
     }
+    
+    wxString toolTipFormatter = wxString::Format(", y: { formatter: function(value, opts) { return value.toLocaleString(%s, {minimumFractionDigits: %i, maximumFractionDigits: %i});}}", locale, precision, precision);
 
     htmlChart += wxString::Format(", tooltip: { theme: 'dark' %s }\n", toolTipFormatter);
 
     // Turn off data labels for bar charts when they get too cluttered
-    if ((gd.type == GraphData::BAR || gd.type == GraphData::STACKEDAREA) && gd.labels.size() > 10) 
+    if ((gd.type == GraphData::BAR || gd.type == GraphData::STACKEDAREA) && gd.labels.size() > 10)
     {
         htmlChart += ", dataLabels: { enabled: false }";
     } else if (gd.type == GraphData::PIE || gd.type == GraphData::DONUT)
     {
+
+        htmlChart += ", legend: { formatter: function(seriesName, opts){ "
+            "var percent = (+opts.w.globals.seriesPercent[opts.seriesIndex]).toFixed(1); "
+            "percent = new Array((5 - percent.length)*2).join('&nbsp;') + percent; " +
+            wxString::Format("var localizedValues = opts.w.globals.series.map(function(value){ return value.toLocaleString(%s, {minimumFractionDigits: %i, "
+                             "maximumFractionDigits: %i});});",
+                             locale, precision, precision)
+                                                                                                                                                                    
+            + "var valueLength = localizedValues.reduce(function(a, b) {return Math.max(a, b.length) }, 0) + 1;" +
+            wxString::Format("var value = chart_%s[opts.seriesIndex].toLocaleString(%s, {minimumFractionDigits: %i, maximumFractionDigits: %i});", divid, locale, precision, precision) +
+            "value = new Array((valueLength - value.toString().length)*2 + value.split((1000).toLocaleString(" + wxString::Format("%s", locale) + ").charAt(1)).length - 1).join('&nbsp;') + value;"
+            "return['<strong>', percent + '%&nbsp;', value, '&nbsp;</strong>', seriesName] } }\n";
         htmlChart += ", dataLabels: { enabled: true, style: { fontSize: '16px' }, dropShadow: { enabled: false } }\n";
     }
 
@@ -702,7 +768,7 @@ void mmHTMLBuilder::addChart(const GraphData& gd)
             }
             seriesNo++;
         }
-        htmlChart += "] }";   // Always label the lines
+        htmlChart += "], formatter: function(value, opts){ return " + wxString::Format("value.toLocaleString(%s, {minimumFractionDigits: %i, maximumFractionDigits: %i});", locale, precision, precision) + "}}";   // Always label the lines
     }
 
     htmlPieData += wxString::Format("var chart_%s = [ %s ]", divid, pieEntries);
@@ -715,7 +781,7 @@ void mmHTMLBuilder::addChart(const GraphData& gd)
         divid, gtype, htmlPieData, htmlChart, divid));
     
     endDiv();
-};
+}
 
 const wxString mmHTMLBuilder::getHTMLText() const
 {

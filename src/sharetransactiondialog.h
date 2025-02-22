@@ -36,11 +36,11 @@ public:
     ShareTransactionDialog(wxWindow* parent, Model_Stock::Data* stock);
     ShareTransactionDialog(wxWindow* parent, Model_Translink::Data* transfer_entry, Model_Checking::Data* checking_entry);
 
-    int m_stock_id;
+    int64 m_stock_id = -1;
 
 private:
     bool Create(wxWindow* parent, wxWindowID id = wxID_ANY
-        , const wxString& caption = _("Edit Share Transaction")
+        , const wxString& caption = _t("Edit Share Transaction")
         , const wxPoint& pos = wxDefaultPosition
         , const wxSize& size = wxDefaultSize
         , long style = wxCAPTION | wxSYSTEM_MENU | wxCLOSE_BOX);
@@ -56,22 +56,23 @@ private:
     void CalculateAmount(wxCommandEvent& event);
 
 private:
-    Model_Stock::Data* m_stock;
-    wxTextCtrl* m_stock_name_ctrl;
-    mmTextCtrl* m_share_num_ctrl;
-    wxTextCtrl* m_stock_symbol_ctrl;
-    mmTextCtrl* m_share_price_ctrl;
-    wxTextCtrl* m_share_lot_ctrl;
-    mmTextCtrl* m_share_commission_ctrl;
-    wxTextCtrl* m_notes_ctrl;
-    wxBitmapButton* m_attachments_btn;
+    Model_Stock::Data* m_stock = nullptr;
+    wxTextCtrl* m_stock_name_ctrl = nullptr;
+    mmTextCtrl* m_share_num_ctrl = nullptr;
+    wxTextCtrl* m_stock_symbol_ctrl = nullptr;
+    mmTextCtrl* m_share_price_ctrl = nullptr;
+    wxTextCtrl* m_share_lot_ctrl = nullptr;
+    mmTextCtrl* m_share_commission_ctrl = nullptr;
+    wxTextCtrl* m_notes_ctrl = nullptr;
+    wxBitmapButton* m_attachments_btn = nullptr;
+    wxBitmapButton* web_button = nullptr;
 
-    UserTransactionPanel* m_transaction_panel;
+    UserTransactionPanel* m_transaction_panel = nullptr;
     wxString m_dialog_heading;
 
-    Model_Checking::Data* m_checking_entry;
-    Model_Translink::Data* m_translink_entry;
-    Model_Shareinfo::Data* m_share_entry;
+    Model_Checking::Data* m_checking_entry = nullptr;
+    Model_Translink::Data* m_translink_entry = nullptr;
+    Model_Shareinfo::Data* m_share_entry = nullptr;
     enum
     {
         ID_STOCKTRANS_DATEPICKER_CHANGE = wxID_HIGHEST + 820,

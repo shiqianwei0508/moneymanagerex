@@ -23,11 +23,11 @@ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 Model_CurrencyHistory::Model_CurrencyHistory()
     : Model<DB_Table_CURRENCYHISTORY_V1>()
 {
-};
+}
 
 Model_CurrencyHistory::~Model_CurrencyHistory()
 {
-};
+}
 
 /**
 * Initialize the global Model_CurrencyHistory table.
@@ -48,7 +48,7 @@ Model_CurrencyHistory& Model_CurrencyHistory::instance()
     return Singleton<Model_CurrencyHistory>::instance();
 }
 
-Model_CurrencyHistory::Data* Model_CurrencyHistory::get(const int& currencyID, const wxDate& date)
+Model_CurrencyHistory::Data* Model_CurrencyHistory::get(const int64& currencyID, const wxDate& date)
 {
     Data* hist = this->get_one(CURRENCYID(currencyID), DB_Table_CURRENCYHISTORY_V1::CURRDATE(date.FormatISODate()));
     if (hist) return hist;
@@ -71,7 +71,7 @@ DB_Table_CURRENCYHISTORY_V1::CURRDATE Model_CurrencyHistory::CURRDATE(const wxDa
 /**
 Adds or updates an element in stock history
 */
-int Model_CurrencyHistory::addUpdate(const int& currencyID, const wxDate& date, double price, UPDTYPE type)
+int64 Model_CurrencyHistory::addUpdate(const int64 currencyID, const wxDate& date, double price, UPDTYPE type)
 {
     Data *currHist = this->get(currencyID, date);
     if (!currHist) currHist = this->create();
@@ -84,9 +84,9 @@ int Model_CurrencyHistory::addUpdate(const int& currencyID, const wxDate& date, 
 }
 
 /** Return the rate for a specific currency in a specific day*/
-double Model_CurrencyHistory::getDayRate(int currencyID, const wxString& DateISO)
+double Model_CurrencyHistory::getDayRate(int64 currencyID, const wxString& DateISO)
 {
-    if (!Option::instance().getCurrencyHistoryEnabled()) {
+    if (!Option::instance().getUseCurrencyHistory()) {
         auto c = Model_Currency::instance().get(currencyID);
         return c ? c->BASECONVRATE : 1.0;
     }
@@ -100,12 +100,12 @@ double Model_CurrencyHistory::getDayRate(int currencyID, const wxString& DateISO
     }
 }
 
-double Model_CurrencyHistory::getDayRate(int currencyID, const wxDate& Date)
+double Model_CurrencyHistory::getDayRate(int64 currencyID, const wxDate& Date)
 {
     if (currencyID == Model_Currency::GetBaseCurrency()->CURRENCYID || currencyID == -1)
         return 1;
 
-    if (!Option::instance().getCurrencyHistoryEnabled())
+    if (!Option::instance().getUseCurrencyHistory())
         return Model_Currency::instance().get(currencyID)->BASECONVRATE;
 
     Model_CurrencyHistory::Data_Set Data = Model_CurrencyHistory::instance().find(Model_CurrencyHistory::CURRENCYID(currencyID), Model_CurrencyHistory::CURRDATE(Date));
@@ -141,9 +141,9 @@ double Model_CurrencyHistory::getDayRate(int currencyID, const wxDate& Date)
 }
 
 /** Return the last rate for specified currency */
-double Model_CurrencyHistory::getLastRate(const int& currencyID)
+double Model_CurrencyHistory::getLastRate(const int64& currencyID)
 {
-    if (!Option::instance().getCurrencyHistoryEnabled())
+    if (!Option::instance().getUseCurrencyHistory())
         return Model_Currency::instance().get(currencyID)->BASECONVRATE;
 
     Model_CurrencyHistory::Data_Set histData = Model_CurrencyHistory::instance().find(Model_CurrencyHistory::CURRENCYID(currencyID));

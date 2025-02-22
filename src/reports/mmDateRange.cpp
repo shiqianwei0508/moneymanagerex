@@ -19,20 +19,19 @@ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 ********************************************************/
 
 #include "mmDateRange.h"
+#include "constants.h"
 #include "option.h"
 #include <wx/intl.h>
 
-#define DATE_MAX 253402214400   /* Dec 31, 9999 */
-
-mmDateRange::mmDateRange()
-    : today_(wxDateTime::Today())
-    , future_(wxDateTime(DATE_MAX))
+mmDateRange::mmDateRange() : today_(wxDateTime::Today())
+    , today_end_(wxDateTime(23, 59, 59, 999))
+    , future_(DATE_MAX)
     , futureIgnored_(false)
 {
     start_date_ = today_;
-    end_date_ = today_;
+    end_date_ = today_end_;
     startDay_ = Option::instance().getReportingFirstDay();
-    title_ = wxTRANSLATE("Date Range");
+    title_ = _n("Date Range");
 }
 
 mmDateRange::~mmDateRange()
@@ -60,7 +59,7 @@ void mmDateRange::findEndOfMonth()
 {
     if (this->today_.GetDay() < startDay_)
         this->end_date_.Subtract(wxDateSpan::Months(1));
-    end_date_.Add(wxDateSpan::Months(1)).SetDay(1).Subtract(wxDateSpan::Day()).Add(wxDateSpan::Days(startDay_ - 1));
+    end_date_ = getDayEnd(end_date_.Add(wxDateSpan::Months(1)).SetDay(1).Subtract(wxDateSpan::Day()).Add(wxDateSpan::Days(startDay_ - 1)));
 }
 
 mmCurrentMonth::mmCurrentMonth()
@@ -68,26 +67,26 @@ mmCurrentMonth::mmCurrentMonth()
 {
     this->findEndOfMonth();
     this->findBeginOfMonth();
-    if (Option::instance().getIgnoreFutureTransactions() && (end_date_ > today_)) 
+    if (Option::instance().getIgnoreFutureTransactions() && (end_date_ > today_end_)) 
     {
-        end_date_ = today_;
+        end_date_ = today_end_;
         futureIgnored_ = true;
     }
-    this->title_ = wxTRANSLATE("Current Month");
+    this->title_ = _n("Current Month");
 }
 
 mmToday::mmToday()
 : mmDateRange()
 {
-    this->title_ = wxTRANSLATE("Today");
+    this->title_ = _n("Today");
 }
 
 mmCurrentMonthToDate::mmCurrentMonthToDate()
 : mmDateRange()
 {
     findBeginOfMonth();
-    this->end_date_ = today_;
-    this->title_ = wxTRANSLATE("Current Month to Date");
+    this->end_date_ = today_end_;
+    this->title_ = _n("Current Month to Date");
 }
 
 mmLastMonth::mmLastMonth()
@@ -97,7 +96,7 @@ mmLastMonth::mmLastMonth()
     this->findEndOfMonth();
     this->start_date_.Subtract(wxDateSpan::Months(1));
     this->findBeginOfMonth();
-    this->title_ = wxTRANSLATE("Last Month");
+    this->title_ = _n("Previous Month");
 }
 
 mmLast30Days::mmLast30Days()
@@ -107,7 +106,7 @@ mmLast30Days::mmLast30Days()
         .Subtract(wxDateSpan::Months(1))
         .Add(wxDateSpan::Days(1));
     // no change to end_date_
-    this->title_ = wxTRANSLATE("Last 30 Days");
+    this->title_ = _n("1 Month Ago to Date");
 }
 
 mmLast90Days::mmLast90Days()
@@ -117,7 +116,7 @@ mmLast90Days::mmLast90Days()
         .Subtract(wxDateSpan::Months(3))
         .Add(wxDateSpan::Days(1));
     // no change to end_date_
-    this->title_ = wxTRANSLATE("Last 90 Days");
+    this->title_ = _n("3 Months Ago to Date");
 }
 
 mmLast3Months::mmLast3Months()
@@ -126,12 +125,12 @@ mmLast3Months::mmLast3Months()
     this->findEndOfMonth();
     this->start_date_.Subtract(wxDateSpan::Months(2));
     this->findBeginOfMonth();
-    if (Option::instance().getIgnoreFutureTransactions() && (end_date_ > today_)) 
+    if (Option::instance().getIgnoreFutureTransactions() && (end_date_ > today_end_)) 
     {
-        end_date_ = today_;
+        end_date_ = today_end_;
         futureIgnored_ = true;
     }
-    this->title_ = wxTRANSLATE("Last 3 Months");
+    this->title_ = _n("Latest 3 Months");
 }
 
 mmLast12Months::mmLast12Months()
@@ -140,12 +139,12 @@ mmLast12Months::mmLast12Months()
     this->findEndOfMonth();
     this->start_date_.Subtract(wxDateSpan::Months(11));
     this->findBeginOfMonth();
-    if (Option::instance().getIgnoreFutureTransactions() && (end_date_ > today_)) 
+    if (Option::instance().getIgnoreFutureTransactions() && (end_date_ > today_end_)) 
     {
-        end_date_ = today_;
+        end_date_ = today_end_;
         futureIgnored_ = true;
     }
-    this->title_ = wxTRANSLATE("Last 12 Months");
+    this->title_ = _n("Latest 12 Months");
 }
 
 mmCurrentYear::mmCurrentYear()
@@ -156,12 +155,12 @@ mmCurrentYear::mmCurrentYear()
     this->end_date_ = this->start_date_;
     this->end_date_.Add(wxDateSpan::Months(11));
     this->findEndOfMonth();
-    if (Option::instance().getIgnoreFutureTransactions() && (end_date_ > today_)) 
+    if (Option::instance().getIgnoreFutureTransactions() && (end_date_ > today_end_)) 
     {
-        end_date_ = today_;
+        end_date_ = today_end_;
         futureIgnored_ = true;
     }
-    this->title_ = wxTRANSLATE("Current Year");
+    this->title_ = _n("Current Year");
 }
 
 mmCurrentYearToDate::mmCurrentYearToDate()
@@ -169,8 +168,8 @@ mmCurrentYearToDate::mmCurrentYearToDate()
 {
     this->findBeginOfMonth();
     this->start_date_.SetMonth(wxDateTime::Jan);
-    this->end_date_ = today_;
-    this->title_ = wxTRANSLATE("Current Year to Date");
+    this->end_date_ = today_end_;
+    this->title_ = _n("Current Year to Date");
 }
 
 mmLastYear::mmLastYear()
@@ -182,37 +181,38 @@ mmLastYear::mmLastYear()
     this->end_date_ = this->start_date_;
     this->end_date_.Add(wxDateSpan::Months(11));
     this->findEndOfMonth();
-    this->title_ = wxTRANSLATE("Last Year");
+    this->title_ = _n("Previous Year");
 }
 
 mmCurrentFinancialYear::mmCurrentFinancialYear()
 : mmDateRange()
 {
-    int day = wxAtoi(Option::instance().FinancialYearStartDay());
-    int month = wxAtoi(Option::instance().FinancialYearStartMonth());
+    int day = Option::instance().getFinancialFirstDay();
+    wxDateTime::Month month = Option::instance().getFinancialFirstMonth();
 
-    int this_month = this->start_date_.GetMonth() + 1;
+    wxDateTime::Month this_month = this->start_date_.GetMonth();
     auto finDate = this->start_date_;
-    finDate.SetDay(1).SetMonth(wxDateTime::Month(month - 1));
+    finDate.SetDay(1).SetMonth(month);
     auto last_month_day = finDate.GetLastMonthDay().GetDay();
     wxASSERT(day <= last_month_day);
     finDate.SetDay(day <= last_month_day ? day : last_month_day);
 
     if (finDate.IsLaterThan(this->start_date_))
-        this->start_date_.Subtract(wxDateSpan::Year()).Add(wxDateSpan::Months(month - this_month));
-    else
-        this->start_date_.Subtract(wxDateSpan::Months(this_month - month));
+        this->start_date_.Subtract(wxDateSpan::Year());
+    this->start_date_.Add(wxDateSpan::Months(month - this_month));
 
-    this->start_date_.Subtract(wxDateSpan::Days(this->start_date_.GetDay() - 1)).Add(wxDateSpan::Days(day - 1));
+    this->start_date_.Subtract(wxDateSpan::Days(this->start_date_.GetDay() - day));
     
     this->end_date_ = this->start_date_;
-    this->end_date_.Add(wxDateSpan::Year()).Subtract(wxDateSpan::Day());
-    if (Option::instance().getIgnoreFutureTransactions() && (end_date_ > today_)) 
+    end_date_ = getDayEnd(end_date_.Add(wxDateSpan::Year()).Subtract(wxDateSpan::Day()));
+
+    if (Option::instance().getIgnoreFutureTransactions() && (end_date_ > today_end_)) 
     {
-        end_date_ = today_;
+        end_date_ = today_end_;
         futureIgnored_ = true;
     }
-    this->title_ = wxTRANSLATE("Current Financial Year");
+
+    this->title_ = _n("Current Financial Year");
 }
 
 mmCurrentFinancialYearToDate::mmCurrentFinancialYearToDate()
@@ -222,7 +222,7 @@ mmCurrentFinancialYearToDate::mmCurrentFinancialYearToDate()
     this->start_date_ = current_financial_year.start_date();
     // no change to end_date_
 
-    this->title_ = wxTRANSLATE("Current Financial Year to Date");
+    this->title_ = _n("Current Financial Year to Date");
 }
 
 mmLastFinancialYear::mmLastFinancialYear()
@@ -231,9 +231,8 @@ mmLastFinancialYear::mmLastFinancialYear()
     mmCurrentFinancialYear current_financial_year;
     this->start_date_ = current_financial_year.start_date().Subtract(wxDateSpan::Year());
     this->end_date_ = this->start_date_;
-    this->end_date_.Add(wxDateSpan::Year()).Subtract(wxDateSpan::Day());
-
-    this->title_ = wxTRANSLATE("Last Financial Year");
+    end_date_ = getDayEnd(end_date_.Add(wxDateSpan::Year()).Subtract(wxDateSpan::Day()));
+    this->title_ = _n("Previous Financial Year");
 }
 
 mmAllTime::mmAllTime()
@@ -241,12 +240,12 @@ mmAllTime::mmAllTime()
 {
     this->start_date_.SetDay(1).SetMonth(wxDateTime::Jan).SetYear(1900);
     this->end_date_ = future_;
-    if (Option::instance().getIgnoreFutureTransactions() && (end_date_ > today_)) 
+    if (Option::instance().getIgnoreFutureTransactions() && (end_date_ > today_end_)) 
     {
-        end_date_ = today_;
+        end_date_ = today_end_;
         futureIgnored_ = true;
     }
-    this->title_ = wxTRANSLATE("Over Time");
+    this->title_ = _n("Over Time");
 }
 
 bool mmAllTime::is_with_date() const
@@ -257,12 +256,12 @@ bool mmAllTime::is_with_date() const
 mmSpecifiedRange::mmSpecifiedRange(const wxDateTime& start, const wxDateTime& end)
 : mmDateRange()
 {
-    this->title_ = wxTRANSLATE("Custom");
+    this->title_ = _n("Custom");
     this->start_date_ = start;
     this->end_date_ = end;
-    if (Option::instance().getIgnoreFutureTransactions() && (end_date_ > today_)) 
+    if (Option::instance().getIgnoreFutureTransactions() && (end_date_ > today_end_)) 
     {
-        end_date_ = today_;
+        end_date_ = today_end_;
         futureIgnored_ = true;
     }
 }
@@ -271,13 +270,35 @@ mmLast365Days::mmLast365Days() : mmDateRange()
 {
     this->start_date_.Subtract(wxDateSpan::Months(12)).Add(wxDateSpan::Days(1));
     // no change to end_date_
-    this->title_ = wxTRANSLATE("Last 365 Days");
+    this->title_ = _n("1 Year Ago to Date");
+}
+
+mmLastNDays::mmLastNDays(int days)
+    : mmDateRange()
+{
+    this->start_date_
+        .Subtract(wxDateSpan::Days(days))
+        .Add(wxDateSpan::Days(1));
+    // no change to end_date_
+    this->title_ = wxString::Format(_t("Last %i Days"), days);
+}
+
+void mmLastNDays::SetRange(int days)
+{
+    // recalculate start_date_
+    this->start_date_ = today_;
+    this->start_date_
+        .Subtract(wxDateSpan::Days(days))
+        .Add(wxDateSpan::Days(1));
+    // no change to end_date_
+    // update title
+    this->title_ = wxString::Format(_t("Last %i Days"), days);
 }
 
 mmSinseToday::mmSinseToday() : mmDateRange()
 {
     this->end_date_ = future_;
-    this->title_ = wxTRANSLATE("Since Today");
+    this->title_ = _n("Since Today");
 }
 
 mmSinse30days::mmSinse30days() : mmDateRange()
@@ -286,7 +307,7 @@ mmSinse30days::mmSinse30days() : mmDateRange()
         .Subtract(wxDateSpan::Months(1))
         .Add(wxDateSpan::Days(1));
     this->end_date_ = future_;
-    this->title_ = wxTRANSLATE("Since 30 days ago");
+    this->title_ = _n("Since 1 Month Ago");
 }
 
 mmSinse90days::mmSinse90days() : mmDateRange()
@@ -295,7 +316,7 @@ mmSinse90days::mmSinse90days() : mmDateRange()
         .Subtract(wxDateSpan::Months(3))
         .Add(wxDateSpan::Days(1));
     this->end_date_ = future_;
-    this->title_ = wxTRANSLATE("Since 90 days ago");
+    this->title_ = _n("Since 3 Months Ago");
 }
 
 mmSinseCurrentYear::mmSinseCurrentYear() : mmDateRange()
@@ -303,12 +324,12 @@ mmSinseCurrentYear::mmSinseCurrentYear() : mmDateRange()
     this->findBeginOfMonth();
     this->start_date_.SetMonth(wxDateTime::Jan);
     this->end_date_ = future_;
-    this->title_ = wxTRANSLATE("Since Start of This Year");
+    this->title_ = _n("Since Start of This Year");
 }
 
 mmSinseCurrentFinancialYear::mmSinseCurrentFinancialYear() : mmCurrentFinancialYear()
 {
     futureIgnored_ = false;
     this->end_date_ = future_;
-    this->title_ = wxTRANSLATE("Since Start of Financial Year");
+    this->title_ = _n("Since Start of Financial Year");
 }

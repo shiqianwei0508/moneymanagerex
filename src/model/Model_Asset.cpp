@@ -18,42 +18,34 @@
  ********************************************************/
 
 #include "Model_Asset.h"
+#include "Model_Translink.h"
+#include "Model_CurrencyHistory.h"
 
-const std::vector<std::pair<Model_Asset::RATE, wxString> > Model_Asset::RATE_CHOICES = 
-{
-    {Model_Asset::RATE_NONE, wxString(wxTRANSLATE("None"))}
-    , {Model_Asset::RATE_APPRECIATE, wxString(wxTRANSLATE("Appreciates"))}
-    , {Model_Asset::RATE_DEPRECIATE, wxString(wxTRANSLATE("Depreciates"))}
-};
+ChoicesName Model_Asset::TYPE_CHOICES = ChoicesName({
+    { TYPE_ID_PROPERTY,  _n("Property") },
+    { TYPE_ID_AUTO,      _n("Automobile") },
+    { TYPE_ID_HOUSE,     _n("Household Object") },
+    { TYPE_ID_ART,       _n("Art") },
+    { TYPE_ID_JEWELLERY, _n("Jewellery") },
+    { TYPE_ID_CASH,      _n("Cash") },
+    { TYPE_ID_OTHER,     _n("Other") }
+});
 
-const std::vector<std::pair<Model_Asset::RATEMODE, wxString> > Model_Asset::RATEMODE_CHOICES = 
-{
-    {Model_Asset::PERCENTAGE, wxString(wxTRANSLATE("Percentage"))}
-    , {Model_Asset::LINEAR, wxString(wxTRANSLATE("Linear"))}
-};
+ChoicesName Model_Asset::STATUS_CHOICES = ChoicesName({
+    { STATUS_ID_CLOSED, _n("Closed") },
+    { STATUS_ID_OPEN,   _n("Open") }
+});
 
-const wxString Model_Asset::PERCENTAGE_STR = all_ratemode()[PERCENTAGE];
-const wxString Model_Asset::LINEAR_STR = all_ratemode()[LINEAR];
+ChoicesName Model_Asset::CHANGE_CHOICES = ChoicesName({
+    { CHANGE_ID_NONE,       _n("None") },
+    { CHANGE_ID_APPRECIATE, _n("Appreciates") },
+    { CHANGE_ID_DEPRECIATE, _n("Depreciates") }
+});
 
-const std::vector<std::pair<Model_Asset::TYPE, wxString> > Model_Asset::TYPE_CHOICES = 
-{
-    {Model_Asset::TYPE_PROPERTY, wxString(wxTRANSLATE("Property"))}
-    , {Model_Asset::TYPE_AUTO, wxString(wxTRANSLATE("Automobile"))}
-    , {Model_Asset::TYPE_HOUSE, wxString(wxTRANSLATE("Household Object"))}
-    , {Model_Asset::TYPE_ART, wxString(wxTRANSLATE("Art"))}
-    , {Model_Asset::TYPE_JEWELLERY, wxString(wxTRANSLATE("Jewellery"))}
-    , {Model_Asset::TYPE_CASH, wxString(wxTRANSLATE("Cash"))}
-    , {Model_Asset::TYPE_OTHER, wxString(wxTRANSLATE("Other"))}
-};
-
-const std::vector<std::pair<Model_Asset::STATUS, wxString> > Model_Asset::STATUS_CHOICES = 
-{
-    {Model_Asset::STATUS_CLOSED, wxString(wxTRANSLATE("Closed"))}
-    , {Model_Asset::STATUS_OPEN, wxString(wxTRANSLATE("Open"))}
-};
-
-const wxString Model_Asset::OPEN_STR = all_status()[STATUS_OPEN];
-const wxString Model_Asset::CLOSED_STR = all_status()[STATUS_CLOSED];
+ChoicesName Model_Asset::CHANGEMODE_CHOICES = ChoicesName({
+    { CHANGEMODE_ID_PERCENTAGE, _n("Percentage") },
+    { CHANGEMODE_ID_LINEAR,     _n("Linear") }
+});
 
 Model_Asset::Model_Asset()
 : Model<DB_Table_ASSETS_V1>()
@@ -84,41 +76,13 @@ Model_Asset& Model_Asset::instance()
     return Singleton<Model_Asset>::instance();
 }
 
-wxString Model_Asset::get_asset_name(int asset_id)
+wxString Model_Asset::get_asset_name(int64 asset_id)
 {
     Data* asset = instance().get(asset_id);
     if (asset)
         return asset->ASSETNAME;
     else
-        return _("Asset Error");
-}
-
-wxArrayString Model_Asset::all_rate()
-{
-    wxArrayString rates;
-    for (const auto& item: RATE_CHOICES) rates.Add(item.second);
-    return rates;
-}
-
-wxArrayString Model_Asset::all_ratemode()
-{
-    wxArrayString ratemodes;
-    for (const auto& item: RATEMODE_CHOICES) ratemodes.Add(item.second);
-    return ratemodes;
-}
-
-wxArrayString Model_Asset::all_type()
-{
-    wxArrayString types;
-    for (const auto& item: TYPE_CHOICES) types.Add(item.second);
-    return types;
-}
-
-wxArrayString Model_Asset::all_status()
-{
-    wxArrayString statusList;
-    for (const auto& item: STATUS_CHOICES) statusList.Add(item.second);
-    return statusList;
+        return _t("Asset Error");
 }
 
 double Model_Asset::balance()
@@ -131,9 +95,9 @@ double Model_Asset::balance()
     return balance;
 }
 
-DB_Table_ASSETS_V1::ASSETTYPE Model_Asset::ASSETTYPE(TYPE type, OP op)
+DB_Table_ASSETS_V1::ASSETTYPE Model_Asset::ASSETTYPE(TYPE_ID type, OP op)
 {
-    return DB_Table_ASSETS_V1::ASSETTYPE(all_type()[type], op);
+    return DB_Table_ASSETS_V1::ASSETTYPE(type_name(type), op);
 }
 
 DB_Table_ASSETS_V1::STARTDATE Model_Asset::STARTDATE(const wxDate& date, OP op)
@@ -151,51 +115,6 @@ wxDate Model_Asset::STARTDATE(const Data& r)
     return Model::to_date(r.STARTDATE);
 }
 
-Model_Asset::TYPE Model_Asset::type(const Data* r)
-{
-    for (const auto& item : TYPE_CHOICES) if (item.second.CmpNoCase(r->ASSETTYPE) == 0) return item.first;
-
-    return TYPE(-1);
-}
-
-Model_Asset::TYPE Model_Asset::type(const Data& r)
-{
-    return type(&r);
-}
-
-Model_Asset::RATE Model_Asset::rate(const Data* r)
-{
-    for (const auto & item : RATE_CHOICES) if (item.second.CmpNoCase(r->VALUECHANGE) == 0) return item.first;
-    return RATE(-1);
-}
-
-Model_Asset::RATE Model_Asset::rate(const Data& r)
-{
-    return rate(&r);
-}
-
-Model_Asset::RATEMODE Model_Asset::ratemode(const Data* r)
-{
-    for (const auto & item : RATEMODE_CHOICES) if (item.second.CmpNoCase(r->VALUECHANGEMODE) == 0) return item.first;
-    return RATEMODE(-1);
-}
-
-Model_Asset::RATEMODE Model_Asset::ratemode(const Data& r)
-{
-    return ratemode(&r);
-}
-
-Model_Asset::STATUS Model_Asset::status(const Data* r)
-{
-    for (const auto & item : STATUS_CHOICES) if (item.second.CmpNoCase(r->ASSETSTATUS) == 0) return item.first;
-    return STATUS(-1);
-}
-
-Model_Asset::STATUS Model_Asset::status(const Data& r)
-{
-    return status(&r);
-}
-
 Model_Currency::Data* Model_Asset::currency(const Data* /* r */)
 {
     return Model_Currency::instance().GetBaseCurrency();
@@ -203,29 +122,72 @@ Model_Currency::Data* Model_Asset::currency(const Data* /* r */)
 
 double Model_Asset::value(const Data* r)
 {
-    double sum = r->VALUE;
-    wxDate start_date = STARTDATE(r);
-    const wxDate today = wxDate::Today();
-    wxTimeSpan diff_time = today - start_date;
-    double diff_time_in_days = static_cast<double>(diff_time.GetDays());
-    switch (rate(r))
-    {
-    case RATE_NONE:
-        break;
-    case RATE_APPRECIATE:
-        sum *= pow(1.0 + (r->VALUECHANGERATE / 36500.0), diff_time_in_days);
-        break;
-    case RATE_DEPRECIATE:
-        sum *= pow(1.0 - (r->VALUECHANGERATE / 36500.0), diff_time_in_days);
-        break;
-    default:
-        break;
-    }
-
-    return sum;
+    return instance().valueAtDate(r, wxDate::Today());
 }
 
 double Model_Asset::value(const Data& r)
 {
-    return value(&r);
+    return instance().valueAtDate(&r, wxDate::Today());
+}
+
+double Model_Asset::valueAtDate(const Data* r, const wxDate date)
+{
+    double balance = 0;
+    if (date >= STARTDATE(r)) {
+        Model_Translink::Data_Set translink_records = Model_Translink::instance().find(
+            Model_Translink::LINKRECORDID(r->ASSETID),
+            Model_Translink::LINKTYPE(Model_Attachment::REFTYPE_NAME_ASSET)
+        );
+        if (!translink_records.empty())
+        {
+            for (const auto& link : translink_records)
+            {
+                const Model_Checking::Data* tran = Model_Checking::instance().get(link.CHECKINGACCOUNTID);
+                const wxDate tranDate = Model_Checking::TRANSDATE(tran);
+                if (tranDate <= date)
+                {
+                    double amount = -1 * Model_Checking::account_flow(tran, tran->ACCOUNTID) *
+                        Model_CurrencyHistory::getDayRate(Model_Account::instance().get(tran->ACCOUNTID)->CURRENCYID, tranDate);
+                    wxTimeSpan diff_time = date - tranDate;
+                    double diff_time_in_days = static_cast<double>(diff_time.GetDays());
+
+                    switch (change_id(r))
+                    {
+                    case CHANGE_ID_NONE:
+                        break;
+                    case CHANGE_ID_APPRECIATE:
+                        amount *= pow(1.0 + (r->VALUECHANGERATE / 36500.0), diff_time_in_days);
+                        break;
+                    case CHANGE_ID_DEPRECIATE:
+                        amount *= pow(1.0 - (r->VALUECHANGERATE / 36500.0), diff_time_in_days);
+                        break;
+                    default:
+                        break;
+                    }
+
+                    balance += amount;
+                }
+            }
+        }
+        else {
+            balance = r->VALUE;
+            wxTimeSpan diff_time = date - STARTDATE(r);
+            double diff_time_in_days = static_cast<double>(diff_time.GetDays());
+
+            switch (change_id(r))
+            {
+            case CHANGE_ID_NONE:
+                break;
+            case CHANGE_ID_APPRECIATE:
+                balance *= pow(1.0 + (r->VALUECHANGERATE / 36500.0), diff_time_in_days);
+                break;
+            case CHANGE_ID_DEPRECIATE:
+                balance *= pow(1.0 - (r->VALUECHANGERATE / 36500.0), diff_time_in_days);
+                break;
+            default:
+                break;
+            }
+        }
+    }
+    return balance;
 }

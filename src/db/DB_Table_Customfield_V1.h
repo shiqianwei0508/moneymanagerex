@@ -1,7 +1,7 @@
 ﻿// -*- C++ -*-
 //=============================================================================
 /**
- *      Copyright: (c) 2013 - 2022 Guan Lisheng (guanlisheng@gmail.com)
+ *      Copyright: (c) 2013 - 2025 Guan Lisheng (guanlisheng@gmail.com)
  *      Copyright: (c) 2017 - 2018 Stefano Giorgio (stef145g)
  *      Copyright: (c) 2022 Mark Whalley (mark@ipx.co.uk)
  *
@@ -12,7 +12,7 @@
  *      @brief
  *
  *      Revision History:
- *          AUTO GENERATED at 2022-09-28 23:10:47.317664.
+ *          AUTO GENERATED at 2025-02-04 16:22:14.834591.
  *          DO NOT EDIT!
  */
 //=============================================================================
@@ -49,7 +49,7 @@ struct DB_Table_CUSTOMFIELD_V1 : public DB_Table
 
     /** A container to hold a list of Data record pointers for the table in memory*/
     typedef std::vector<Self::Data*> Cache;
-    typedef std::map<int, Self::Data*> Index_By_Id;
+    typedef std::map<int64, Self::Data*> Index_By_Id;
     Cache cache_;
     Index_By_Id index_by_id_;
     Data* fake_; // in case the entity not found
@@ -64,7 +64,7 @@ struct DB_Table_CUSTOMFIELD_V1 : public DB_Table
     /** Removes all records stored in memory (cache) for the table*/ 
     void destroy_cache()
     {
-        std::for_each(cache_.begin(), cache_.end(), std::mem_fun(&Data::destroy));
+        std::for_each(cache_.begin(), cache_.end(), std::mem_fn(&Data::destroy));
         cache_.clear();
         index_by_id_.clear(); // no memory release since it just stores pointer and the according objects are in cache
     }
@@ -112,10 +112,10 @@ struct DB_Table_CUSTOMFIELD_V1 : public DB_Table
         db->Commit();
     }
     
-    struct FIELDID : public DB_Column<int>
+    struct FIELDID : public DB_Column<int64>
     { 
         static wxString name() { return "FIELDID"; } 
-        explicit FIELDID(const int &v, OP op = EQUAL): DB_Column<int>(v, op) {}
+        explicit FIELDID(const int64 &v, OP op = EQUAL): DB_Column<int64>(v, op) {}
     };
     
     struct REFTYPE : public DB_Column<wxString>
@@ -153,7 +153,7 @@ struct DB_Table_CUSTOMFIELD_V1 : public DB_Table
     };
 
     /** Returns the column name as a string*/
-    static wxString column_to_name(COLUMN col)
+    static wxString column_to_name(const COLUMN col)
     {
         switch(col)
         {
@@ -187,18 +187,18 @@ struct DB_Table_CUSTOMFIELD_V1 : public DB_Table
         /** This is a instance pointer to itself in memory. */
         Self* table_;
     
-        int FIELDID;//  primary key
+        int64 FIELDID;//  primary key
         wxString REFTYPE;
         wxString DESCRIPTION;
         wxString TYPE;
         wxString PROPERTIES;
 
-        int id() const
+        int64 id() const
         {
             return FIELDID;
         }
 
-        void id(int id)
+        void id(const int64 id)
         {
             FIELDID = id;
         }
@@ -213,23 +213,35 @@ struct DB_Table_CUSTOMFIELD_V1 : public DB_Table
             return this->id() < r->id();
         }
 
-        explicit Data(Self* table = 0) 
+        bool equals(const Data* r) const
+        {
+            if(FIELDID != r->FIELDID) return false;
+            if(!REFTYPE.IsSameAs(r->REFTYPE)) return false;
+            if(!DESCRIPTION.IsSameAs(r->DESCRIPTION)) return false;
+            if(!TYPE.IsSameAs(r->TYPE)) return false;
+            if(!PROPERTIES.IsSameAs(r->PROPERTIES)) return false;
+            return true;
+        }
+        
+        explicit Data(Self* table = nullptr ) 
         {
             table_ = table;
         
             FIELDID = -1;
         }
 
-        explicit Data(wxSQLite3ResultSet& q, Self* table = 0)
+        explicit Data(wxSQLite3ResultSet& q, Self* table = nullptr )
         {
             table_ = table;
         
-            FIELDID = q.GetInt(0); // FIELDID
+            FIELDID = q.GetInt64(0); // FIELDID
             REFTYPE = q.GetString(1); // REFTYPE
             DESCRIPTION = q.GetString(2); // DESCRIPTION
             TYPE = q.GetString(3); // TYPE
             PROPERTIES = q.GetString(4); // PROPERTIES
         }
+
+        Data(const Data& other) = default;
 
         Data& operator=(const Data& other)
         {
@@ -244,7 +256,7 @@ struct DB_Table_CUSTOMFIELD_V1 : public DB_Table
         }
 
         template<typename C>
-        bool match(const C &c) const
+        bool match(const C &) const
         {
             return false;
         }
@@ -291,7 +303,7 @@ struct DB_Table_CUSTOMFIELD_V1 : public DB_Table
         void as_json(PrettyWriter<StringBuffer>& json_writer) const
         {
             json_writer.Key("FIELDID");
-            json_writer.Int(this->FIELDID);
+            json_writer.Int64(this->FIELDID.GetValue());
             json_writer.Key("REFTYPE");
             json_writer.String(this->REFTYPE.utf8_str());
             json_writer.Key("DESCRIPTION");
@@ -305,7 +317,7 @@ struct DB_Table_CUSTOMFIELD_V1 : public DB_Table
         row_t to_row_t() const
         {
             row_t row;
-            row(L"FIELDID") = FIELDID;
+            row(L"FIELDID") = FIELDID.GetValue();
             row(L"REFTYPE") = REFTYPE;
             row(L"DESCRIPTION") = DESCRIPTION;
             row(L"TYPE") = TYPE;
@@ -315,7 +327,7 @@ struct DB_Table_CUSTOMFIELD_V1 : public DB_Table
 
         void to_template(html_template& t) const
         {
-            t(L"FIELDID") = FIELDID;
+            t(L"FIELDID") = FIELDID.GetValue();
             t(L"REFTYPE") = REFTYPE;
             t(L"DESCRIPTION") = DESCRIPTION;
             t(L"TYPE") = TYPE;
@@ -395,7 +407,7 @@ struct DB_Table_CUSTOMFIELD_V1 : public DB_Table
         wxString sql = wxEmptyString;
         if (entity->id() <= 0) //  new & insert
         {
-            sql = "INSERT INTO CUSTOMFIELD_V1(REFTYPE, DESCRIPTION, TYPE, PROPERTIES) VALUES(?, ?, ?, ?)";
+            sql = "INSERT INTO CUSTOMFIELD_V1(REFTYPE, DESCRIPTION, TYPE, PROPERTIES, FIELDID) VALUES(?, ?, ?, ?, ?)";
         }
         else
         {
@@ -410,8 +422,7 @@ struct DB_Table_CUSTOMFIELD_V1 : public DB_Table
             stmt.Bind(2, entity->DESCRIPTION);
             stmt.Bind(3, entity->TYPE);
             stmt.Bind(4, entity->PROPERTIES);
-            if (entity->id() > 0)
-                stmt.Bind(5, entity->FIELDID);
+            stmt.Bind(5, entity->id() > 0 ? entity->FIELDID : newId());
 
             stmt.ExecuteUpdate();
             stmt.Finalize();
@@ -434,14 +445,14 @@ struct DB_Table_CUSTOMFIELD_V1 : public DB_Table
 
         if (entity->id() <= 0)
         {
-            entity->id((db->GetLastRowId()).ToLong());
+            entity->id(db->GetLastRowId());
             index_by_id_.insert(std::make_pair(entity->id(), entity));
         }
         return true;
     }
 
     /** Remove the Data record from the database and the memory table (cache) */
-    bool remove(int id, wxSQLite3Database* db)
+    bool remove(const int64 id, wxSQLite3Database* db)
     {
         if (id <= 0) return false;
         try
@@ -512,12 +523,12 @@ struct DB_Table_CUSTOMFIELD_V1 : public DB_Table
     * Search the memory table (Cache) for the data record.
     * If not found in memory, search the database and update the cache.
     */
-    Self::Data* get(int id, wxSQLite3Database* db)
+    Self::Data* get(const int64 id, wxSQLite3Database* db)
     {
         if (id <= 0) 
         {
             ++ skip_;
-            return 0;
+            return nullptr;
         }
 
         Index_By_Id::iterator it = index_by_id_.find(id);
@@ -528,7 +539,7 @@ struct DB_Table_CUSTOMFIELD_V1 : public DB_Table
         }
         
         ++ miss_;
-        Self::Data* entity = 0;
+        Self::Data* entity = nullptr;
         wxString where = wxString::Format(" WHERE %s = ?", PRIMARY::name().utf8_str());
         try
         {
@@ -557,12 +568,50 @@ struct DB_Table_CUSTOMFIELD_V1 : public DB_Table
  
         return entity;
     }
+    /**
+    * Search the database for the data record, bypassing the cache.
+    */
+    Self::Data* get_record(const int64 id, wxSQLite3Database* db)
+    {
+        if (id <= 0) 
+        {
+            ++ skip_;
+            return nullptr;
+        }
+
+        Self::Data* entity = nullptr;
+        wxString where = wxString::Format(" WHERE %s = ?", PRIMARY::name().utf8_str());
+        try
+        {
+            wxSQLite3Statement stmt = db->PrepareStatement(this->query() + where);
+            stmt.Bind(1, id);
+
+            wxSQLite3ResultSet q = stmt.ExecuteQuery();
+            if(q.NextRow())
+            {
+                entity = new Self::Data(q, this);
+            }
+            stmt.Finalize();
+        }
+        catch(const wxSQLite3Exception &e) 
+        { 
+            wxLogError("%s: Exception %s", this->name().utf8_str(), e.GetMessage().utf8_str());
+        }
+        
+        if (!entity) 
+        {
+            entity = this->fake_;
+            // wxLogError("%s: %d not found", this->name().utf8_str(), id);
+        }
+ 
+        return entity;
+    }
 
     /**
     * Return a list of Data records (Data_Set) derived directly from the database.
     * The Data_Set is sorted based on the column number.
     */
-    const Data_Set all(wxSQLite3Database* db, COLUMN col = COLUMN(0), bool asc = true)
+    const Data_Set all(wxSQLite3Database* db, const COLUMN col = COLUMN(0), const bool asc = true)
     {
         Data_Set result;
         try

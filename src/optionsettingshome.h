@@ -21,6 +21,7 @@ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
 #include "optionsettingsbase.h"
 #include "reports/mmDateRange.h"
+#include "wx/spinctrl.h"
 
 class OptionSettingsHome : public OptionSettingsBase
 {
@@ -48,6 +49,7 @@ private:
     std::vector<wxSharedPtr<mmDateRange>> m_all_date_ranges;
 
 private:
-    wxChoice* m_incExpChoice;
+    wxChoice* m_incExpChoice = nullptr;
+    wxSpinCtrl* nDays_ = nullptr;
 
 };

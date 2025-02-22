@@ -94,7 +94,7 @@ def get_data_initializer_list(cursor, tbl_name):
 base_data_types_reverse = {
     'TEXT': 'wxString',
     'NUMERIC': 'double',
-    'INTEGER': 'int',
+    'INTEGER': 'int64',
     'REAL': 'double',
     'BLOB': 'wxString',
     'DATE': 'wxDateTime',
@@ -103,7 +103,7 @@ base_data_types_reverse = {
 base_data_types_function = {
     'TEXT': 'GetString',
     'NUMERIC': 'GetDouble',
-    'INTEGER': 'GetInt',
+    'INTEGER': 'GetInt64',
     'REAL': 'GetDouble',
 }
 
@@ -198,7 +198,7 @@ struct DB_Table_%s : public DB_Table
 
     /** A container to hold a list of Data record pointers for the table in memory*/
     typedef std::vector<Self::Data*> Cache;
-    typedef std::map<int, Self::Data*> Index_By_Id;
+    typedef std::map<int64, Self::Data*> Index_By_Id;
     Cache cache_;
     Index_By_Id index_by_id_;
     Data* fake_; // in case the entity not found
@@ -213,7 +213,7 @@ struct DB_Table_%s : public DB_Table
     /** Removes all records stored in memory (cache) for the table*/ 
     void destroy_cache()
     {
-        std::for_each(cache_.begin(), cache_.end(), std::mem_fun(&Data::destroy));
+        std::for_each(cache_.begin(), cache_.end(), std::mem_fn(&Data::destroy));
         cache_.clear();
         index_by_id_.clear(); // no memory release since it just stores pointer and the according objects are in cache
     }
@@ -319,7 +319,7 @@ struct DB_Table_%s : public DB_Table
 '''
         s += '''
     /** Returns the column name as a string*/
-    static wxString column_to_name(COLUMN col)
+    static wxString column_to_name(const COLUMN col)
     {
         switch(col)
         {
@@ -366,12 +366,12 @@ struct DB_Table_%s : public DB_Table
 
         s += '''
 
-        int id() const
+        int64 id() const
         {
             return %s;
         }
 
-        void id(int id)
+        void id(const int64 id)
         {
             %s = id;
         }
@@ -388,7 +388,21 @@ struct DB_Table_%s : public DB_Table
 ''' % (self._primay_key, self._primay_key)
 
         s += '''
-        explicit Data(Self* table = 0) 
+        bool equals(const Data* r) const
+        {'''
+        for field in self._fields:
+            ftype = base_data_types_reverse[field['type']]
+            if ftype == 'int64' or ftype == 'double':
+                s += '''
+            if(%s != r->%s) return false;''' % (field['name'], field['name'])
+            elif ftype == 'wxString':
+                s += '''
+            if(!%s.IsSameAs(r->%s)) return false;''' % (field['name'], field['name'])
+        s += '''
+            return true;
+        }
+        
+        explicit Data(Self* table = nullptr ) 
         {
             table_ = table;
         '''
@@ -400,7 +414,7 @@ struct DB_Table_%s : public DB_Table
             elif ftype == 'double':
                 s += '''
             %s = 0.0;''' % field['name']
-            elif ftype == 'int':
+            elif ftype == 'int64':
                 s += '''
             %s = -1;''' % field['name']
 
@@ -408,7 +422,7 @@ struct DB_Table_%s : public DB_Table
         s += '''
         }
 
-        explicit Data(wxSQLite3ResultSet& q, Self* table = 0)
+        explicit Data(wxSQLite3ResultSet& q, Self* table = nullptr )
         {
             table_ = table;
         '''
@@ -419,6 +433,8 @@ struct DB_Table_%s : public DB_Table
 
         s += '''
         }
+
+        Data(const Data& other) = default;
 
         Data& operator=(const Data& other)
         {
@@ -433,7 +449,7 @@ struct DB_Table_%s : public DB_Table
 '''
         s += '''
         template<typename C>
-        bool match(const C &c) const
+        bool match(const C &) const
         {
             return false;
         }'''
@@ -474,10 +490,10 @@ struct DB_Table_%s : public DB_Table
         {'''
         for field in self._fields:
             type = base_data_types_reverse[field['type']]
-            if type == 'int':
+            if type == 'int64':
                 s += '''
             json_writer.Key("%s");
-            json_writer.Int(this->%s);''' % (field['name'], field['name'])
+            json_writer.Int64(this->%s.GetValue());''' % (field['name'], field['name'])
             elif type == 'double':
                 s += '''
             json_writer.Key("%s");
@@ -499,7 +515,7 @@ struct DB_Table_%s : public DB_Table
             row_t row;'''
         for field in self._fields:
             s += '''
-            row(L"%s") = %s;'''%(field['name'], field['name'])
+            row(L"%s") = %s;'''%(field['name'], field['name'] + '.GetValue()' if field['type'] == 'INTEGER' else field['name'])
 
         s += '''
             return row;
@@ -511,7 +527,7 @@ struct DB_Table_%s : public DB_Table
         {'''
         for field in self._fields:
             s += '''
-            t(L"%s") = %s;''' % (field['name'], field['name'])
+            t(L"%s") = %s;''' % (field['name'], field['name'] + '.GetValue()' if field['type'] == 'INTEGER' else field['name'])
 
         s += '''
         }'''
@@ -599,10 +615,10 @@ struct DB_Table_%s : public DB_Table
         wxString sql = wxEmptyString;
         if (entity->id() <= 0) //  new & insert
         {
-            sql = "INSERT INTO %s(%s) VALUES(%s)";
+            sql = "INSERT INTO %s(%s, %s) VALUES(%s)";
         }''' % (self._table, ', '.join([field['name']\
-                for field in self._fields if not field['pk']]),
-                ', '.join(['?' for field in self._fields if not field['pk']]))
+                for field in self._fields if not field['pk']]), self._primay_key,
+                ', '.join(['?' for field in self._fields]))
 
         s += '''
         else
@@ -622,8 +638,7 @@ struct DB_Table_%s : public DB_Table
 
 
         s += '''
-            if (entity->id() > 0)
-                stmt.Bind(%d, entity->%s);
+            stmt.Bind(%d, entity->id() > 0 ? entity->%s : newId());
 
             stmt.ExecuteUpdate();
             stmt.Finalize();
@@ -646,15 +661,16 @@ struct DB_Table_%s : public DB_Table
 
         if (entity->id() <= 0)
         {
-            entity->id((db->GetLastRowId()).ToLong());
+            entity->id(db->GetLastRowId());
             index_by_id_.insert(std::make_pair(entity->id(), entity));
         }
         return true;
     }
 ''' % (len(self._fields), self._primay_key, self._table)
+
         s += '''
     /** Remove the Data record from the database and the memory table (cache) */
-    bool remove(int id, wxSQLite3Database* db)
+    bool remove(const int64 id, wxSQLite3Database* db)
     {
         if (id <= 0) return false;
         try
@@ -729,12 +745,12 @@ struct DB_Table_%s : public DB_Table
     * Search the memory table (Cache) for the data record.
     * If not found in memory, search the database and update the cache.
     */
-    Self::Data* get(int id, wxSQLite3Database* db)
+    Self::Data* get(const int64 id, wxSQLite3Database* db)
     {
         if (id <= 0) 
         {
             ++ skip_;
-            return 0;
+            return nullptr;
         }
 
         Index_By_Id::iterator it = index_by_id_.find(id);
@@ -745,7 +761,7 @@ struct DB_Table_%s : public DB_Table
         }
         
         ++ miss_;
-        Self::Data* entity = 0;
+        Self::Data* entity = nullptr;
         wxString where = wxString::Format(" WHERE %s = ?", PRIMARY::name().utf8_str());
         try
         {
@@ -774,13 +790,51 @@ struct DB_Table_%s : public DB_Table
  
         return entity;
     }
+    /**
+    * Search the database for the data record, bypassing the cache.
+    */
+    Self::Data* get_record(const int64 id, wxSQLite3Database* db)
+    {
+        if (id <= 0) 
+        {
+            ++ skip_;
+            return nullptr;
+        }
+
+        Self::Data* entity = nullptr;
+        wxString where = wxString::Format(" WHERE %s = ?", PRIMARY::name().utf8_str());
+        try
+        {
+            wxSQLite3Statement stmt = db->PrepareStatement(this->query() + where);
+            stmt.Bind(1, id);
+
+            wxSQLite3ResultSet q = stmt.ExecuteQuery();
+            if(q.NextRow())
+            {
+                entity = new Self::Data(q, this);
+            }
+            stmt.Finalize();
+        }
+        catch(const wxSQLite3Exception &e) 
+        { 
+            wxLogError("%s: Exception %s", this->name().utf8_str(), e.GetMessage().utf8_str());
+        }
+        
+        if (!entity) 
+        {
+            entity = this->fake_;
+            // wxLogError("%s: %d not found", this->name().utf8_str(), id);
+        }
+ 
+        return entity;
+    }
 '''
         s += '''
     /**
     * Return a list of Data records (Data_Set) derived directly from the database.
     * The Data_Set is sorted based on the column number.
     */
-    const Data_Set all(wxSQLite3Database* db, COLUMN col = COLUMN(0), bool asc = true)
+    const Data_Set all(wxSQLite3Database* db, const COLUMN col = COLUMN(0), const bool asc = true)
     {
         Data_Set result;
         try
@@ -814,6 +868,7 @@ def generate_base_class(header, fields=set):
 
 #include <vector>
 #include <map>
+#include <random>
 #include <algorithm>
 #include <functional>
 #include <cwchar>
@@ -829,6 +884,8 @@ using namespace rapidjson;
 #include "html_template.h"
 using namespace tmpl;
 
+typedef wxLongLong int64;
+
 class wxString;
 enum OP { EQUAL = 0, GREATER, LESS, GREATER_OR_EQUAL, LESS_OR_EQUAL, NOT_EQUAL };
 
@@ -841,6 +898,8 @@ struct DB_Column
     {}
 };
 
+static int64 ticks_last_ = 0;
+    
 struct DB_Table
 {
     DB_Table(): hit_(0), miss_(0), skip_(0) {};
@@ -859,6 +918,23 @@ struct DB_Table
     void drop(wxSQLite3Database* db) const
     {
         db->ExecuteUpdate("DROP TABLE IF EXISTS " + this->name());
+    }
+
+    static wxLongLong newId()
+    {
+        // Get the current time in milliseconds as wxLongLong
+        wxLongLong ticks = wxDateTime::UNow().GetValue();
+        // Ensure uniqueness from last generated value
+        if (ticks <= ticks_last_)
+            ticks = ticks_last_ + 1;
+        ticks_last_ = ticks;
+        // Generate a random 3-digit number (0 to 999)
+        std::random_device rd;
+        std::mt19937 gen(rd());
+        std::uniform_int_distribution<int> dist(0, 999);
+        int randomSuffix = dist(gen);
+        // Combine ticks and randomSuffix
+        return (ticks * 1000) + randomSuffix;
     }
 };
 

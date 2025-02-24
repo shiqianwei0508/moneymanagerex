@@ -1,6 +1,6 @@
 /*******************************************************
  Copyright (C) 2006 Madhan Kanagavel
- Copyright (C) 2021 Mark Whalley (mark@ipx.co.uk)
+ Copyright (C) 2021,2024 Mark Whalley (mark@ipx.co.uk)
 
  This program is free software; you can redistribute it and/or modify
  it under the terms of the GNU General Public License as published by
@@ -33,10 +33,7 @@
 #include <algorithm>
 
 mmReportSummaryStocks::mmReportSummaryStocks()
-    : mmPrintableBase(wxTRANSLATE("Summary of Stocks"))
-    , m_real_gain_loss_sum_total(0.0)
-    , m_unreal_gain_loss_sum_total(0.0)
-    , m_stock_balance(0.0)
+    : mmPrintableBase(_n("Summary of Stocks"))
 {
     setReportParameters(Reports::StocksReportSummary);
 }
@@ -46,6 +43,8 @@ void  mmReportSummaryStocks::RefreshData()
     m_stocks.clear();
     m_real_gain_loss_sum_total = 0.0;
     m_unreal_gain_loss_sum_total = 0.0;
+    m_real_gain_loss_excl_forex = 0.0;
+    m_unreal_gain_loss_excl_forex = 0.0;
     m_stock_balance = 0.0;
 
     data_holder line;
@@ -54,8 +53,8 @@ void  mmReportSummaryStocks::RefreshData()
 
     for (const auto& a : Model_Account::instance().all(Model_Account::COL_ACCOUNTNAME))
     {
-        if (Model_Account::type(a) != Model_Account::INVESTMENT) continue;
-        if (Model_Account::status(a) != Model_Account::OPEN) continue;
+        if (Model_Account::type_id(a) != Model_Account::TYPE_ID_INVESTMENT) continue;
+        if (Model_Account::status_id(a) != Model_Account::STATUS_ID_OPEN) continue;
 
         account.id = a.id();
         account.name = a.ACCOUNTNAME;
@@ -71,11 +70,12 @@ void  mmReportSummaryStocks::RefreshData()
             m_stock_balance += today_rate * Model_Stock::CurrentValue(stock);
             line.realgainloss = Model_Stock::RealGainLoss(stock);
             account.realgainloss += line.realgainloss;
-            line.unrealgainloss = Model_Stock::CurrentValue(stock) - Model_Stock::InvestmentValue(stock);
+            line.unrealgainloss = Model_Stock::UnrealGainLoss(stock);
             account.unrealgainloss += line.unrealgainloss;
-            const double purchase_rate = Model_CurrencyHistory::getDayRate(currency->CURRENCYID, stock.PURCHASEDATE);
-            m_unreal_gain_loss_sum_total += (Model_Stock::CurrentValue(stock) * today_rate - Model_Stock::InvestmentValue(stock) * purchase_rate);
-            m_real_gain_loss_sum_total += line.realgainloss * today_rate;
+            m_unreal_gain_loss_sum_total += Model_Stock::UnrealGainLoss(stock, true);
+            m_real_gain_loss_sum_total += Model_Stock::RealGainLoss(stock, true);
+            m_real_gain_loss_excl_forex += line.realgainloss * today_rate;
+            m_unreal_gain_loss_excl_forex += line.unrealgainloss * today_rate;
 
             line.name = stock.STOCKNAME;
             line.symbol = stock.SYMBOL;
@@ -109,16 +109,16 @@ wxString mmReportSummaryStocks::getHTMLText()
             {
                 hb.startTableRow();
                 {
-                    hb.addTableHeaderCell(_("Name"));
-                    hb.addTableHeaderCell(_("Symbol"));
-                    hb.addTableHeaderCell(_("Purchase Date"));
-                    hb.addTableHeaderCell(_("Quantity"), "text-right");
-                    hb.addTableHeaderCell(_("Initial Value"), "text-right");
-                    hb.addTableHeaderCell(_("Current Price"), "text-right");
-                    hb.addTableHeaderCell(_("Commission"), "text-right");
-                    hb.addTableHeaderCell(_("Realized Gain/Loss"), "text-right");
-                    hb.addTableHeaderCell(_("Unrealized Gain/Loss"), "text-right");
-                    hb.addTableHeaderCell(_("Current Value"), "text-right");
+                    hb.addTableHeaderCell(_t("Name"));
+                    hb.addTableHeaderCell(_t("Symbol"));
+                    hb.addTableHeaderCell(_t("Purchase Date"));
+                    hb.addTableHeaderCell(_t("Quantity"), "text-right");
+                    hb.addTableHeaderCell(_t("Initial Value"), "text-right");
+                    hb.addTableHeaderCell(_t("Current Price"), "text-right");
+                    hb.addTableHeaderCell(_t("Commission"), "text-right");
+                    hb.addTableHeaderCell(_t("Realized Gain/Loss"), "text-right");
+                    hb.addTableHeaderCell(_t("Unrealized Gain/Loss"), "text-right");
+                    hb.addTableHeaderCell(_t("Current Value"), "text-right");
                 }
                 hb.endTableRow();
             }
@@ -133,7 +133,7 @@ wxString mmReportSummaryStocks::getHTMLText()
                 {
                     hb.startTableRow();
                     {
-                        hb.addTableHeaderCell(acct.name, "text-left", 9);
+                        hb.addTableHeaderCell(acct.name, "text-left", 10);
                     }
                     hb.endTableRow();
                 }
@@ -160,7 +160,7 @@ wxString mmReportSummaryStocks::getHTMLText()
                     }
                     hb.startTotalTableRow();
                     {
-                        hb.addTableCell(_("Total:"));
+                        hb.addTableCell(_t("Total:"));
                         hb.addEmptyTableCell(6);
                         hb.addCurrencyCell(acct.realgainloss, currency);
                         hb.addCurrencyCell(acct.unrealgainloss, currency);
@@ -174,10 +174,60 @@ wxString mmReportSummaryStocks::getHTMLText()
 
             hb.startTfoot();
             {
-                const std::vector<wxString> v{ Model_Currency::toCurrency(m_real_gain_loss_sum_total),
-                                               Model_Currency::toCurrency(m_unreal_gain_loss_sum_total),
-                                               Model_Currency::toCurrency(m_stock_balance) };
-                hb.addTotalRow(_("Grand Total:"), 10, v);
+                // Round FX gain/loss to the scale of the base currency for display
+                int scale = pow(10, log10(Model_Currency::instance().GetBaseCurrency()->SCALE.GetValue()));
+                double forex_real_gain_loss = std::round((m_real_gain_loss_sum_total - m_real_gain_loss_excl_forex) * scale) / scale;
+                double forex_unreal_gain_loss = std::round((m_unreal_gain_loss_sum_total - m_unreal_gain_loss_excl_forex) * scale) / scale;
+
+                hb.startTotalTableRow();
+                hb.addTableCell(_t("Grand Total:"));
+                hb.addEmptyTableCell(6);
+
+                hb.startTableCell(" style='text-align:right;' nowrap");
+                if (forex_real_gain_loss != 0) {
+                    hb.startSpan(Model_Currency::toCurrency(m_real_gain_loss_excl_forex), wxString::Format(" style='text-align:right;%s' nowrap"
+                        , m_real_gain_loss_excl_forex < 0 ? "color:red;" : ""));
+                    hb.endSpan();
+                    hb.startSpan(" + ", "");
+                    hb.endSpan();
+                    hb.startSpan(Model_Currency::toCurrency(forex_real_gain_loss), wxString::Format(" style='text-align:right;%s' nowrap"
+                        , forex_real_gain_loss < 0 ? "color:red;" : ""));
+                    hb.endSpan();
+                    hb.startSpan(" FX", "");
+                    hb.endSpan();
+                    hb.addLineBreak();
+                }
+                hb.startSpan(Model_Currency::toCurrency(m_real_gain_loss_sum_total), wxString::Format(" style='text-align:right;%s' nowrap"
+                    , m_real_gain_loss_sum_total < 0 ? "color:red;" : ""));
+                hb.endSpan();
+
+                hb.endTableCell();
+
+                hb.startTableCell(" style='text-align:right;' nowrap");
+                if (forex_unreal_gain_loss != 0) {
+                    hb.startSpan(Model_Currency::toCurrency(m_unreal_gain_loss_excl_forex), wxString::Format(" style='text-align:right;%s' nowrap"
+                        , m_unreal_gain_loss_excl_forex < 0 ? "color:red;" : ""));
+                    hb.endSpan();
+                    hb.startSpan(" + ", "");
+                    hb.endSpan();
+                    hb.startSpan(Model_Currency::toCurrency(forex_unreal_gain_loss), wxString::Format(" style='text-align:right;%s' nowrap"
+                        , forex_unreal_gain_loss < 0 ? "color:red;" : ""));
+                    hb.endSpan();
+                    hb.startSpan(" FX", "");
+                    hb.endSpan();
+                    hb.addLineBreak();
+                }
+                hb.startSpan(Model_Currency::toCurrency(m_unreal_gain_loss_sum_total), wxString::Format(" style='text-align:right;%s' nowrap"
+                    , m_unreal_gain_loss_sum_total < 0 ? "color:red;" : ""));
+                hb.endSpan();
+
+                hb.endTableCell();
+                
+                hb.startTableCell(" style='text-align:right;' nowrap");
+                hb.startSpan(Model_Currency::toCurrency(m_stock_balance), "");
+                hb.endSpan();
+
+                hb.endTableCell();
             }
             hb.endTfoot();
         }
@@ -191,7 +241,7 @@ wxString mmReportSummaryStocks::getHTMLText()
 }
 
 mmReportChartStocks::mmReportChartStocks()
-    : mmPrintableBase(wxTRANSLATE("Stocks Performance Charts"))
+    : mmPrintableBase(_n("Stocks Performance Charts"))
 {
     setReportParameters(Reports::StocksReportPerformance);
 }
@@ -211,13 +261,12 @@ wxString mmReportChartStocks::getHTMLText()
         hb.DisplayDateHeading(m_date_range->start_date(), m_date_range->end_date(), true);
 
     wxTimeSpan dist;
-    wxDate precDateDt = wxInvalidDateTime;
     wxArrayString symbols;
     for (const auto& stock : Model_Stock::instance().all(Model_Stock::COL_SYMBOL))
     {
-        if (symbols.Index(stock.SYMBOL) != wxNOT_FOUND) {
-            continue;
-        }
+        Model_Account::Data* account = Model_Account::instance().get(stock.HELDAT);
+        if (Model_Account::status_id(account) != Model_Account::STATUS_ID_OPEN) continue;
+        if (symbols.Index(stock.SYMBOL) != wxNOT_FOUND) continue;
 
         symbols.Add(stock.SYMBOL);
         int dataCount = 0, freq = 1;
@@ -249,8 +298,6 @@ wxString mmReportChartStocks::getHTMLText()
 
         if (!gd.series.empty())
         {
-
-            Model_Account::Data* account = Model_Account::instance().get(stock.HELDAT);
             hb.addHeader(1, wxString::Format("%s / %s - (%s)", stock.SYMBOL, stock.STOCKNAME, account->ACCOUNTNAME));
             gd.type = GraphData::LINE_DATETIME;
             hb.addChart(gd);

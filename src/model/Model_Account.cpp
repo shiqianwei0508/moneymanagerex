@@ -17,28 +17,39 @@
  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  ********************************************************/
 
+#include "option.h"
 #include "Model_Account.h"
 #include "Model_Stock.h"
 #include "Model_Translink.h"
 #include "Model_Shareinfo.h"
 
-const std::vector<std::pair<Model_Account::STATUS_ENUM, wxString> > Model_Account::STATUS_CHOICES =
-{
-    {Model_Account::OPEN, wxString(wxTRANSLATE("Open"))},
-    {Model_Account::CLOSED, wxString(wxTRANSLATE("Closed"))}
-};
+ChoicesName Model_Account::TYPE_CHOICES = ChoicesName({
+    { TYPE_ID_CASH,        _n("Cash") },
+    { TYPE_ID_CHECKING,    _n("Checking") },
+    { TYPE_ID_CREDIT_CARD, _n("Credit Card") },
+    { TYPE_ID_LOAN,        _n("Loan") },
+    { TYPE_ID_TERM,        _n("Term") },
+    { TYPE_ID_INVESTMENT,  _n("Investment") },
+    { TYPE_ID_ASSET,       _n("Asset") },
+    { TYPE_ID_SHARES,      _n("Shares") },
+});
 
-const std::vector<std::pair<Model_Account::TYPE, wxString> > Model_Account::TYPE_CHOICES =
-{
-    {Model_Account::CASH, wxString(wxTRANSLATE("Cash"))},
-    {Model_Account::CHECKING, wxString(wxTRANSLATE("Checking"))},
-    {Model_Account::CREDIT_CARD, wxString(wxTRANSLATE("Credit Card"))},
-    {Model_Account::LOAN, wxString(wxTRANSLATE("Loan"))},
-    {Model_Account::TERM, wxString(wxTRANSLATE("Term"))},
-    {Model_Account::INVESTMENT, wxString(wxTRANSLATE("Investment"))},
-    {Model_Account::ASSET, wxString(wxTRANSLATE("Asset"))},
-    {Model_Account::SHARES, wxString(wxTRANSLATE("Shares"))},
-};
+ChoicesName Model_Account::STATUS_CHOICES = ChoicesName({
+    { STATUS_ID_OPEN,   _n("Open") },
+    { STATUS_ID_CLOSED, _n("Closed") }
+});
+
+const wxString Model_Account::TYPE_NAME_CASH        = type_name(TYPE_ID_CASH);
+const wxString Model_Account::TYPE_NAME_CHECKING    = type_name(TYPE_ID_CHECKING);
+const wxString Model_Account::TYPE_NAME_CREDIT_CARD = type_name(TYPE_ID_CREDIT_CARD);
+const wxString Model_Account::TYPE_NAME_LOAN        = type_name(TYPE_ID_LOAN);
+const wxString Model_Account::TYPE_NAME_TERM        = type_name(TYPE_ID_TERM);
+const wxString Model_Account::TYPE_NAME_INVESTMENT  = type_name(TYPE_ID_INVESTMENT);
+const wxString Model_Account::TYPE_NAME_ASSET       = type_name(TYPE_ID_ASSET);
+const wxString Model_Account::TYPE_NAME_SHARES      = type_name(TYPE_ID_SHARES);
+
+const wxString Model_Account::STATUS_NAME_OPEN   = status_name(STATUS_ID_OPEN);
+const wxString Model_Account::STATUS_NAME_CLOSED = status_name(STATUS_ID_CLOSED);
 
 Model_Account::Model_Account()
 : Model<DB_Table_ACCOUNTLIST_V1>()
@@ -75,9 +86,9 @@ wxArrayString Model_Account::all_checking_account_names(bool skip_closed)
     wxArrayString accounts;
     for (const auto &account : this->all(COL_ACCOUNTNAME))
     {
-        if (skip_closed && status(account) == CLOSED)
+        if (skip_closed && status_id(account) == STATUS_ID_CLOSED)
             continue;
-        if (type(account) == INVESTMENT)
+        if (type_id(account) == TYPE_ID_INVESTMENT)
             continue;
         if (account.ACCOUNTNAME.empty())
             continue;
@@ -86,34 +97,20 @@ wxArrayString Model_Account::all_checking_account_names(bool skip_closed)
     return accounts;
 }
 
-const std::map<wxString, int> Model_Account::all_accounts(bool skip_closed)
+const std::map<wxString, int64> Model_Account::all_accounts(bool skip_closed)
 {
-    std::map<wxString, int> accounts;
+    std::map<wxString, int64> accounts;
     for (const auto& account : this->all(COL_ACCOUNTNAME))
     {
-        if (skip_closed && status(account) == CLOSED)
+        if (skip_closed && status_id(account) == STATUS_ID_CLOSED)
             continue;
-        if (type(account) == INVESTMENT)
+        if (type_id(account) == TYPE_ID_INVESTMENT)
             continue;
         if (account.ACCOUNTNAME.empty())
             continue;
         accounts[account.ACCOUNTNAME] = account.ACCOUNTID;
     }
     return accounts;
-}
-
-wxArrayString Model_Account::all_status()
-{
-    wxArrayString status;
-    for (const auto& item : STATUS_CHOICES) status.Add(item.second);
-    return status;
-}
-
-wxArrayString Model_Account::all_type()
-{
-    wxArrayString type;
-    for (const auto& item : TYPE_CHOICES) type.Add(item.second);
-    return type;
 }
 
 /** Get the Data record instance in memory. */
@@ -138,17 +135,17 @@ Model_Account::Data* Model_Account::getByAccNum(const wxString& num)
     return account;
 }
 
-wxString Model_Account::get_account_name(int account_id)
+wxString Model_Account::get_account_name(int64 account_id)
 {
     Data* account = instance().get(account_id);
     if (account)
         return account->ACCOUNTNAME;
     else
-        return _("Account Error");
+        return _t("Account Error");
 }
 
 /** Remove the Data record instance from memory and the database. */
-bool Model_Account::remove(int id)
+bool Model_Account::remove(int64 id)
 {
     this->Savepoint();
     for (const auto& r: Model_Checking::instance().find_or(Model_Checking::ACCOUNTID(id), Model_Checking::TOACCOUNTID(id)))
@@ -166,7 +163,7 @@ bool Model_Account::remove(int id)
 
     for (const auto& r : Model_Stock::instance().find(Model_Stock::HELDAT(id)))
     {
-        Model_Translink::RemoveTransLinkRecords(Model_Attachment::STOCK, r.STOCKID);
+        Model_Translink::RemoveTransLinkRecords(Model_Attachment::REFTYPE_ID_STOCK, r.STOCKID);
         Model_Stock::instance().remove(r.STOCKID);
     }
     this->ReleaseSavepoint();
@@ -191,19 +188,23 @@ Model_Currency::Data* Model_Account::currency(const Data& r)
     return currency(&r);
 }
 
-const Model_Checking::Data_Set Model_Account::transaction(const Data*r)
+const Model_Checking::Data_Set Model_Account::transactionsByDateTimeId(const Data*r)
 {
-    auto trans = Model_Checking::instance().find_or(Model_Checking::ACCOUNTID(r->ACCOUNTID)
-        , Model_Checking::TOACCOUNTID(r->ACCOUNTID));
+    auto trans = Model_Checking::instance().find_or(
+        Model_Checking::ACCOUNTID(r->ACCOUNTID),
+        Model_Checking::TOACCOUNTID(r->ACCOUNTID)
+    );
     std::sort(trans.begin(), trans.end());
-    std::stable_sort(trans.begin(), trans.end(), SorterByTRANSDATE());
-
+    if (Option::instance().UseTransDateTime())
+        std::stable_sort(trans.begin(), trans.end(), SorterByTRANSDATE());
+    else
+        std::stable_sort(trans.begin(), trans.end(), Model_Checking::SorterByTRANSDATE_DATE());
     return trans;
 }
 
-const Model_Checking::Data_Set Model_Account::transaction(const Data& r)
+const Model_Checking::Data_Set Model_Account::transactionsByDateTimeId(const Data& r)
 {
-    return transaction(&r);
+    return transactionsByDateTimeId(&r);
 }
 
 const Model_Billsdeposits::Data_Set Model_Account::billsdeposits(const Data* r)
@@ -219,9 +220,9 @@ const Model_Billsdeposits::Data_Set Model_Account::billsdeposits(const Data& r)
 double Model_Account::balance(const Data* r)
 {
     double sum = r->INITIALBAL;
-    for (const auto& tran: transaction(r))
+    for (const auto& tran: transactionsByDateTimeId(r))
     {
-        sum += Model_Checking::balance(tran, r->ACCOUNTID); 
+        sum += Model_Checking::account_flow(tran, r->ACCOUNTID); 
     }
     return sum;
 }
@@ -262,45 +263,9 @@ wxString Model_Account::toString(double value, const Data& r, int precision)
     return toString(value, &r, precision);
 }
 
-Model_Account::STATUS_ENUM Model_Account::status(const Data* account)
+DB_Table_ACCOUNTLIST_V1::STATUS Model_Account::STATUS(STATUS_ID status, OP op)
 {
-    if (account->STATUS.CmpNoCase(all_status()[OPEN]) == 0)
-        return OPEN;
-    return CLOSED;
-}
-
-Model_Account::STATUS_ENUM Model_Account::status(const Data& account)
-{
-    return status(&account);
-}
-
-DB_Table_ACCOUNTLIST_V1::STATUS Model_Account::STATUS(STATUS_ENUM status, OP op)
-{
-    return DB_Table_ACCOUNTLIST_V1::STATUS(all_status()[status], op);
-}
-
-Model_Account::TYPE Model_Account::type(const Data* account)
-{
-    static std::unordered_map<wxString, TYPE> cache;
-    const auto it = cache.find(account->ACCOUNTTYPE);
-    if (it != cache.end()) return it->second;
-
-    for (const auto& t : TYPE_CHOICES) 
-    {
-        if (account->ACCOUNTTYPE.CmpNoCase(t.second) == 0)
-        {
-            cache.insert(std::make_pair(account->ACCOUNTTYPE, t.first));
-            return t.first;
-        }
-    }
-
-    cache.insert(std::make_pair(account->ACCOUNTTYPE, TYPE::CHECKING));
-    return TYPE::CHECKING;
-}
-
-Model_Account::TYPE Model_Account::type(const Data& account)
-{
-    return type(&account);
+    return DB_Table_ACCOUNTLIST_V1::STATUS(status_name(status), op);
 }
 
 bool Model_Account::FAVORITEACCT(const Data* r)
@@ -316,7 +281,9 @@ bool Model_Account::FAVORITEACCT(const Data& r)
 bool Model_Account::is_used(const Model_Currency::Data* c)
 {
     if (!c) return false;
-    const auto &accounts = Model_Account::instance().find(CURRENCYID(c->CURRENCYID) , STATUS(CLOSED, NOT_EQUAL));
+    const auto &accounts = Model_Account::instance().find(
+        CURRENCYID(c->CURRENCYID),
+        STATUS(STATUS_ID_CLOSED, NOT_EQUAL));
     return !accounts.empty();
 }
 
@@ -328,13 +295,13 @@ bool Model_Account::is_used(const Model_Currency::Data& c)
 int Model_Account::money_accounts_num()
 {
     return
-        Model_Account::instance().find(ACCOUNTTYPE(all_type()[CASH])).size()
-        + Model_Account::instance().find(ACCOUNTTYPE(all_type()[CHECKING])).size()
-        + Model_Account::instance().find(ACCOUNTTYPE(all_type()[CREDIT_CARD])).size()
-        + Model_Account::instance().find(ACCOUNTTYPE(all_type()[LOAN])).size()
-        + Model_Account::instance().find(ACCOUNTTYPE(all_type()[TERM])).size()
-        + Model_Account::instance().find(ACCOUNTTYPE(all_type()[ASSET])).size()
-        + Model_Account::instance().find(ACCOUNTTYPE(all_type()[SHARES])).size();
+        Model_Account::instance().find(ACCOUNTTYPE(TYPE_NAME_CASH)).size()
+        + Model_Account::instance().find(ACCOUNTTYPE(TYPE_NAME_CHECKING)).size()
+        + Model_Account::instance().find(ACCOUNTTYPE(TYPE_NAME_CREDIT_CARD)).size()
+        + Model_Account::instance().find(ACCOUNTTYPE(TYPE_NAME_LOAN)).size()
+        + Model_Account::instance().find(ACCOUNTTYPE(TYPE_NAME_TERM)).size()
+        + Model_Account::instance().find(ACCOUNTTYPE(TYPE_NAME_ASSET)).size()
+        + Model_Account::instance().find(ACCOUNTTYPE(TYPE_NAME_SHARES)).size();
 }
 
 bool Model_Account::Exist(const wxString& account_name)
@@ -349,7 +316,7 @@ wxDateTime Model_Account::DateOf(const wxString& date_str)
     return Model::to_date(date_str);
 }
 
-bool Model_Account::BoolOf(int value)
+bool Model_Account::BoolOf(int64 value)
 {
     return value > 0 ? true : false;
 }
@@ -359,9 +326,9 @@ const Model_Account::Data_Set Model_Account::FilterAccounts(const wxString& acco
     Data_Set accounts;
     for (auto &account : this->all(Model_Account::COL_ACCOUNTNAME))
     {
-        if (skip_closed && status(account) == CLOSED)
+        if (skip_closed && status_id(account) == STATUS_ID_CLOSED)
             continue;
-        if (type(account) == INVESTMENT)
+        if (type_id(account) == TYPE_ID_INVESTMENT)
             continue;
         if (account.ACCOUNTNAME.Lower().Matches(account_pattern.Lower().Append("*")))
             accounts.push_back(account);

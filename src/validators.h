@@ -79,17 +79,30 @@ inline void mmCalcValidator::OnChar(wxKeyEvent& event)
         return event.Skip();
 
     wxChar decChar = text_field->GetDecimalPoint();
-    bool numpad_dec_swap = (wxGetKeyState(WXK_NUMPAD_DECIMAL) && decChar != str);
+
+    bool numpad_dec_swap = false;
+
+    try
+    {
+        numpad_dec_swap = (wxGetKeyState(WXK_NUMPAD_DECIMAL) && decChar != str);
+    }
+    catch(...)
+    {
+
+    }
 
     if (numpad_dec_swap)
         str = wxString(decChar);
 
     // if decimal point, check if it's already in the string
-    if (str == '.' || str == ',')
+    if (str == decChar)
     {
         const wxString value = text_field->GetValue();
         size_t ind = value.rfind(decChar);
-        if (ind < value.Length())
+        // Determine selection start/end to allow overwrite of decimal
+        long selStart, selEnd;
+        text_field->GetSelection(&selStart, &selEnd);
+        if (ind < value.Length() && (ind < static_cast<size_t>(selStart) || ind >= static_cast<size_t>(selEnd)))
         {
             // check if after last decimal point there is an operation char (+-/*)
             if (value.find('+', ind + 1) >= value.Length() && value.find('-', ind + 1) >= value.Length() &&

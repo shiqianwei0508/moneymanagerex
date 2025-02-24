@@ -33,6 +33,9 @@
 #include <wx/combobox.h>
 #include <wx/valnum.h>
 
+#include <fmt/core.h>
+#include <fmt/format.h>
+
 wxIMPLEMENT_DYNAMIC_CLASS(mmCurrencyDialog, wxDialog);
 
 wxBEGIN_EVENT_TABLE(mmCurrencyDialog, wxDialog)
@@ -55,16 +58,6 @@ mmCurrencyDialog::~mmCurrencyDialog()
 
 mmCurrencyDialog::mmCurrencyDialog(wxWindow* parent, const Model_Currency::Data * currency)
     : m_scale(SCALE)
-    , mctrl_name(nullptr)
-    , mctrl_sampleText(nullptr)
-    , mctrl_code(nullptr)
-    , mctrl_symbol(nullptr)
-    , mctrl_prefix(nullptr)
-    , mctrl_suffix(nullptr)
-    , mctrl_decimalSep(nullptr)
-    , mctrl_groupSep(nullptr)
-    , mctrl_scale(nullptr)
-    , mctrl_baseConvRate(nullptr)
 {
     if (currency)
     {
@@ -79,8 +72,23 @@ mmCurrencyDialog::mmCurrencyDialog(wxWindow* parent, const Model_Currency::Data 
         m_currency->SCALE = 100;
         m_currency->DECIMAL_POINT = ".";
         m_currency->GROUP_SEPARATOR = ",";
-        m_currency->CURRENCY_TYPE = Model_Currency::FIAT_STR;
+        m_currency->CURRENCY_TYPE = Model_Currency::TYPE_NAME_FIAT;
     }
+
+    // Check if locale will be used in preference
+    const wxString locale = Model_Infotable::instance().getString("LOCALE", "");
+    m_locale_used = false;
+    if (!locale.empty())
+    {
+        try {
+            fmt::format(std::locale(locale.c_str()), "{:L}", 123);
+            m_locale_used = true;
+        }
+        catch (...) {
+            // nothing
+        }
+    }
+
 
     this->SetFont(parent->GetFont());
     Create(parent);
@@ -101,7 +109,7 @@ bool mmCurrencyDialog::Create(wxWindow* parent, wxWindowID id
 
     if (!m_currency)
     {
-        mmSingleChoiceDialog select_currency_name(this, _("Currency name"), _("Select Currency")
+        mmSingleChoiceDialog select_currency_name(this, _t("Currency name"), _t("Select Currency")
             , Model_Currency::instance().all_currency_names());
         if (select_currency_name.ShowModal() == wxID_OK)
         {
@@ -120,7 +128,7 @@ bool mmCurrencyDialog::Create(wxWindow* parent, wxWindowID id
 
     Fit();
     Centre();
-    return TRUE;
+    return true;
 }
 
 void mmCurrencyDialog::fillControls()
@@ -139,7 +147,7 @@ void mmCurrencyDialog::fillControls()
             mctrl_prefix->SetValue(true);
             mctrl_symbol->ChangeValue(m_currency->PFX_SYMBOL);
         }
-        int i;
+        unsigned int i;
         for (i = 0; i<mctrl_decimalSep->GetCount(); i++)
             if (static_cast<wxStringClientData *>(mctrl_decimalSep->GetClientObject(i))->GetData()
                                  == m_currency->DECIMAL_POINT)
@@ -150,24 +158,11 @@ void mmCurrencyDialog::fillControls()
                                 == m_currency->GROUP_SEPARATOR)
                 break;
         mctrl_groupSep->SetSelection(i);
-        m_scale = log10(m_currency->SCALE);
-        mctrl_decimalSep->Enable(m_scale > 0); 
+        m_scale = log10(m_currency->SCALE.GetValue());
+        mctrl_decimalSep->Enable(!m_locale_used && m_scale > 0); 
+        mctrl_groupSep->Enable(!m_locale_used); 
         const wxString& scale_value = wxString::Format("%i", m_scale);
         mctrl_scale->ChangeValue(scale_value);
-
-        /*const wxString locale = Model_Infotable::instance().GetStringInfo("LOCALE", "");
-        if (!locale.empty())
-        {
-            try {
-                fmt::format(std::locale(locale.c_str()), "{:L}", 123);
-                decTx_->Disable();
-                grpTx_->Disable();
-            }
-            catch (...) {
-                //Do nothing
-            }
-        }*/
-
         mctrl_code->ChangeValue(m_currency->CURRENCY_SYMBOL);
 
         bool baseCurrency = (Option::instance().getBaseCurrencyID() == m_currency->CURRENCYID);
@@ -190,50 +185,50 @@ void mmCurrencyDialog::CreateControls()
     itemBoxSizer2->Add(itemFlexGridSizer3, g_flagsExpand);
 
     //--------------------------
-    itemFlexGridSizer3->Add(new wxStaticText(this, wxID_STATIC, _("Currency Name")), g_flagsH);
+    itemFlexGridSizer3->Add(new wxStaticText(this, wxID_STATIC, _t("Currency Name")), g_flagsH);
     mctrl_name = new wxTextCtrl(this, ID_DIALOG_CURRENCY);
     mctrl_name->SetMinSize(wxSize(220, -1));
     itemFlexGridSizer3->Add(mctrl_name, g_flagsExpand);
 
-    itemFlexGridSizer3->Add(new wxStaticText(this, wxID_STATIC, _("Currency Code")), g_flagsH);
+    itemFlexGridSizer3->Add(new wxStaticText(this, wxID_STATIC, _t("Currency Code")), g_flagsH);
     mctrl_code = new wxTextCtrl(this, ID_DIALOG_CURRENCY);
     mctrl_code->SetMaxLength(12);
     itemFlexGridSizer3->Add(mctrl_code, g_flagsExpand);
 
-    itemFlexGridSizer3->Add(new wxStaticText(this, wxID_STATIC, _("Currency Symbol")), g_flagsH);
+    itemFlexGridSizer3->Add(new wxStaticText(this, wxID_STATIC, _t("Currency Symbol")), g_flagsH);
     mctrl_symbol = new wxTextCtrl(this, ID_DIALOG_CURRENCY, "");
     itemFlexGridSizer3->Add(mctrl_symbol, g_flagsExpand);
 
-    itemFlexGridSizer3->Add(new wxStaticText(this, wxID_STATIC, _("Symbol Location")), g_flagsH);
-    mctrl_prefix = new wxRadioButton(this, ID_DIALOG_CURRENCY, _("Prefix"), wxDefaultPosition, wxDefaultSize, wxRB_GROUP);
-    mctrl_suffix = new wxRadioButton(this, ID_DIALOG_CURRENCY, _("Suffix"), wxDefaultPosition, wxDefaultSize);
+    itemFlexGridSizer3->Add(new wxStaticText(this, wxID_STATIC, _t("Symbol Location")), g_flagsH);
+    mctrl_prefix = new wxRadioButton(this, ID_DIALOG_CURRENCY, _t("Prefix"), wxDefaultPosition, wxDefaultSize, wxRB_GROUP);
+    mctrl_suffix = new wxRadioButton(this, ID_DIALOG_CURRENCY, _t("Suffix"), wxDefaultPosition, wxDefaultSize);
     wxBoxSizer* radSizer = new wxBoxSizer(wxHORIZONTAL);
     radSizer->Add(mctrl_prefix);
     radSizer->Add(mctrl_suffix);
     itemFlexGridSizer3->Add(radSizer, g_flagsExpand);
 
-    itemFlexGridSizer3->Add(new wxStaticText(this, wxID_STATIC, _("Decimal Char")), g_flagsH);
+    itemFlexGridSizer3->Add(new wxStaticText(this, wxID_STATIC, _t("Decimal Char")), g_flagsH);
     mctrl_decimalSep = new wxChoice(this, ID_DIALOG_CURRENCY);
     itemFlexGridSizer3->Add(mctrl_decimalSep, g_flagsExpand);
-    mctrl_decimalSep->Append(_("Dot"), new wxStringClientData("."));
-    mctrl_decimalSep->Append(_("Comma"), new wxStringClientData(","));
+    mctrl_decimalSep->Append(_t("Dot"), new wxStringClientData("."));
+    mctrl_decimalSep->Append(_t("Comma"), new wxStringClientData(","));
 
-    itemFlexGridSizer3->Add(new wxStaticText(this, wxID_STATIC, _("Grouping Char")), g_flagsH);
+    itemFlexGridSizer3->Add(new wxStaticText(this, wxID_STATIC, _t("Grouping Char")), g_flagsH);
     mctrl_groupSep = new wxChoice(this, ID_DIALOG_CURRENCY);
     itemFlexGridSizer3->Add(mctrl_groupSep, g_flagsExpand);
-    mctrl_groupSep->Append(_("None"), new wxStringClientData(""));    
-    mctrl_groupSep->Append(_("Dot"), new wxStringClientData("."));
-    mctrl_groupSep->Append(_("Comma"), new wxStringClientData(","));
-    mctrl_groupSep->Append(_("Space"), new wxStringClientData(" "));
+    mctrl_groupSep->Append(_t("None"), new wxStringClientData(""));    
+    mctrl_groupSep->Append(_t("Dot"), new wxStringClientData("."));
+    mctrl_groupSep->Append(_t("Comma"), new wxStringClientData(","));
+    mctrl_groupSep->Append(_t("Space"), new wxStringClientData(" "));
 
     wxIntegerValidator<int> valInt(&m_scale, wxNUM_VAL_THOUSANDS_SEPARATOR);
     valInt.SetMin(0); // Only allow positive numbers
     valInt.SetMax(SCALE);
-    itemFlexGridSizer3->Add(new wxStaticText(this, wxID_STATIC, _("Scale")), g_flagsH);
+    itemFlexGridSizer3->Add(new wxStaticText(this, wxID_STATIC, _t("Scale")), g_flagsH);
     mctrl_scale = new wxTextCtrl(this, ID_DIALOG_CURRENCY, "", wxDefaultPosition, wxDefaultSize, wxALIGN_RIGHT, valInt);
     itemFlexGridSizer3->Add(mctrl_scale, g_flagsExpand);
 
-    itemFlexGridSizer3->Add(new wxStaticText(this, wxID_STATIC, _("Conversion to Base Rate")), g_flagsH);
+    itemFlexGridSizer3->Add(new wxStaticText(this, wxID_STATIC, _t("Conversion to Base Rate")), g_flagsH);
     mctrl_baseConvRate = new mmTextCtrl(this, ID_DIALOG_CURRENCY_RATE, ""
         , wxDefaultPosition, wxDefaultSize, wxALIGN_RIGHT | wxTE_PROCESS_ENTER
         , mmCalcValidator());
@@ -241,15 +236,15 @@ void mmCurrencyDialog::CreateControls()
         , wxCommandEventHandler(mmCurrencyDialog::OnTextEntered), nullptr, this);
     mctrl_baseConvRate->SetAltPrecision(SCALE);
     wxString ConvRateTooltip = wxEmptyString;
-    if (Option::instance().getCurrencyHistoryEnabled())
-        ConvRateTooltip = _("Conversion rate will be used in case no currency history has been found for the currency");
+    if (Option::instance().getUseCurrencyHistory())
+        ConvRateTooltip = _t("Conversion rate will be used in case no currency history has been found for the currency");
     else
-        ConvRateTooltip = _("Fixed conversion rate");
+        ConvRateTooltip = _t("Fixed conversion rate");
     mmToolTip(mctrl_baseConvRate, ConvRateTooltip);
     itemFlexGridSizer3->Add(mctrl_baseConvRate, g_flagsExpand);
 
     //--------------------------
-    wxStaticBox* itemStaticBox_01 = new wxStaticBox(this, wxID_STATIC, _("Currency Format Sample:"));
+    wxStaticBox* itemStaticBox_01 = new wxStaticBox(this, wxID_STATIC, _t("Currency Format Sample:"));
     wxStaticBoxSizer* itemStaticBoxSizer_01 = new wxStaticBoxSizer(itemStaticBox_01, wxHORIZONTAL);
     itemBoxSizer2->Add(itemStaticBoxSizer_01, wxSizerFlags(g_flagsExpand).Proportion(0));
 
@@ -261,13 +256,13 @@ void mmCurrencyDialog::CreateControls()
     wxBoxSizer* itemBoxSizer22 = new wxBoxSizer(wxHORIZONTAL);
     itemBoxSizer2->Add(itemBoxSizer22, wxSizerFlags(g_flagsV).Centre());
 
-    wxButton* itemButton24 = new wxButton(this, wxID_OK, _("&OK "));
+    wxButton* itemButton24 = new wxButton(this, wxID_OK, _t("&OK "));
     itemBoxSizer22->Add(itemButton24, g_flagsH);
-    mmToolTip(itemButton24, _("Save any changes made"));
+    mmToolTip(itemButton24, _t("Save any changes made"));
 
     wxButton* itemButton25 = new wxButton(this, wxID_CANCEL, wxGetTranslation(g_CloseLabel));
     itemBoxSizer22->Add(itemButton25, g_flagsH);
-    mmToolTip(itemButton25, _("Any changes will be lost without update"));
+    mmToolTip(itemButton25, _t("Any changes will be lost without update"));
 }
 
 void mmCurrencyDialog::OnOk(wxCommandEvent& WXUNUSED(event))
@@ -286,14 +281,14 @@ void mmCurrencyDialog::OnOk(wxCommandEvent& WXUNUSED(event))
 
     if (m_currency->SCALE > 1)
         if (m_currency->GROUP_SEPARATOR == m_currency->DECIMAL_POINT) {
-            return mmErrorDialogs::ToolTip4Object(mctrl_groupSep, _("Invalid Entry")
-                        , _("Grouping character cannot be the same as the decimal character"));
+            return mmErrorDialogs::ToolTip4Object(mctrl_groupSep, _t("Invalid Entry")
+                        , _t("Grouping character is unable to be the same as the decimal character"));
         }
 
     if (mctrl_baseConvRate->Calculate(SCALE))
         mctrl_baseConvRate->GetDouble(m_currency->BASECONVRATE);
     if (!mctrl_baseConvRate->checkValue(m_currency->BASECONVRATE))
-        return mmErrorDialogs::ToolTip4Object(mctrl_baseConvRate, _("Invalid Entry"), _("Conversion to Base Rate"));;
+        return mmErrorDialogs::ToolTip4Object(mctrl_baseConvRate, _t("Invalid Entry"), _t("Conversion to Base Rate"));;
 
     Model_Currency::instance().save(m_currency);
     EndModal(wxID_OK);
@@ -311,10 +306,10 @@ void mmCurrencyDialog::OnDataChanged(wxCommandEvent& WXUNUSED(event))
     int scale = wxAtoi(mctrl_scale->GetValue());
 
     if ((scale > 0) && (grouping == decimal))
-        mmErrorDialogs::ToolTip4Object(mctrl_groupSep, _("Invalid Entry")
-                , _("Grouping character cannot be the same as the decimal character"));
+        mmErrorDialogs::ToolTip4Object(mctrl_groupSep, _t("Invalid Entry")
+                , _t("Grouping character is unable to be the same as the decimal character"));
 
-    mctrl_decimalSep->Enable(scale > 0); 
+    mctrl_decimalSep->Enable(!m_locale_used && scale > 0); 
 
     if (mctrl_prefix->GetValue())
     {
@@ -334,9 +329,9 @@ void mmCurrencyDialog::OnDataChanged(wxCommandEvent& WXUNUSED(event))
     wxString dispAmount = "";
     double base_amount = 1234567.89;
 
-    dispAmount = wxString::Format(_("%.2f Shown As: %s"), base_amount, Model_Currency::toCurrency(base_amount, m_currency, scale));
-    if (!Model_Infotable::instance().GetStringInfo("LOCALE","").empty())
-        dispAmount = dispAmount + "  " + _("(Using Locale)");
+    dispAmount = wxString::Format(_t("%.2f Shown As: %s"), base_amount, Model_Currency::toCurrency(base_amount, m_currency, scale));
+    if (m_locale_used)
+        dispAmount = dispAmount + "  " + _t("(Using Locale)");
     mctrl_sampleText->SetLabelText(dispAmount);
 }
 

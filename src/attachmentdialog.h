@@ -20,9 +20,10 @@
 #ifndef MM_EX_ATTACHMENTDIALOG_H_
 #define MM_EX_ATTACHMENTDIALOG_H_
 
-#include "defs.h"
 #include <wx/dataview.h>
 #include <map>
+#include "defs.h"
+#include "primitive.h"
 
 class mmAttachmentDialog : public wxDialog
 {
@@ -30,7 +31,7 @@ class mmAttachmentDialog : public wxDialog
     wxDECLARE_EVENT_TABLE();
 
 public:
-    mmAttachmentDialog(wxWindow* parent, const wxString& RefType, int RefId, const wxString& name = "mmAttachmentDialog");
+    mmAttachmentDialog(wxWindow* parent, const wxString& RefType, int64 RefId, const wxString& name = "mmAttachmentDialog");
 
 private:
     enum cols
@@ -48,18 +49,18 @@ private:
         MENU_DELETE_ATTACHMENT,
     };
 
-    wxDataViewListCtrl* attachmentListBox_;
+    wxDataViewListCtrl* attachmentListBox_ = nullptr;
 
-    int m_attachment_id;
+    int64 m_attachment_id = -1;
     std::map<int, wxString> ColName_;
-    wxButton* btnCancel_;
-    wxButton* button_OK_;
+    //wxButton* btnCancel_ = nullptr;
+    //wxButton* button_OK_ = nullptr;
     wxString m_PathSep = wxFileName::GetPathSeparator();
 
     wxString m_RefType;
-    int m_RefId;
+    int64 m_RefId = -1;
 
-    mmAttachmentDialog() : m_attachment_id(-1) {}
+    mmAttachmentDialog() {}
 
     void Create(wxWindow* parent, const wxString& name);
     void CreateControls();
@@ -79,7 +80,11 @@ private:
     void OnListItemActivated(wxDataViewEvent& event);
     void OnMagicButton(wxCommandEvent& event);
 
-    bool debug_;
+    #ifdef _DEBUG
+        bool debug_ = true;
+    #else
+        bool debug_ = false;
+    #endif
 };
 
 class mmAttachmentManage
@@ -91,10 +96,10 @@ public:
     static bool CopyAttachment(const wxString& FileToImport, const wxString& ImportedFile);
     static bool DeleteAttachment(const wxString& FileToDelete);
     static bool OpenAttachment(const wxString& FileToOpen);
-    static bool DeleteAllAttachments(const wxString& RefType, int RefId);
-    static bool RelocateAllAttachments(const wxString& RefType, int OldRefId, int NewRefId);
-    static bool CloneAllAttachments(const wxString& RefType, int OldRefId, int NewRefId);
-    static void OpenAttachmentFromPanelIcon(wxWindow* parent, const wxString& RefType, int RefId);
+    static bool DeleteAllAttachments(const wxString& RefType, int64 RefId);
+    static bool RelocateAllAttachments(const wxString& OldRefType, int64 OldRefId, const wxString& NewRefType, int64 NewRefId);
+    static bool CloneAllAttachments(const wxString& RefType, int64 OldRefId, int64 NewRefId);
+    static void OpenAttachmentFromPanelIcon(wxWindow* parent, const wxString& RefType, int64 RefId);
 private:
     static wxString m_PathSep;
 };

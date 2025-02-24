@@ -24,6 +24,7 @@
 #include "mmSimpleDialogs.h"
 #include "reports/reportbase.h"
 #include <wx/spinctrl.h>
+#include <wx/timectrl.h>
 
 class mmGUIFrame;
 class mmDateRange;
@@ -50,13 +51,13 @@ public:
         const wxString& name = "mmReportsPanel");
 
     void CreateControls();
-    void sortTable() {}
+    void sortList() {}
 
     bool saveReportText(bool initial = true);
     mmPrintableBase* getPrintableBase();
     void PrintPage();
 
-    mmGUIFrame *m_frame;
+    mmGUIFrame *m_frame = nullptr;
 
     enum RepPanel
     {
@@ -64,6 +65,7 @@ public:
         ID_CHOICE_ACCOUNTS,
         ID_CHOICE_START_DATE,
         ID_CHOICE_END_DATE,
+        ID_CHOICE_TIME,
         ID_CHOICE_YEAR,
         ID_CHOICE_BUDGET,
         ID_CHOICE_CHART,
@@ -73,13 +75,14 @@ public:
 private:
     void OnNewWindow(wxWebViewEvent& evt);
     std::vector<wxSharedPtr<mmDateRange>> m_all_date_ranges;
-    wxChoice* m_date_ranges;
-    mmDatePickerCtrl *m_start_date, *m_end_date;
-    wxWebView * browser_;
-    mmPrintableBase* rb_;
-    wxChoice* m_accounts;
-    wxChoice* m_chart;
-    wxSpinCtrl *m_forwardMonths;
+    wxChoice* m_date_ranges = nullptr;
+    mmDatePickerCtrl *m_start_date = nullptr, *m_end_date = nullptr;
+    wxTimePickerCtrl *m_time = nullptr;
+    wxWebView * browser_ = nullptr;
+    mmPrintableBase* rb_ = nullptr;
+    wxChoice* m_accounts = nullptr;
+    wxChoice* m_chart = nullptr;
+    wxSpinCtrl *m_forwardMonths = nullptr;
 
 private:
     void OnDateRangeChanged(wxCommandEvent& event);
@@ -93,8 +96,8 @@ private:
     void OnShiftPressed(wxCommandEvent& event);
 
     bool cleanup_;
-    bool cleanupmem_;
-    int m_shift;
+    bool cleanupmem_ = false;
+    int m_shift = 0;
     wxString htmlreport_;
 
 };

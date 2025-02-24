@@ -4,7 +4,7 @@ Copyright (C) 2012 Stefano Giorgio
 Copyright (C) 2013, 2022 Nikolay Akimov
 Copyright (C) 2014 James Higley
 Copyright (C) 2014 Guan Lisheng (guanlisheng@gmail.com)
-Copyright (C) 2021, 2022 Mark Whalley (mark@ipx.co.uk)
+Copyright (C) 2021, 2022, 2024 Mark Whalley (mark@ipx.co.uk)
 
  This program is free software; you can redistribute it and/or modify
  it under the terms of the GNU General Public License as published by
@@ -32,6 +32,8 @@ Copyright (C) 2021, 2022 Mark Whalley (mark@ipx.co.uk)
 #include "constants.h"
 #include "util.h"
 #include "paths.h"
+#include "model/Model_Account.h"
+#include "fusedtransaction.h"
 
 //----------------------------------------------------------------------------
 class wxSQLite3Database;
@@ -54,34 +56,43 @@ class mmGUIApp;
 class mmGUIFrame : public wxFrame
 {
 public:
-    mmGUIFrame(mmGUIApp* m_app, const wxString& title, const wxPoint& pos, const wxSize& size);
-    ~mmGUIFrame();
-public:
+    static wxArrayString ACCOUNT_SECTION;
     mmGUIApp *m_app;
 
 public:
-    void setGotoAccountID(int account_id, long transID = -1);
+    mmGUIFrame(mmGUIApp* m_app, const wxString& title, const wxPoint& pos, const wxSize& size);
+    ~mmGUIFrame();
+
+public:
+    void setGotoAccountID(int64 account_id, Fused_Transaction::IdRepeat fused_id = {-1, 0});
     bool financialYearIsDifferent()
     {
-        return (Option::instance().FinancialYearStartDay() != "1" ||
-                Option::instance().FinancialYearStartMonth() != "1");
+        return Option::instance().getFinancialFirstDay() != 1 ||
+            Option::instance().getFinancialFirstMonth() != wxDateTime::Month::Jan;
     }
     /// return the index (mmex::EDocFile) to return the correct file.
     int getHelpFileIndex() const;
     void setHelpFileIndex();
 
 
-    void setAccountNavTreeSection(const wxString& accountName);
     bool setNavTreeSection(const wxString &sectionName);
+    void setNavTreeAccount(const wxString& accountName);
     void menuPrintingEnable(bool enable);
     void OnToggleFullScreen(wxCommandEvent& WXUNUSED(event));
+    void OnResetView(wxCommandEvent& WXUNUSED(event));
     void OnClose(wxCloseEvent&);
 
     void RefreshNavigationTree();
+    void SetNavTreeSelection(wxTreeItemId id);
+    wxTreeItemId GetNavTreeSelection() const;
+
+private:
+    static const std::vector<std::pair<Model_Account::TYPE_ID, wxString> > ACCOUNT_SECTION_TABLE;
+    static wxArrayString account_section_all();
 
 private:
     std::vector<WebsiteNews> websiteNewsArray_;
-    std::vector<const ModelBase*> m_all_models;
+    std::vector<ModelBase*> m_all_models;
 
     /* handles to SQLite Database */
     wxSharedPtr<wxSQLite3Database> m_db;
@@ -94,31 +105,32 @@ private:
     // Marker to indicate DB was inuse when opened and open cancelled
     bool db_lockInPlace;
 
-    int gotoAccountID_;
-    int gotoTransID_;
+    int64 gotoAccountID_ = -1;
+    Fused_Transaction::IdRepeat gotoTransID_ = { -1, 0 };
 
     /* There are 2 kinds of reports */
-    bool activeReport_;
+    bool activeReport_ = false;
 
     /* Repeat Transactions automatic processing delay */
     wxTimer autoRepeatTransactionsTimer_;
     void OnAutoRepeatTransactionsTimer(wxTimerEvent& event);
 
     /* controls */
-    mmPanelBase* panelCurrent_;
+    mmPanelBase* panelCurrent_ = nullptr;
 
-    wxPanel* homePanel_;
-    wxTreeCtrl* m_nav_tree_ctrl;
-    wxMenuBar *menuBar_;
-    wxAuiToolBar* toolBar_;
+    wxPanel* homePanel_ = nullptr;
+    wxTreeCtrl* m_nav_tree_ctrl = nullptr;
+    wxMenuBar *menuBar_ = nullptr;
+    wxAuiToolBar* toolBar_ = nullptr;
+
 private:
-    mmTreeItemData* selectedItemData_;
+    mmTreeItemData* selectedItemData_ = nullptr;
 
-    wxTreeItemId getTreeItemfor(const wxTreeItemId& itemID, const wxString& accountName) const;
-    bool setAccountInSection(const wxString& sectionName, const wxString& accountName);
+    wxTreeItemId getNavTreeChild(const wxTreeItemId& section, const wxString& childName) const;
+    bool setNavTreeSectionChild(const wxString& sectionName, const wxString& childName);
 
     /* printing */
-    int helpFileIndex_;
+    int helpFileIndex_ = -1;
 
     /* wxAUI */
     wxAuiManager m_mgr;
@@ -134,27 +146,34 @@ private:
     void InitializeModelTables();
     bool createDataStore(const wxString& fileName, const wxString &passwd, bool openingNew);
     void createMenu();
-    void CreateToolBar();
+    void createToolBar();
     void createReportsPage(mmPrintableBase* rb, bool cleanup);
     void createHelpPage(int index = mmex::HTML_INDEX);
     void refreshPanelData();
+    wxTreeItemId findItemByData(wxTreeItemId itemId, mmTreeItemData& searchData);
 
     void createHomePage();
-    void createCheckingAccountPage(int accountID);
-    void createAllTransactionsPage();
-    void createStocksAccountPage(int accountID);
+    void createCheckingPage(
+        int64 checking_id,
+        const std::vector<int64> &group_ids = std::vector<int64>{}
+    );
+    void createStocksAccountPage(int64 accountID);
 private:
     void createBillsDeposits();
 
-    void createBudgetingPage(int budgetYearID);
-
+    void createBudgetingPage(int64 budgetYearID);
+    void autocleanDeletedTransactions();
     void createControls();
     /*Set nav tree items status from JSON data with stored in DB*/
     void loadNavigationTreeItemsStatusFromJson();
     /*save Settings LASTFILENAME AUIPERSPECTIVE SIZES*/
     void saveSettings();
     void menuEnableItems(bool enable);
-    void DoRecreateNavTreeControl();
+    wxTreeItemId addNavTreeSection(
+        const wxTreeItemId& root, const wxString& sectionName, int sectionImg,
+        int dataType, int64 dataId = -1
+    );
+    void DoRecreateNavTreeControl(bool home_page = false);
     void DoUpdateReportNavigation(wxTreeItemId& parent_item);
     void DoUpdateGRMNavigation(wxTreeItemId& parent_item);
     void DoUpdateFilterNavigation(wxTreeItemId& parent_item);
@@ -191,6 +210,7 @@ private:
     void OnGotoStocksAccount(wxCommandEvent& WXUNUSED(event));
 private:
     void OnHideShareAccounts(wxCommandEvent &event);
+    void OnHideDeletedTransactions(wxCommandEvent& event);
     void OnChangeGUILanguage(wxCommandEvent &event);
     void OnKeyDown(wxTreeEvent& event);
 
@@ -218,8 +238,10 @@ private:
 private:
     void OnOrgCategories(wxCommandEvent& event);
     void OnOrgPayees(wxCommandEvent& event);
+    void OnOrgTags(wxCommandEvent& event);
     void OnCategoryRelocation(wxCommandEvent& event);
     void OnPayeeRelocation(wxCommandEvent& event);
+    void OnTagRelocation(wxCommandEvent& event);
     void OnNewTransaction(wxCommandEvent& event);
     void refreshPanelData(wxCommandEvent& /*event*/);
 
@@ -231,7 +253,9 @@ private:
     void OnCustomFieldsManager(wxCommandEvent& event);
     void OnGeneralReportManager(wxCommandEvent& event);
     void OnThemeManager(wxCommandEvent& event);
-    void OnRefreshWebApp(wxCommandEvent& event);
+    void OnColumnOrderManager(wxCommandEvent& event);
+    void OnRefreshWebApp(wxCommandEvent&);
+    bool OnRefreshWebApp(bool is_silent);
 
     void OnHelp(wxCommandEvent& event);
     void OnShowAppStartDialog(wxCommandEvent& WXUNUSED(event));
@@ -252,12 +276,14 @@ private:
     void OnViewAccountsTemporaryChange(wxCommandEvent& event);
 
     void OnTreeItemExpanded(wxTreeEvent& event);
-    void OnTreeItemCollapsing(wxTreeEvent& event);
+    void OnTreeItemCollapsing(wxTreeEvent&);
     void OnTreeItemCollapsed(wxTreeEvent& event);
+
+    void OnDropFiles(wxDropFilesEvent& event);
 
     void navTreeStateToJson();
     void processPendingEvents();
-    void ReallocateAccount(int accountID);
+    void ReallocateAccount(int64 accountID);
     void mmDoHideReportsDialog();
 private:
     /* Recent Files */
@@ -271,8 +297,8 @@ private:
     void SetDatabaseFile(const wxString& dbFileName, bool newDatabase = false);
 
     // Required to prevent memory leaks.
-    CommitCallbackHook* m_commit_callback_hook;
-    UpdateCallbackHook* m_update_callback_hook;
+    wxSharedPtr<CommitCallbackHook> m_commit_callback_hook;
+    wxSharedPtr<UpdateCallbackHook> m_update_callback_hook;
     void ShutdownDatabase();
 private:
     // any class wishing to process wxWindows events must use this macro
@@ -292,6 +318,7 @@ private:
         MENU_HOMEPAGE,
         MENU_ORGCATEGS,
         MENU_ORGPAYEE,
+        MENU_ORGTAGS,
         MENU_BUDGETSETUPDIALOG,
         MENU_CHECKUPDATE,
         MENU_IMPORT,
@@ -311,6 +338,7 @@ private:
         MENU_CROWDIN,
         MENU_REPORTISSUES,
         MENU_BUY_COFFEE,
+        MENU_APPLE_APPSTORE,
         MENU_GOOGLEPLAY,
         MENU_TWITTER, // end range for OnSimpleURLOpen
         MENU_EXPORT_CSV,
@@ -334,10 +362,14 @@ private:
         MENU_VIEW_TOOLBAR,
         MENU_VIEW_LINKS,
         MENU_VIEW_HIDE_SHARE_ACCOUNTS,
+        MENU_VIEW_HIDE_DELETED_TRANSACTIONS,
+        MENU_VIEW_RESET,
         MENU_CATEGORY_RELOCATION,
         MENU_PAYEE_RELOCATION,
+        MENU_TAG_RELOCATION,
         MENU_RELOCATION,
         MENU_THEME_MANAGER,
+        MENU_COLUMN_ORDER,
         MENU_CONVERT_ENC_DB,
         MENU_CHANGE_ENCRYPT_PASSWORD,
         MENU_DB_VACUUM,
@@ -387,6 +419,7 @@ private:
 
 inline int mmGUIFrame::getHelpFileIndex() const { return helpFileIndex_; }
 inline void mmGUIFrame::setHelpFileIndex() { helpFileIndex_ = mmex::EDocFile::HTML_INDEX; }
+inline wxTreeItemId mmGUIFrame::GetNavTreeSelection() const{ return m_nav_tree_ctrl->GetSelection(); }
 //----------------------------------------------------------------------------
 #endif // MM_FRAME_H_
 //----------------------------------------------------------------------------

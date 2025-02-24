@@ -19,6 +19,7 @@
 #ifndef MM_EX_CUSTOMFIELDEDITDIALOG_H_
 #define MM_EX_CUSTOMFIELDEDITDIALOG_H_
 
+#include "defs.h"
 #include <wx/dialog.h>
 #include "Model_CustomField.h"
 class wxChoice;
@@ -34,11 +35,11 @@ public:
     mmCustomFieldEditDialog() {};
     mmCustomFieldEditDialog(wxWindow *parent, Model_CustomField::Data* field);
 
-    Model_CustomField::Data* m_field;
+    Model_CustomField::Data* m_field = nullptr;
 private:
     bool Create(wxWindow* parent
         , wxWindowID id = wxID_ANY
-        , const wxString& caption = _("New/Edit Custom Field")
+        , const wxString& caption = _t("New/Edit Custom Field")
         , const wxPoint& pos = wxDefaultPosition
         , const wxSize& size = wxDefaultSize
         , long style = wxCAPTION | wxSYSTEM_MENU | wxRESIZE_BORDER | wxCLOSE_BOX);
@@ -51,16 +52,16 @@ private:
     void OnChangeType(wxCommandEvent& event, bool OnDataToControls);
 
     wxString m_fieldRefType;
-    wxTextCtrl* m_itemDescription;
-    wxChoice* m_itemType;
-    wxChoice* m_itemReference;
-    wxChoice*  m_itemUDFC;
-    wxTextCtrl* m_itemTooltip;
-    wxTextCtrl* m_itemRegEx;
-    wxCheckBox* m_itemAutocomplete;
-    wxTextCtrl* m_itemDefault;
-    wxTextCtrl* m_itemChoices;
-    wxSpinCtrl* m_itemDigitScale;
+    wxTextCtrl* m_itemDescription = nullptr;
+    wxChoice* m_itemType = nullptr;
+    wxChoice* m_itemReference = nullptr;
+    wxChoice* m_itemUDFC = nullptr;
+    wxTextCtrl* m_itemTooltip = nullptr;
+    wxTextCtrl* m_itemRegEx = nullptr;
+    wxCheckBox* m_itemAutocomplete = nullptr;
+    wxTextCtrl* m_itemDefault = nullptr;
+    wxTextCtrl* m_itemChoices = nullptr;
+    wxSpinCtrl* m_itemDigitScale = nullptr;
 
     enum
     {

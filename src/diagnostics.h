@@ -36,16 +36,16 @@ private:
     );
     mmDiagnosticsDialog() {};
     wxSharedPtr<wxHtmlWindow> m_diagPanel;
-    wxWindow* m_parent;
-    wxButton* m_okButton;
-    bool m_is_max;
+    wxWindow* m_parent = nullptr;
+    wxButton* m_okButton = nullptr;
+    bool m_is_max = false;
 
 private:
 
     void CreateControls();
     void RefreshView();
  
-    void OnOk(wxCommandEvent& event);
+    void OnOk(wxCommandEvent&);
 };
 
 #endif // MM_EX_DIAGNOSTICS_H_

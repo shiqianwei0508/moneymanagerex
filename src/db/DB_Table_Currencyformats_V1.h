@@ -1,7 +1,7 @@
 ﻿// -*- C++ -*-
 //=============================================================================
 /**
- *      Copyright: (c) 2013 - 2022 Guan Lisheng (guanlisheng@gmail.com)
+ *      Copyright: (c) 2013 - 2025 Guan Lisheng (guanlisheng@gmail.com)
  *      Copyright: (c) 2017 - 2018 Stefano Giorgio (stef145g)
  *      Copyright: (c) 2022 Mark Whalley (mark@ipx.co.uk)
  *
@@ -12,7 +12,7 @@
  *      @brief
  *
  *      Revision History:
- *          AUTO GENERATED at 2022-09-28 23:10:47.317664.
+ *          AUTO GENERATED at 2025-02-04 16:22:14.834591.
  *          DO NOT EDIT!
  */
 //=============================================================================
@@ -49,7 +49,7 @@ struct DB_Table_CURRENCYFORMATS_V1 : public DB_Table
 
     /** A container to hold a list of Data record pointers for the table in memory*/
     typedef std::vector<Self::Data*> Cache;
-    typedef std::map<int, Self::Data*> Index_By_Id;
+    typedef std::map<int64, Self::Data*> Index_By_Id;
     Cache cache_;
     Index_By_Id index_by_id_;
     Data* fake_; // in case the entity not found
@@ -64,7 +64,7 @@ struct DB_Table_CURRENCYFORMATS_V1 : public DB_Table
     /** Removes all records stored in memory (cache) for the table*/ 
     void destroy_cache()
     {
-        std::for_each(cache_.begin(), cache_.end(), std::mem_fun(&Data::destroy));
+        std::for_each(cache_.begin(), cache_.end(), std::mem_fn(&Data::destroy));
         cache_.clear();
         index_by_id_.clear(); // no memory release since it just stores pointer and the according objects are in cache
     }
@@ -109,10 +109,10 @@ struct DB_Table_CURRENCYFORMATS_V1 : public DB_Table
     void ensure_data(wxSQLite3Database* db)
     {
         db->Begin();
-        db->ExecuteUpdate(wxString::Format("INSERT INTO CURRENCYFORMATS_V1 VALUES ('1', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '100', '1', '%s', '%s')", _("United States dollar"), L"$", L"", L".", L" ", L"", L"", L"USD", L"Fiat"));
-        db->ExecuteUpdate(wxString::Format("INSERT INTO CURRENCYFORMATS_V1 VALUES ('2', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '100', '1', '%s', '%s')", _("European euro"), L"€", L"", L".", L" ", L"", L"", L"EUR", L"Fiat"));
-        db->ExecuteUpdate(wxString::Format("INSERT INTO CURRENCYFORMATS_V1 VALUES ('3', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '100', '1', '%s', '%s')", _("UK Pound"), L"£", L"", L".", L" ", L"Pound", L"Pence", L"GBP", L"Fiat"));
-        db->ExecuteUpdate(wxString::Format("INSERT INTO CURRENCYFORMATS_V1 VALUES ('4', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '100', '1', '%s', '%s')", _("Russian Ruble"), L"", L"р", L",", L" ", L"руб.", L"коп.", L"RUB", L"Fiat"));
+        db->ExecuteUpdate(wxString::Format("INSERT INTO CURRENCYFORMATS_V1 VALUES ('1', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '100', '1', '%s', '%s')", _("US dollar"), L"$", L"", L".", L",", L"Dollar", L"Cent", L"USD", L"Fiat"));
+        db->ExecuteUpdate(wxString::Format("INSERT INTO CURRENCYFORMATS_V1 VALUES ('2', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '100', '1', '%s', '%s')", _("Euro"), L"€", L"", L".", L" ", L"", L"", L"EUR", L"Fiat"));
+        db->ExecuteUpdate(wxString::Format("INSERT INTO CURRENCYFORMATS_V1 VALUES ('3', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '100', '1', '%s', '%s')", _("British pound"), L"£", L"", L".", L" ", L"Pound", L"Pence", L"GBP", L"Fiat"));
+        db->ExecuteUpdate(wxString::Format("INSERT INTO CURRENCYFORMATS_V1 VALUES ('4', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '100', '1', '%s', '%s')", _("Russian ruble"), L"", L"р", L",", L" ", L"руб.", L"коп.", L"RUB", L"Fiat"));
         db->ExecuteUpdate(wxString::Format("INSERT INTO CURRENCYFORMATS_V1 VALUES ('5', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '100', '1', '%s', '%s')", _("Ukrainian hryvnia"), L"₴", L"", L",", L" ", L"", L"", L"UAH", L"Fiat"));
         db->ExecuteUpdate(wxString::Format("INSERT INTO CURRENCYFORMATS_V1 VALUES ('6', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '100', '1', '%s', '%s')", _("Afghan afghani"), L"؋", L"", L".", L" ", L"", L"pul", L"AFN", L"Fiat"));
         db->ExecuteUpdate(wxString::Format("INSERT INTO CURRENCYFORMATS_V1 VALUES ('7', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '1', '1', '%s', '%s')", _("Albanian lek"), L"", L"L", L".", L" ", L"", L"", L"ALL", L"Fiat"));
@@ -128,29 +128,29 @@ struct DB_Table_CURRENCYFORMATS_V1 : public DB_Table
         db->ExecuteUpdate(wxString::Format("INSERT INTO CURRENCYFORMATS_V1 VALUES ('17', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '100', '1', '%s', '%s')", _("Bahraini dinar"), L"", L"", L".", L" ", L"", L"", L"BHD", L"Fiat"));
         db->ExecuteUpdate(wxString::Format("INSERT INTO CURRENCYFORMATS_V1 VALUES ('18', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '100', '1', '%s', '%s')", _("Bangladeshi taka"), L"", L"", L".", L" ", L"", L"", L"BDT", L"Fiat"));
         db->ExecuteUpdate(wxString::Format("INSERT INTO CURRENCYFORMATS_V1 VALUES ('19', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '100', '1', '%s', '%s')", _("Barbadian dollar"), L"Bds$", L"", L".", L" ", L"", L"", L"BBD", L"Fiat"));
-        db->ExecuteUpdate(wxString::Format("INSERT INTO CURRENCYFORMATS_V1 VALUES ('20', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '1', '1', '%s', '%s')", _("Belarusian ruble"), L"Br", L"", L",", L" ", L"", L"", L"BYR", L"Fiat"));
+        db->ExecuteUpdate(wxString::Format("INSERT INTO CURRENCYFORMATS_V1 VALUES ('20', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '1', '1', '%s', '%s')", _("Belarusian ruble (2000-2016)"), L"Br", L"", L",", L" ", L"", L"", L"BYR", L"Fiat"));
         db->ExecuteUpdate(wxString::Format("INSERT INTO CURRENCYFORMATS_V1 VALUES ('21', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '100', '1', '%s', '%s')", _("Belize dollar"), L"BZ$", L"", L".", L" ", L"", L"", L"BZD", L"Fiat"));
         db->ExecuteUpdate(wxString::Format("INSERT INTO CURRENCYFORMATS_V1 VALUES ('22', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '100', '1', '%s', '%s')", _("West African CFA franc"), L"CFA", L"", L".", L" ", L"", L"", L"XOF", L"Fiat"));
-        db->ExecuteUpdate(wxString::Format("INSERT INTO CURRENCYFORMATS_V1 VALUES ('23', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '100', '1', '%s', '%s')", _("Bermudian dollar"), L"BD$", L"", L".", L" ", L"", L"", L"BMD", L"Fiat"));
+        db->ExecuteUpdate(wxString::Format("INSERT INTO CURRENCYFORMATS_V1 VALUES ('23', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '100', '1', '%s', '%s')", _("Bermudan dollar"), L"BD$", L"", L".", L" ", L"", L"", L"BMD", L"Fiat"));
         db->ExecuteUpdate(wxString::Format("INSERT INTO CURRENCYFORMATS_V1 VALUES ('24', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '100', '1', '%s', '%s')", _("Bhutanese ngultrum"), L"Nu.", L"", L".", L" ", L"", L"", L"BTN", L"Fiat"));
         db->ExecuteUpdate(wxString::Format("INSERT INTO CURRENCYFORMATS_V1 VALUES ('25', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '100', '1', '%s', '%s')", _("Bolivian boliviano"), L"Bs.", L"", L".", L" ", L"", L"", L"BOB", L"Fiat"));
-        db->ExecuteUpdate(wxString::Format("INSERT INTO CURRENCYFORMATS_V1 VALUES ('26', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '100', '1', '%s', '%s')", _("Bosnia and Herzegovina konvertibilna marka"), L"KM", L"", L",", L".", L"", L"", L"BAM", L"Fiat"));
-        db->ExecuteUpdate(wxString::Format("INSERT INTO CURRENCYFORMATS_V1 VALUES ('27', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '100', '1', '%s', '%s')", _("Botswana pula"), L"P", L"", L".", L" ", L"", L"", L"BWP", L"Fiat"));
+        db->ExecuteUpdate(wxString::Format("INSERT INTO CURRENCYFORMATS_V1 VALUES ('26', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '100', '1', '%s', '%s')", _("Bosnia-Herzegovina convertible mark"), L"KM", L"", L",", L".", L"", L"", L"BAM", L"Fiat"));
+        db->ExecuteUpdate(wxString::Format("INSERT INTO CURRENCYFORMATS_V1 VALUES ('27', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '100', '1', '%s', '%s')", _("Botswanan pula"), L"P", L"", L".", L" ", L"", L"", L"BWP", L"Fiat"));
         db->ExecuteUpdate(wxString::Format("INSERT INTO CURRENCYFORMATS_V1 VALUES ('28', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '100', '1', '%s', '%s')", _("Brazilian real"), L"R$", L"", L".", L" ", L"", L"", L"BRL", L"Fiat"));
         db->ExecuteUpdate(wxString::Format("INSERT INTO CURRENCYFORMATS_V1 VALUES ('29', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '100', '1', '%s', '%s')", _("Brunei dollar"), L"B$", L"", L".", L" ", L"", L"", L"BND", L"Fiat"));
         db->ExecuteUpdate(wxString::Format("INSERT INTO CURRENCYFORMATS_V1 VALUES ('30', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '100', '1', '%s', '%s')", _("Bulgarian lev"), L"", L"", L".", L" ", L"", L"", L"BGN", L"Fiat"));
-        db->ExecuteUpdate(wxString::Format("INSERT INTO CURRENCYFORMATS_V1 VALUES ('31', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '1', '1', '%s', '%s')", _("Burundi franc"), L"FBu", L"", L".", L" ", L"", L"", L"BIF", L"Fiat"));
+        db->ExecuteUpdate(wxString::Format("INSERT INTO CURRENCYFORMATS_V1 VALUES ('31', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '1', '1', '%s', '%s')", _("Burundian franc"), L"FBu", L"", L".", L" ", L"", L"", L"BIF", L"Fiat"));
         db->ExecuteUpdate(wxString::Format("INSERT INTO CURRENCYFORMATS_V1 VALUES ('32', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '100', '1', '%s', '%s')", _("Cambodian riel"), L"", L"", L".", L" ", L"", L"", L"KHR", L"Fiat"));
         db->ExecuteUpdate(wxString::Format("INSERT INTO CURRENCYFORMATS_V1 VALUES ('33', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '1', '1', '%s', '%s')", _("Central African CFA franc"), L"CFA", L"", L".", L" ", L"", L"", L"XAF", L"Fiat"));
         db->ExecuteUpdate(wxString::Format("INSERT INTO CURRENCYFORMATS_V1 VALUES ('34', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '100', '1', '%s', '%s')", _("Canadian dollar"), L"$", L"", L".", L" ", L"", L"", L"CAD", L"Fiat"));
         db->ExecuteUpdate(wxString::Format("INSERT INTO CURRENCYFORMATS_V1 VALUES ('35', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '100', '1', '%s', '%s')", _("Cape Verdean escudo"), L"Esc", L"", L".", L" ", L"", L"", L"CVE", L"Fiat"));
         db->ExecuteUpdate(wxString::Format("INSERT INTO CURRENCYFORMATS_V1 VALUES ('36', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '100', '1', '%s', '%s')", _("Cayman Islands dollar"), L"KY$", L"", L".", L" ", L"", L"", L"KYD", L"Fiat"));
         db->ExecuteUpdate(wxString::Format("INSERT INTO CURRENCYFORMATS_V1 VALUES ('37', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '1', '1', '%s', '%s')", _("Chilean peso"), L"$", L"", L".", L" ", L"", L"", L"CLP", L"Fiat"));
-        db->ExecuteUpdate(wxString::Format("INSERT INTO CURRENCYFORMATS_V1 VALUES ('38', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '100', '1', '%s', '%s')", _("Chinese renminbi"), L"¥", L"", L".", L" ", L"", L"", L"CNY", L"Fiat"));
+        db->ExecuteUpdate(wxString::Format("INSERT INTO CURRENCYFORMATS_V1 VALUES ('38', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '100', '1', '%s', '%s')", _("Chinese yuan"), L"¥", L"", L".", L" ", L"", L"", L"CNY", L"Fiat"));
         db->ExecuteUpdate(wxString::Format("INSERT INTO CURRENCYFORMATS_V1 VALUES ('39', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '100', '1', '%s', '%s')", _("Colombian peso"), L"Col$", L"", L".", L" ", L"", L"", L"COP", L"Fiat"));
         db->ExecuteUpdate(wxString::Format("INSERT INTO CURRENCYFORMATS_V1 VALUES ('40', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '1', '1', '%s', '%s')", _("Comorian franc"), L"", L"", L".", L" ", L"", L"", L"KMF", L"Fiat"));
         db->ExecuteUpdate(wxString::Format("INSERT INTO CURRENCYFORMATS_V1 VALUES ('41', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '100', '1', '%s', '%s')", _("Congolese franc"), L"F", L"", L".", L" ", L"", L"", L"CDF", L"Fiat"));
-        db->ExecuteUpdate(wxString::Format("INSERT INTO CURRENCYFORMATS_V1 VALUES ('42', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '1', '1', '%s', '%s')", _("Costa Rican colon"), L"₡", L"", L".", L" ", L"", L"", L"CRC", L"Fiat"));
+        db->ExecuteUpdate(wxString::Format("INSERT INTO CURRENCYFORMATS_V1 VALUES ('42', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '1', '1', '%s', '%s')", L"Costa Rican colón", L"₡", L"", L".", L" ", L"", L"", L"CRC", L"Fiat"));
         db->ExecuteUpdate(wxString::Format("INSERT INTO CURRENCYFORMATS_V1 VALUES ('43', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '100', '1', '%s', '%s')", _("Croatian kuna"), L"kn", L"", L".", L" ", L"", L"", L"HRK", L"Fiat"));
         db->ExecuteUpdate(wxString::Format("INSERT INTO CURRENCYFORMATS_V1 VALUES ('44', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '100', '1', '%s', '%s')", _("Czech koruna"), L"Kč", L"", L".", L" ", L"", L"", L"CZK", L"Fiat"));
         db->ExecuteUpdate(wxString::Format("INSERT INTO CURRENCYFORMATS_V1 VALUES ('45', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '100', '1', '%s', '%s')", _("Danish krone"), L"Kr", L"", L".", L" ", L"", L"", L"DKK", L"Fiat"));
@@ -168,7 +168,7 @@ struct DB_Table_CURRENCYFORMATS_V1 : public DB_Table
         db->ExecuteUpdate(wxString::Format("INSERT INTO CURRENCYFORMATS_V1 VALUES ('57', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '100', '1', '%s', '%s')", _("Gibraltar pound"), L"£", L"", L".", L" ", L"", L"", L"GIP", L"Fiat"));
         db->ExecuteUpdate(wxString::Format("INSERT INTO CURRENCYFORMATS_V1 VALUES ('58', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '100', '1', '%s', '%s')", _("Guatemalan quetzal"), L"Q", L"", L".", L" ", L"", L"", L"GTQ", L"Fiat"));
         db->ExecuteUpdate(wxString::Format("INSERT INTO CURRENCYFORMATS_V1 VALUES ('59', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '1', '1', '%s', '%s')", _("Guinean franc"), L"FG", L"", L".", L" ", L"", L"", L"GNF", L"Fiat"));
-        db->ExecuteUpdate(wxString::Format("INSERT INTO CURRENCYFORMATS_V1 VALUES ('60', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '100', '1', '%s', '%s')", _("Guyanese dollar"), L"GY$", L"", L".", L" ", L"", L"", L"GYD", L"Fiat"));
+        db->ExecuteUpdate(wxString::Format("INSERT INTO CURRENCYFORMATS_V1 VALUES ('60', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '100', '1', '%s', '%s')", _("Guyanaese dollar"), L"GY$", L"", L".", L" ", L"", L"", L"GYD", L"Fiat"));
         db->ExecuteUpdate(wxString::Format("INSERT INTO CURRENCYFORMATS_V1 VALUES ('61', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '100', '1', '%s', '%s')", _("Haitian gourde"), L"G", L"", L".", L" ", L"", L"", L"HTG", L"Fiat"));
         db->ExecuteUpdate(wxString::Format("INSERT INTO CURRENCYFORMATS_V1 VALUES ('62', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '100', '1', '%s', '%s')", _("Honduran lempira"), L"L", L"", L".", L" ", L"", L"", L"HNL", L"Fiat"));
         db->ExecuteUpdate(wxString::Format("INSERT INTO CURRENCYFORMATS_V1 VALUES ('63', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '100', '1', '%s', '%s')", _("Hong Kong dollar"), L"HK$", L"", L".", L" ", L"", L"", L"HKD", L"Fiat"));
@@ -176,7 +176,7 @@ struct DB_Table_CURRENCYFORMATS_V1 : public DB_Table
         db->ExecuteUpdate(wxString::Format("INSERT INTO CURRENCYFORMATS_V1 VALUES ('65', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '1', '1', '%s', '%s')", L"Icelandic króna", L"kr", L"", L".", L" ", L"", L"", L"ISK", L"Fiat"));
         db->ExecuteUpdate(wxString::Format("INSERT INTO CURRENCYFORMATS_V1 VALUES ('66', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '100', '1', '%s', '%s')", _("Indian rupee"), L"₹", L"", L".", L" ", L"", L"", L"INR", L"Fiat"));
         db->ExecuteUpdate(wxString::Format("INSERT INTO CURRENCYFORMATS_V1 VALUES ('67', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '1', '1', '%s', '%s')", _("Indonesian rupiah"), L"Rp", L"", L".", L" ", L"", L"", L"IDR", L"Fiat"));
-        db->ExecuteUpdate(wxString::Format("INSERT INTO CURRENCYFORMATS_V1 VALUES ('68', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '100', '1', '%s', '%s')", _("Special Drawing Rights"), L"SDR", L"", L".", L" ", L"", L"", L"XDR", L"Fiat"));
+        db->ExecuteUpdate(wxString::Format("INSERT INTO CURRENCYFORMATS_V1 VALUES ('68', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '100', '1', '%s', '%s')", _("Special drawing rights"), L"SDR", L"", L".", L" ", L"", L"", L"XDR", L"Fiat"));
         db->ExecuteUpdate(wxString::Format("INSERT INTO CURRENCYFORMATS_V1 VALUES ('69', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '1', '1', '%s', '%s')", _("Iranian rial"), L"", L"", L".", L" ", L"", L"", L"IRR", L"Fiat"));
         db->ExecuteUpdate(wxString::Format("INSERT INTO CURRENCYFORMATS_V1 VALUES ('70', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '1', '1', '%s', '%s')", _("Iraqi dinar"), L"", L"", L".", L" ", L"", L"", L"IQD", L"Fiat"));
         db->ExecuteUpdate(wxString::Format("INSERT INTO CURRENCYFORMATS_V1 VALUES ('71', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '100', '1', '%s', '%s')", _("Israeli new shekel"), L"₪", L"", L".", L" ", L"", L"", L"ILS", L"Fiat"));
@@ -188,10 +188,10 @@ struct DB_Table_CURRENCYFORMATS_V1 : public DB_Table
         db->ExecuteUpdate(wxString::Format("INSERT INTO CURRENCYFORMATS_V1 VALUES ('77', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '100', '1', '%s', '%s')", _("North Korean won"), L"W", L"", L".", L" ", L"", L"", L"KPW", L"Fiat"));
         db->ExecuteUpdate(wxString::Format("INSERT INTO CURRENCYFORMATS_V1 VALUES ('78', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '1', '1', '%s', '%s')", _("South Korean won"), L"W", L"", L".", L" ", L"", L"", L"KRW", L"Fiat"));
         db->ExecuteUpdate(wxString::Format("INSERT INTO CURRENCYFORMATS_V1 VALUES ('79', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '100', '1', '%s', '%s')", _("Kuwaiti dinar"), L"", L"", L".", L" ", L"", L"", L"KWD", L"Fiat"));
-        db->ExecuteUpdate(wxString::Format("INSERT INTO CURRENCYFORMATS_V1 VALUES ('80', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '100', '1', '%s', '%s')", _("Kyrgyzstani som"), L"", L"", L".", L" ", L"", L"", L"KGS", L"Fiat"));
-        db->ExecuteUpdate(wxString::Format("INSERT INTO CURRENCYFORMATS_V1 VALUES ('81', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '100', '1', '%s', '%s')", _("Lao kip"), L"KN", L"", L".", L" ", L"", L"", L"LAK", L"Fiat"));
+        db->ExecuteUpdate(wxString::Format("INSERT INTO CURRENCYFORMATS_V1 VALUES ('80', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '100', '1', '%s', '%s')", _("Kyrgystani som"), L"", L"", L".", L" ", L"", L"", L"KGS", L"Fiat"));
+        db->ExecuteUpdate(wxString::Format("INSERT INTO CURRENCYFORMATS_V1 VALUES ('81', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '100', '1', '%s', '%s')", _("Laotian kip"), L"KN", L"", L".", L" ", L"", L"", L"LAK", L"Fiat"));
         db->ExecuteUpdate(wxString::Format("INSERT INTO CURRENCYFORMATS_V1 VALUES ('82', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '100', '1', '%s', '%s')", _("Latvian lats"), L"Ls", L"", L".", L" ", L"", L"", L"LVL", L"Fiat"));
-        db->ExecuteUpdate(wxString::Format("INSERT INTO CURRENCYFORMATS_V1 VALUES ('83', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '1', '1', '%s', '%s')", _("Lebanese lira"), L"", L"", L".", L" ", L"", L"", L"LBP", L"Fiat"));
+        db->ExecuteUpdate(wxString::Format("INSERT INTO CURRENCYFORMATS_V1 VALUES ('83', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '1', '1', '%s', '%s')", _("Lebanese pound"), L"", L"", L".", L" ", L"", L"", L"LBP", L"Fiat"));
         db->ExecuteUpdate(wxString::Format("INSERT INTO CURRENCYFORMATS_V1 VALUES ('84', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '100', '1', '%s', '%s')", _("Lesotho loti"), L"M", L"", L".", L" ", L"", L"", L"LSL", L"Fiat"));
         db->ExecuteUpdate(wxString::Format("INSERT INTO CURRENCYFORMATS_V1 VALUES ('85', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '100', '1', '%s', '%s')", _("Liberian dollar"), L"L$", L"", L".", L" ", L"", L"", L"LRD", L"Fiat"));
         db->ExecuteUpdate(wxString::Format("INSERT INTO CURRENCYFORMATS_V1 VALUES ('86', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '100', '1', '%s', '%s')", _("Libyan dinar"), L"LD", L"", L".", L" ", L"", L"", L"LYD", L"Fiat"));
@@ -202,16 +202,16 @@ struct DB_Table_CURRENCYFORMATS_V1 : public DB_Table
         db->ExecuteUpdate(wxString::Format("INSERT INTO CURRENCYFORMATS_V1 VALUES ('91', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '1', '1', '%s', '%s')", _("Malawian kwacha"), L"MK", L"", L".", L" ", L"", L"", L"MWK", L"Fiat"));
         db->ExecuteUpdate(wxString::Format("INSERT INTO CURRENCYFORMATS_V1 VALUES ('92', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '100', '1', '%s', '%s')", _("Malaysian ringgit"), L"RM", L"", L".", L" ", L"", L"", L"MYR", L"Fiat"));
         db->ExecuteUpdate(wxString::Format("INSERT INTO CURRENCYFORMATS_V1 VALUES ('93', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '100', '1', '%s', '%s')", _("Maldivian rufiyaa"), L"Rf", L"", L".", L" ", L"", L"", L"MVR", L"Fiat"));
-        db->ExecuteUpdate(wxString::Format("INSERT INTO CURRENCYFORMATS_V1 VALUES ('94', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '100', '1', '%s', '%s')", _("Mauritanian ouguiya"), L"UM", L"", L".", L" ", L"", L"", L"MRO", L"Fiat"));
+        db->ExecuteUpdate(wxString::Format("INSERT INTO CURRENCYFORMATS_V1 VALUES ('94', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '100', '1', '%s', '%s')", _("Mauritanian ouguiya (1973-2017)"), L"UM", L"", L".", L" ", L"", L"", L"MRO", L"Fiat"));
         db->ExecuteUpdate(wxString::Format("INSERT INTO CURRENCYFORMATS_V1 VALUES ('95', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '1', '1', '%s', '%s')", _("Mauritian rupee"), L"Rs", L"", L".", L" ", L"", L"", L"MUR", L"Fiat"));
         db->ExecuteUpdate(wxString::Format("INSERT INTO CURRENCYFORMATS_V1 VALUES ('96', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '100', '1', '%s', '%s')", _("Mexican peso"), L"$", L"", L".", L" ", L"", L"", L"MXN", L"Fiat"));
         db->ExecuteUpdate(wxString::Format("INSERT INTO CURRENCYFORMATS_V1 VALUES ('97', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '100', '1', '%s', '%s')", _("Moldovan leu"), L"", L"", L".", L" ", L"", L"", L"MDL", L"Fiat"));
         db->ExecuteUpdate(wxString::Format("INSERT INTO CURRENCYFORMATS_V1 VALUES ('98', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '100', '1', '%s', '%s')", _("Mongolian tugrik"), L"₮", L"", L".", L" ", L"", L"", L"MNT", L"Fiat"));
         db->ExecuteUpdate(wxString::Format("INSERT INTO CURRENCYFORMATS_V1 VALUES ('99', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '100', '1', '%s', '%s')", _("Moroccan dirham"), L"", L"", L".", L" ", L"", L"", L"MAD", L"Fiat"));
-        db->ExecuteUpdate(wxString::Format("INSERT INTO CURRENCYFORMATS_V1 VALUES ('100', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '1', '1', '%s', '%s')", _("Myanma kyat"), L"K", L"", L".", L" ", L"", L"", L"MMK", L"Fiat"));
+        db->ExecuteUpdate(wxString::Format("INSERT INTO CURRENCYFORMATS_V1 VALUES ('100', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '1', '1', '%s', '%s')", _("Myanmar kyat"), L"K", L"", L".", L" ", L"", L"", L"MMK", L"Fiat"));
         db->ExecuteUpdate(wxString::Format("INSERT INTO CURRENCYFORMATS_V1 VALUES ('101', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '100', '1', '%s', '%s')", _("Namibian dollar"), L"N$", L"", L".", L" ", L"", L"", L"NAD", L"Fiat"));
         db->ExecuteUpdate(wxString::Format("INSERT INTO CURRENCYFORMATS_V1 VALUES ('102', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '100', '1', '%s', '%s')", _("Nepalese rupee"), L"NRs", L"", L".", L" ", L"", L"", L"NPR", L"Fiat"));
-        db->ExecuteUpdate(wxString::Format("INSERT INTO CURRENCYFORMATS_V1 VALUES ('103', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '100', '1', '%s', '%s')", _("Netherlands Antillean gulden"), L"NAƒ", L"", L".", L" ", L"", L"", L"ANG", L"Fiat"));
+        db->ExecuteUpdate(wxString::Format("INSERT INTO CURRENCYFORMATS_V1 VALUES ('103', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '100', '1', '%s', '%s')", _("Netherlands Antillean guilder"), L"NAƒ", L"", L".", L" ", L"", L"", L"ANG", L"Fiat"));
         db->ExecuteUpdate(wxString::Format("INSERT INTO CURRENCYFORMATS_V1 VALUES ('104', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '100', '1', '%s', '%s')", _("New Zealand dollar"), L"NZ$", L"", L".", L" ", L"", L"", L"NZD", L"Fiat"));
         db->ExecuteUpdate(wxString::Format("INSERT INTO CURRENCYFORMATS_V1 VALUES ('105', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '100', '1', '%s', '%s')", L"Nicaraguan córdoba", L"C$", L"", L".", L" ", L"", L"", L"NIO", L"Fiat"));
         db->ExecuteUpdate(wxString::Format("INSERT INTO CURRENCYFORMATS_V1 VALUES ('106', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '100', '1', '%s', '%s')", _("Nigerian naira"), L"₦", L"", L".", L" ", L"", L"", L"NGN", L"Fiat"));
@@ -221,23 +221,23 @@ struct DB_Table_CURRENCYFORMATS_V1 : public DB_Table
         db->ExecuteUpdate(wxString::Format("INSERT INTO CURRENCYFORMATS_V1 VALUES ('110', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '100', '1', '%s', '%s')", _("Panamanian balboa"), L"B./", L"", L".", L" ", L"", L"", L"PAB", L"Fiat"));
         db->ExecuteUpdate(wxString::Format("INSERT INTO CURRENCYFORMATS_V1 VALUES ('111', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '100', '1', '%s', '%s')", _("Papua New Guinean kina"), L"K", L"", L".", L" ", L"", L"", L"PGK", L"Fiat"));
         db->ExecuteUpdate(wxString::Format("INSERT INTO CURRENCYFORMATS_V1 VALUES ('112', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '1', '1', '%s', '%s')", _("Paraguayan guarani"), L"", L"", L".", L" ", L"", L"", L"PYG", L"Fiat"));
-        db->ExecuteUpdate(wxString::Format("INSERT INTO CURRENCYFORMATS_V1 VALUES ('113', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '100', '1', '%s', '%s')", _("Peruvian nuevo sol"), L"S/.", L"", L".", L" ", L"", L"", L"PEN", L"Fiat"));
+        db->ExecuteUpdate(wxString::Format("INSERT INTO CURRENCYFORMATS_V1 VALUES ('113', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '100', '1', '%s', '%s')", _("Peruvian sol"), L"S/.", L"", L".", L" ", L"", L"", L"PEN", L"Fiat"));
         db->ExecuteUpdate(wxString::Format("INSERT INTO CURRENCYFORMATS_V1 VALUES ('114', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '100', '1', '%s', '%s')", _("Philippine peso"), L"₱", L"", L".", L" ", L"", L"", L"PHP", L"Fiat"));
         db->ExecuteUpdate(wxString::Format("INSERT INTO CURRENCYFORMATS_V1 VALUES ('115', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '100', '1', '%s', '%s')", _("Polish zloty"), L"", L"zł", L",", L".", L"złoty", L"grosz", L"PLN", L"Fiat"));
         db->ExecuteUpdate(wxString::Format("INSERT INTO CURRENCYFORMATS_V1 VALUES ('116', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '100', '1', '%s', '%s')", _("Qatari riyal"), L"QR", L"", L".", L" ", L"", L"", L"QAR", L"Fiat"));
         db->ExecuteUpdate(wxString::Format("INSERT INTO CURRENCYFORMATS_V1 VALUES ('117', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '100', '1', '%s', '%s')", _("Romanian leu"), L"L", L"", L".", L" ", L"", L"", L"RON", L"Fiat"));
         db->ExecuteUpdate(wxString::Format("INSERT INTO CURRENCYFORMATS_V1 VALUES ('118', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '1', '1', '%s', '%s')", _("Rwandan franc"), L"RF", L"", L".", L" ", L"", L"", L"RWF", L"Fiat"));
-        db->ExecuteUpdate(wxString::Format("INSERT INTO CURRENCYFORMATS_V1 VALUES ('119', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '100', '1', '%s', '%s')", L"São Tomé and Príncipe dobra", L"Db", L"", L".", L" ", L"", L"", L"STD", L"Fiat"));
+        db->ExecuteUpdate(wxString::Format("INSERT INTO CURRENCYFORMATS_V1 VALUES ('119', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '100', '1', '%s', '%s')", L"São Tomé & Príncipe dobra (1977-2017)", L"Db", L"", L".", L" ", L"", L"", L"STD", L"Fiat"));
         db->ExecuteUpdate(wxString::Format("INSERT INTO CURRENCYFORMATS_V1 VALUES ('120', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '100', '1', '%s', '%s')", _("Saudi riyal"), L"SR", L"", L".", L" ", L"", L"", L"SAR", L"Fiat"));
         db->ExecuteUpdate(wxString::Format("INSERT INTO CURRENCYFORMATS_V1 VALUES ('121', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '1', '1', '%s', '%s')", _("Serbian dinar"), L"din.", L"", L".", L" ", L"", L"", L"RSD", L"Fiat"));
         db->ExecuteUpdate(wxString::Format("INSERT INTO CURRENCYFORMATS_V1 VALUES ('122', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '100', '1', '%s', '%s')", _("Seychellois rupee"), L"SR", L"", L".", L" ", L"", L"", L"SCR", L"Fiat"));
-        db->ExecuteUpdate(wxString::Format("INSERT INTO CURRENCYFORMATS_V1 VALUES ('123', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '100', '1', '%s', '%s')", _("Sierra Leonean leone"), L"Le", L"", L".", L" ", L"", L"", L"SLL", L"Fiat"));
+        db->ExecuteUpdate(wxString::Format("INSERT INTO CURRENCYFORMATS_V1 VALUES ('123', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '100', '1', '%s', '%s')", _("Sierra Leonean leone (1964-2022)"), L"Le", L"", L".", L" ", L"", L"", L"SLL", L"Fiat"));
         db->ExecuteUpdate(wxString::Format("INSERT INTO CURRENCYFORMATS_V1 VALUES ('124', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '100', '1', '%s', '%s')", _("Singapore dollar"), L"S$", L"", L".", L" ", L"", L"", L"SGD", L"Fiat"));
         db->ExecuteUpdate(wxString::Format("INSERT INTO CURRENCYFORMATS_V1 VALUES ('125', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '100', '1', '%s', '%s')", _("Solomon Islands dollar"), L"SI$", L"", L".", L" ", L"", L"", L"SBD", L"Fiat"));
         db->ExecuteUpdate(wxString::Format("INSERT INTO CURRENCYFORMATS_V1 VALUES ('126', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '1', '1', '%s', '%s')", _("Somali shilling"), L"Sh.", L"", L".", L" ", L"", L"", L"SOS", L"Fiat"));
         db->ExecuteUpdate(wxString::Format("INSERT INTO CURRENCYFORMATS_V1 VALUES ('127', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '100', '1', '%s', '%s')", _("South African rand"), L"R", L"", L".", L" ", L"", L"", L"ZAR", L"Fiat"));
         db->ExecuteUpdate(wxString::Format("INSERT INTO CURRENCYFORMATS_V1 VALUES ('128', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '100', '1', '%s', '%s')", _("Sri Lankan rupee"), L"Rs", L"", L".", L" ", L"", L"", L"LKR", L"Fiat"));
-        db->ExecuteUpdate(wxString::Format("INSERT INTO CURRENCYFORMATS_V1 VALUES ('129', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '100', '1', '%s', '%s')", _("Saint Helena pound"), L"£", L"", L".", L" ", L"", L"", L"SHP", L"Fiat"));
+        db->ExecuteUpdate(wxString::Format("INSERT INTO CURRENCYFORMATS_V1 VALUES ('129', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '100', '1', '%s', '%s')", _("St. Helena pound"), L"£", L"", L".", L" ", L"", L"", L"SHP", L"Fiat"));
         db->ExecuteUpdate(wxString::Format("INSERT INTO CURRENCYFORMATS_V1 VALUES ('130', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '100', '1', '%s', '%s')", _("Sudanese pound"), L"", L"", L".", L" ", L"", L"", L"SDG", L"Fiat"));
         db->ExecuteUpdate(wxString::Format("INSERT INTO CURRENCYFORMATS_V1 VALUES ('131', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '100', '1', '%s', '%s')", _("Surinamese dollar"), L"$", L"", L".", L" ", L"", L"", L"SRD", L"Fiat"));
         db->ExecuteUpdate(wxString::Format("INSERT INTO CURRENCYFORMATS_V1 VALUES ('132', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '100', '1', '%s', '%s')", _("Swazi lilangeni"), L"E", L"", L".", L" ", L"", L"", L"SZL", L"Fiat"));
@@ -248,10 +248,10 @@ struct DB_Table_CURRENCYFORMATS_V1 : public DB_Table
         db->ExecuteUpdate(wxString::Format("INSERT INTO CURRENCYFORMATS_V1 VALUES ('137', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '100', '1', '%s', '%s')", _("Tajikistani somoni"), L"", L"", L".", L" ", L"", L"", L"TJS", L"Fiat"));
         db->ExecuteUpdate(wxString::Format("INSERT INTO CURRENCYFORMATS_V1 VALUES ('138', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '1', '1', '%s', '%s')", _("Tanzanian shilling"), L"", L"", L".", L" ", L"", L"", L"TZS", L"Fiat"));
         db->ExecuteUpdate(wxString::Format("INSERT INTO CURRENCYFORMATS_V1 VALUES ('139', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '100', '1', '%s', '%s')", _("Thai baht"), L"฿", L"", L".", L" ", L"", L"", L"THB", L"Fiat"));
-        db->ExecuteUpdate(wxString::Format("INSERT INTO CURRENCYFORMATS_V1 VALUES ('140', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '100', '1', '%s', '%s')", _("Trinidad and Tobago dollar"), L"TT$", L"", L".", L" ", L"", L"", L"TTD", L"Fiat"));
+        db->ExecuteUpdate(wxString::Format("INSERT INTO CURRENCYFORMATS_V1 VALUES ('140', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '100', '1', '%s', '%s')", _("Trinidad & Tobago dollar"), L"TT$", L"", L".", L" ", L"", L"", L"TTD", L"Fiat"));
         db->ExecuteUpdate(wxString::Format("INSERT INTO CURRENCYFORMATS_V1 VALUES ('141', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '100', '1', '%s', '%s')", _("Tunisian dinar"), L"DT", L"", L".", L" ", L"", L"", L"TND", L"Fiat"));
         db->ExecuteUpdate(wxString::Format("INSERT INTO CURRENCYFORMATS_V1 VALUES ('142', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '100', '1', '%s', '%s')", _("Turkish lira"), L"₺", L"", L".", L" ", L"", L"", L"TRY", L"Fiat"));
-        db->ExecuteUpdate(wxString::Format("INSERT INTO CURRENCYFORMATS_V1 VALUES ('143', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '100', '1', '%s', '%s')", _("Turkmen manat"), L"m", L"", L".", L" ", L"", L"", L"TMT", L"Fiat"));
+        db->ExecuteUpdate(wxString::Format("INSERT INTO CURRENCYFORMATS_V1 VALUES ('143', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '100', '1', '%s', '%s')", _("Turkmenistani manat"), L"m", L"", L".", L" ", L"", L"", L"TMT", L"Fiat"));
         db->ExecuteUpdate(wxString::Format("INSERT INTO CURRENCYFORMATS_V1 VALUES ('144', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '1', '1', '%s', '%s')", _("Ugandan shilling"), L"USh", L"", L".", L" ", L"", L"", L"UGX", L"Fiat"));
         db->ExecuteUpdate(wxString::Format("INSERT INTO CURRENCYFORMATS_V1 VALUES ('145', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '100', '1', '%s', '%s')", _("UAE dirham"), L"", L"", L".", L" ", L"", L"", L"AED", L"Fiat"));
         db->ExecuteUpdate(wxString::Format("INSERT INTO CURRENCYFORMATS_V1 VALUES ('146', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '100', '1', '%s', '%s')", _("Uruguayan peso"), L"$U", L"", L".", L" ", L"", L"", L"UYU", L"Fiat"));
@@ -260,15 +260,30 @@ struct DB_Table_CURRENCYFORMATS_V1 : public DB_Table
         db->ExecuteUpdate(wxString::Format("INSERT INTO CURRENCYFORMATS_V1 VALUES ('149', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '1', '1', '%s', '%s')", _("Vietnamese dong"), L"₫", L"", L".", L" ", L"", L"", L"VND", L"Fiat"));
         db->ExecuteUpdate(wxString::Format("INSERT INTO CURRENCYFORMATS_V1 VALUES ('150', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '100', '1', '%s', '%s')", _("Samoan tala"), L"WS$", L"", L".", L" ", L"", L"", L"WST", L"Fiat"));
         db->ExecuteUpdate(wxString::Format("INSERT INTO CURRENCYFORMATS_V1 VALUES ('151', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '1', '1', '%s', '%s')", _("Yemeni rial"), L"", L"", L".", L" ", L"", L"", L"YER", L"Fiat"));
-        db->ExecuteUpdate(wxString::Format("INSERT INTO CURRENCYFORMATS_V1 VALUES ('152', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '100', '1', '%s', '%s')", L"Venezuelan Bolívar", L"Bs.", L"", L".", L",", L"bolívar", L"céntimos", L"VEF", L"Fiat"));
+        db->ExecuteUpdate(wxString::Format("INSERT INTO CURRENCYFORMATS_V1 VALUES ('152', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '100', '1', '%s', '%s')", L"Venezuelan bolívar (2008-2018)", L"Bs.", L"", L".", L",", L"bolívar", L"céntimos", L"VEF", L"Fiat"));
         db->ExecuteUpdate(wxString::Format("INSERT INTO CURRENCYFORMATS_V1 VALUES ('153', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '100000000', '1', '%s', '%s')", _("Bitcoin"), L"Ƀ", L"", L".", L",", L"", L"", L"BTC", L"Crypto"));
+        db->ExecuteUpdate(wxString::Format("INSERT INTO CURRENCYFORMATS_V1 VALUES ('154', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '100', '1', '%s', '%s')", _("Belarusian ruble"), L"BYN", L"", L".", L",", L"", L"", L"BYN", L"Fiat"));
+        db->ExecuteUpdate(wxString::Format("INSERT INTO CURRENCYFORMATS_V1 VALUES ('155', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '100', '1', '%s', '%s')", _("Cuban convertible peso"), L"$", L"", L".", L",", L"", L"", L"CUC", L"Fiat"));
+        db->ExecuteUpdate(wxString::Format("INSERT INTO CURRENCYFORMATS_V1 VALUES ('156', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '100', '1', '%s', '%s')", _("Cuban peso"), L"$", L"", L".", L",", L"", L"", L"CUP", L"Fiat"));
+        db->ExecuteUpdate(wxString::Format("INSERT INTO CURRENCYFORMATS_V1 VALUES ('157', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '100', '1', '%s', '%s')", _("Mauritanian ouguiya"), L"MRU", L"", L".", L",", L"", L"", L"MRU", L"Fiat"));
+        db->ExecuteUpdate(wxString::Format("INSERT INTO CURRENCYFORMATS_V1 VALUES ('158', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '100', '1', '%s', '%s')", _("Mozambican metical"), L"MZN", L"", L".", L",", L"", L"", L"MZN", L"Fiat"));
+        db->ExecuteUpdate(wxString::Format("INSERT INTO CURRENCYFORMATS_V1 VALUES ('159', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '100', '1', '%s', '%s')", _("Sierra Leonean leone"), L"SLE", L"", L".", L",", L"", L"", L"SLE", L"Fiat"));
+        db->ExecuteUpdate(wxString::Format("INSERT INTO CURRENCYFORMATS_V1 VALUES ('160', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '100', '1', '%s', '%s')", _("South Sudanese pound"), L"£", L"", L".", L",", L"", L"", L"SSP", L"Fiat"));
+        db->ExecuteUpdate(wxString::Format("INSERT INTO CURRENCYFORMATS_V1 VALUES ('161', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '100', '1', '%s', '%s')", L"São Tomé & Príncipe dobra", L"Db", L"", L".", L",", L"", L"", L"STN", L"Fiat"));
+        db->ExecuteUpdate(wxString::Format("INSERT INTO CURRENCYFORMATS_V1 VALUES ('162', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '100', '1', '%s', '%s')", L"Salvadoran colón", L"SVC", L"", L".", L",", L"", L"", L"SVC", L"Fiat"));
+        db->ExecuteUpdate(wxString::Format("INSERT INTO CURRENCYFORMATS_V1 VALUES ('163', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '100', '1', '%s', '%s')", L"Tongan paʻanga", L"T$", L"", L".", L",", L"", L"", L"TOP", L"Fiat"));
+        db->ExecuteUpdate(wxString::Format("INSERT INTO CURRENCYFORMATS_V1 VALUES ('164', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '10000', '1', '%s', '%s')", _("Uruguayan nominal wage index unit"), L"UYW", L"", L".", L",", L"", L"", L"UYW", L"Fiat"));
+        db->ExecuteUpdate(wxString::Format("INSERT INTO CURRENCYFORMATS_V1 VALUES ('165', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '100', '1', '%s', '%s')", L"Bolívar soberano", L"VED", L"", L".", L",", L"", L"", L"VED", L"Fiat"));
+        db->ExecuteUpdate(wxString::Format("INSERT INTO CURRENCYFORMATS_V1 VALUES ('166', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '100', '1', '%s', '%s')", L"Venezuelan bolívar", L"VES", L"", L".", L",", L"", L"", L"VES", L"Fiat"));
+        db->ExecuteUpdate(wxString::Format("INSERT INTO CURRENCYFORMATS_V1 VALUES ('167', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '100', '1', '%s', '%s')", _("Zambian kwacha"), L"ZK", L"", L".", L",", L"", L"", L"ZMW", L"Fiat"));
+        db->ExecuteUpdate(wxString::Format("INSERT INTO CURRENCYFORMATS_V1 VALUES ('168', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '100', '1', '%s', '%s')", _("Zimbabwean dollar (2009)"), L"ZWL", L"", L".", L",", L"", L"", L"ZWL", L"Fiat"));
         db->Commit();
     }
     
-    struct CURRENCYID : public DB_Column<int>
+    struct CURRENCYID : public DB_Column<int64>
     { 
         static wxString name() { return "CURRENCYID"; } 
-        explicit CURRENCYID(const int &v, OP op = EQUAL): DB_Column<int>(v, op) {}
+        explicit CURRENCYID(const int64 &v, OP op = EQUAL): DB_Column<int64>(v, op) {}
     };
     
     struct CURRENCYNAME : public DB_Column<wxString>
@@ -313,10 +328,10 @@ struct DB_Table_CURRENCYFORMATS_V1 : public DB_Table
         explicit CENT_NAME(const wxString &v, OP op = EQUAL): DB_Column<wxString>(v, op) {}
     };
     
-    struct SCALE : public DB_Column<int>
+    struct SCALE : public DB_Column<int64>
     { 
         static wxString name() { return "SCALE"; } 
-        explicit SCALE(const int &v, OP op = EQUAL): DB_Column<int>(v, op) {}
+        explicit SCALE(const int64 &v, OP op = EQUAL): DB_Column<int64>(v, op) {}
     };
     
     struct BASECONVRATE : public DB_Column<double>
@@ -355,7 +370,7 @@ struct DB_Table_CURRENCYFORMATS_V1 : public DB_Table
     };
 
     /** Returns the column name as a string*/
-    static wxString column_to_name(COLUMN col)
+    static wxString column_to_name(const COLUMN col)
     {
         switch(col)
         {
@@ -403,7 +418,7 @@ struct DB_Table_CURRENCYFORMATS_V1 : public DB_Table
         /** This is a instance pointer to itself in memory. */
         Self* table_;
     
-        int CURRENCYID;//  primary key
+        int64 CURRENCYID;//  primary key
         wxString CURRENCYNAME;
         wxString PFX_SYMBOL;
         wxString SFX_SYMBOL;
@@ -411,17 +426,17 @@ struct DB_Table_CURRENCYFORMATS_V1 : public DB_Table
         wxString GROUP_SEPARATOR;
         wxString UNIT_NAME;
         wxString CENT_NAME;
-        int SCALE;
+        int64 SCALE;
         double BASECONVRATE;
         wxString CURRENCY_SYMBOL;
         wxString CURRENCY_TYPE;
 
-        int id() const
+        int64 id() const
         {
             return CURRENCYID;
         }
 
-        void id(int id)
+        void id(const int64 id)
         {
             CURRENCYID = id;
         }
@@ -436,7 +451,24 @@ struct DB_Table_CURRENCYFORMATS_V1 : public DB_Table
             return this->id() < r->id();
         }
 
-        explicit Data(Self* table = 0) 
+        bool equals(const Data* r) const
+        {
+            if(CURRENCYID != r->CURRENCYID) return false;
+            if(!CURRENCYNAME.IsSameAs(r->CURRENCYNAME)) return false;
+            if(!PFX_SYMBOL.IsSameAs(r->PFX_SYMBOL)) return false;
+            if(!SFX_SYMBOL.IsSameAs(r->SFX_SYMBOL)) return false;
+            if(!DECIMAL_POINT.IsSameAs(r->DECIMAL_POINT)) return false;
+            if(!GROUP_SEPARATOR.IsSameAs(r->GROUP_SEPARATOR)) return false;
+            if(!UNIT_NAME.IsSameAs(r->UNIT_NAME)) return false;
+            if(!CENT_NAME.IsSameAs(r->CENT_NAME)) return false;
+            if(SCALE != r->SCALE) return false;
+            if(BASECONVRATE != r->BASECONVRATE) return false;
+            if(!CURRENCY_SYMBOL.IsSameAs(r->CURRENCY_SYMBOL)) return false;
+            if(!CURRENCY_TYPE.IsSameAs(r->CURRENCY_TYPE)) return false;
+            return true;
+        }
+        
+        explicit Data(Self* table = nullptr ) 
         {
             table_ = table;
         
@@ -445,11 +477,11 @@ struct DB_Table_CURRENCYFORMATS_V1 : public DB_Table
             BASECONVRATE = 0.0;
         }
 
-        explicit Data(wxSQLite3ResultSet& q, Self* table = 0)
+        explicit Data(wxSQLite3ResultSet& q, Self* table = nullptr )
         {
             table_ = table;
         
-            CURRENCYID = q.GetInt(0); // CURRENCYID
+            CURRENCYID = q.GetInt64(0); // CURRENCYID
             CURRENCYNAME = q.GetString(1); // CURRENCYNAME
             PFX_SYMBOL = q.GetString(2); // PFX_SYMBOL
             SFX_SYMBOL = q.GetString(3); // SFX_SYMBOL
@@ -457,11 +489,13 @@ struct DB_Table_CURRENCYFORMATS_V1 : public DB_Table
             GROUP_SEPARATOR = q.GetString(5); // GROUP_SEPARATOR
             UNIT_NAME = q.GetString(6); // UNIT_NAME
             CENT_NAME = q.GetString(7); // CENT_NAME
-            SCALE = q.GetInt(8); // SCALE
+            SCALE = q.GetInt64(8); // SCALE
             BASECONVRATE = q.GetDouble(9); // BASECONVRATE
             CURRENCY_SYMBOL = q.GetString(10); // CURRENCY_SYMBOL
             CURRENCY_TYPE = q.GetString(11); // CURRENCY_TYPE
         }
+
+        Data(const Data& other) = default;
 
         Data& operator=(const Data& other)
         {
@@ -483,7 +517,7 @@ struct DB_Table_CURRENCYFORMATS_V1 : public DB_Table
         }
 
         template<typename C>
-        bool match(const C &c) const
+        bool match(const C &) const
         {
             return false;
         }
@@ -565,7 +599,7 @@ struct DB_Table_CURRENCYFORMATS_V1 : public DB_Table
         void as_json(PrettyWriter<StringBuffer>& json_writer) const
         {
             json_writer.Key("CURRENCYID");
-            json_writer.Int(this->CURRENCYID);
+            json_writer.Int64(this->CURRENCYID.GetValue());
             json_writer.Key("CURRENCYNAME");
             json_writer.String(this->CURRENCYNAME.utf8_str());
             json_writer.Key("PFX_SYMBOL");
@@ -581,7 +615,7 @@ struct DB_Table_CURRENCYFORMATS_V1 : public DB_Table
             json_writer.Key("CENT_NAME");
             json_writer.String(this->CENT_NAME.utf8_str());
             json_writer.Key("SCALE");
-            json_writer.Int(this->SCALE);
+            json_writer.Int64(this->SCALE.GetValue());
             json_writer.Key("BASECONVRATE");
             json_writer.Double(this->BASECONVRATE);
             json_writer.Key("CURRENCY_SYMBOL");
@@ -593,7 +627,7 @@ struct DB_Table_CURRENCYFORMATS_V1 : public DB_Table
         row_t to_row_t() const
         {
             row_t row;
-            row(L"CURRENCYID") = CURRENCYID;
+            row(L"CURRENCYID") = CURRENCYID.GetValue();
             row(L"CURRENCYNAME") = CURRENCYNAME;
             row(L"PFX_SYMBOL") = PFX_SYMBOL;
             row(L"SFX_SYMBOL") = SFX_SYMBOL;
@@ -601,7 +635,7 @@ struct DB_Table_CURRENCYFORMATS_V1 : public DB_Table
             row(L"GROUP_SEPARATOR") = GROUP_SEPARATOR;
             row(L"UNIT_NAME") = UNIT_NAME;
             row(L"CENT_NAME") = CENT_NAME;
-            row(L"SCALE") = SCALE;
+            row(L"SCALE") = SCALE.GetValue();
             row(L"BASECONVRATE") = BASECONVRATE;
             row(L"CURRENCY_SYMBOL") = CURRENCY_SYMBOL;
             row(L"CURRENCY_TYPE") = CURRENCY_TYPE;
@@ -610,7 +644,7 @@ struct DB_Table_CURRENCYFORMATS_V1 : public DB_Table
 
         void to_template(html_template& t) const
         {
-            t(L"CURRENCYID") = CURRENCYID;
+            t(L"CURRENCYID") = CURRENCYID.GetValue();
             t(L"CURRENCYNAME") = CURRENCYNAME;
             t(L"PFX_SYMBOL") = PFX_SYMBOL;
             t(L"SFX_SYMBOL") = SFX_SYMBOL;
@@ -618,7 +652,7 @@ struct DB_Table_CURRENCYFORMATS_V1 : public DB_Table
             t(L"GROUP_SEPARATOR") = GROUP_SEPARATOR;
             t(L"UNIT_NAME") = UNIT_NAME;
             t(L"CENT_NAME") = CENT_NAME;
-            t(L"SCALE") = SCALE;
+            t(L"SCALE") = SCALE.GetValue();
             t(L"BASECONVRATE") = BASECONVRATE;
             t(L"CURRENCY_SYMBOL") = CURRENCY_SYMBOL;
             t(L"CURRENCY_TYPE") = CURRENCY_TYPE;
@@ -697,7 +731,7 @@ struct DB_Table_CURRENCYFORMATS_V1 : public DB_Table
         wxString sql = wxEmptyString;
         if (entity->id() <= 0) //  new & insert
         {
-            sql = "INSERT INTO CURRENCYFORMATS_V1(CURRENCYNAME, PFX_SYMBOL, SFX_SYMBOL, DECIMAL_POINT, GROUP_SEPARATOR, UNIT_NAME, CENT_NAME, SCALE, BASECONVRATE, CURRENCY_SYMBOL, CURRENCY_TYPE) VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+            sql = "INSERT INTO CURRENCYFORMATS_V1(CURRENCYNAME, PFX_SYMBOL, SFX_SYMBOL, DECIMAL_POINT, GROUP_SEPARATOR, UNIT_NAME, CENT_NAME, SCALE, BASECONVRATE, CURRENCY_SYMBOL, CURRENCY_TYPE, CURRENCYID) VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
         }
         else
         {
@@ -719,8 +753,7 @@ struct DB_Table_CURRENCYFORMATS_V1 : public DB_Table
             stmt.Bind(9, entity->BASECONVRATE);
             stmt.Bind(10, entity->CURRENCY_SYMBOL);
             stmt.Bind(11, entity->CURRENCY_TYPE);
-            if (entity->id() > 0)
-                stmt.Bind(12, entity->CURRENCYID);
+            stmt.Bind(12, entity->id() > 0 ? entity->CURRENCYID : newId());
 
             stmt.ExecuteUpdate();
             stmt.Finalize();
@@ -743,14 +776,14 @@ struct DB_Table_CURRENCYFORMATS_V1 : public DB_Table
 
         if (entity->id() <= 0)
         {
-            entity->id((db->GetLastRowId()).ToLong());
+            entity->id(db->GetLastRowId());
             index_by_id_.insert(std::make_pair(entity->id(), entity));
         }
         return true;
     }
 
     /** Remove the Data record from the database and the memory table (cache) */
-    bool remove(int id, wxSQLite3Database* db)
+    bool remove(const int64 id, wxSQLite3Database* db)
     {
         if (id <= 0) return false;
         try
@@ -821,12 +854,12 @@ struct DB_Table_CURRENCYFORMATS_V1 : public DB_Table
     * Search the memory table (Cache) for the data record.
     * If not found in memory, search the database and update the cache.
     */
-    Self::Data* get(int id, wxSQLite3Database* db)
+    Self::Data* get(const int64 id, wxSQLite3Database* db)
     {
         if (id <= 0) 
         {
             ++ skip_;
-            return 0;
+            return nullptr;
         }
 
         Index_By_Id::iterator it = index_by_id_.find(id);
@@ -837,7 +870,7 @@ struct DB_Table_CURRENCYFORMATS_V1 : public DB_Table
         }
         
         ++ miss_;
-        Self::Data* entity = 0;
+        Self::Data* entity = nullptr;
         wxString where = wxString::Format(" WHERE %s = ?", PRIMARY::name().utf8_str());
         try
         {
@@ -866,12 +899,50 @@ struct DB_Table_CURRENCYFORMATS_V1 : public DB_Table
  
         return entity;
     }
+    /**
+    * Search the database for the data record, bypassing the cache.
+    */
+    Self::Data* get_record(const int64 id, wxSQLite3Database* db)
+    {
+        if (id <= 0) 
+        {
+            ++ skip_;
+            return nullptr;
+        }
+
+        Self::Data* entity = nullptr;
+        wxString where = wxString::Format(" WHERE %s = ?", PRIMARY::name().utf8_str());
+        try
+        {
+            wxSQLite3Statement stmt = db->PrepareStatement(this->query() + where);
+            stmt.Bind(1, id);
+
+            wxSQLite3ResultSet q = stmt.ExecuteQuery();
+            if(q.NextRow())
+            {
+                entity = new Self::Data(q, this);
+            }
+            stmt.Finalize();
+        }
+        catch(const wxSQLite3Exception &e) 
+        { 
+            wxLogError("%s: Exception %s", this->name().utf8_str(), e.GetMessage().utf8_str());
+        }
+        
+        if (!entity) 
+        {
+            entity = this->fake_;
+            // wxLogError("%s: %d not found", this->name().utf8_str(), id);
+        }
+ 
+        return entity;
+    }
 
     /**
     * Return a list of Data records (Data_Set) derived directly from the database.
     * The Data_Set is sorted based on the column number.
     */
-    const Data_Set all(wxSQLite3Database* db, COLUMN col = COLUMN(0), bool asc = true)
+    const Data_Set all(wxSQLite3Database* db, const COLUMN col = COLUMN(0), const bool asc = true)
     {
         Data_Set result;
         try

@@ -33,6 +33,7 @@ extern const wxSizerFlags g_flagsExpand;
 extern const wxSizerFlags g_flagsExpandBorder1;
 
 extern const wxString g_CancelLabel;
+extern const wxString g_OkLabel;
 extern const wxString g_CloseLabel;
 
 namespace mmex
@@ -62,9 +63,10 @@ namespace version
 namespace weblink
 {
     const wxString addReferralToURL(const wxString& BaseURL, const wxString& CampSource);
-    extern const wxString GA;
+    extern const wxString AMP;
     extern const wxString WebSite;
     extern const wxString Releases;
+    extern const wxString Latest;
     extern const wxString Download;
     extern const wxString News;
     extern const wxString NewsRSS;
@@ -80,6 +82,7 @@ namespace weblink
     extern const wxString Slack;
     extern const wxString SquareCashGuan;
     extern const wxString DefStockUrl;
+    extern const wxString AppleAppStore;
     extern const wxString GooglePlay;
     extern const wxString WebApp;
     extern const wxString Chiark;
@@ -88,23 +91,9 @@ namespace weblink
     extern const wxString YahooQuotesHistory;
     extern const wxString CoinCapSearch;
     extern const wxString CoinCapHistory;
+    extern const wxString GeneralReport;
 } // namespace weblink
 } // namespace mmex
-
-extern const wxString VIEW_TRANS_FILTER_DIALOG_STR;
-extern const wxString VIEW_TRANS_ALL_STR;
-extern const wxString VIEW_TRANS_TODAY_STR;
-extern const wxString VIEW_TRANS_CURRENT_MONTH_STR;
-extern const wxString VIEW_TRANS_LAST_30_DAYS_STR;
-extern const wxString VIEW_TRANS_LAST_90_DAYS_STR;
-extern const wxString VIEW_TRANS_LAST_MONTH_STR;
-extern const wxString VIEW_TRANS_LAST_3MONTHS_STR;
-extern const wxString VIEW_TRANS_LAST_12MONTHS_STR;
-extern const wxString VIEW_TRANS_CURRENT_YEAR_STR;
-extern const wxString VIEW_TRANS_CRRNT_FIN_YEAR_STR;
-extern const wxString VIEW_TRANS_LAST_YEAR_STR;
-extern const wxString VIEW_TRANS_LAST_FIN_YEAR_STR;
-extern const wxString VIEW_TRANS_SINCE_STATEMENT_STR;
 
 extern const wxString VIEW_ACCOUNTS_ALL_STR;
 extern const wxString VIEW_ACCOUNTS_OPEN_STR;
@@ -112,21 +101,10 @@ extern const wxString VIEW_ACCOUNTS_CLOSED_STR;
 extern const wxString VIEW_ACCOUNTS_FAVORITES_STR;
 
 extern const wxString LANGUAGE_PARAMETER;
-extern const wxString INIDB_USE_CURRENCY_HISTORY;
 extern const wxString INIDB_USE_TRANSACTION_SOUND;
 extern const wxString INIDB_USE_ORG_DATE_COPYPASTE;
 extern const wxString INIDB_USE_ORG_DATE_DUPLICATE;
 extern const wxString INIDB_SEND_USAGE_STATS;
-extern const wxString INIDB_CHECK_NEWS;
-
-extern const wxString INIDB_HIDE_SHARE_ACCOUNTS;
-extern const wxString INIDB_BUDGET_FINANCIAL_YEARS;
-extern const wxString INIDB_BUDGET_INCLUDE_TRANSFERS;
-extern const wxString INIDB_BUDGET_SUMMARY_WITHOUT_CATEG;
-extern const wxString INIDB_BUDGET_OVERRIDE;
-extern const wxString INIDB_IGNORE_FUTURE_TRANSACTIONS;
-extern const wxString INIDB_SHOW_TOOLTIPS;
-extern const wxString INIDB_SHOW_MONEYTIPS;
 
 extern const wxString ATTACHMENTS_FOLDER_DOCUMENTS;
 extern const wxString ATTACHMENTS_FOLDER_DATABASE;
@@ -134,6 +112,8 @@ extern const wxString ATTACHMENTS_FOLDER_USERPROFILE;
 extern const wxString ATTACHMENTS_FOLDER_APPDATA;
 
 extern const wxString INIDB_NEWS_LAST_READ_DATE;
+
+extern const wxDateTime DATE_MAX;
 
 extern const wxArrayString g_locales();
 extern const wxString g_fiat_curr();
@@ -150,7 +130,6 @@ enum id
     mmID_CATEGORY,
     mmID_PAYEE,
     mmID_SPLIT,
-    mmID_ALLTRANSACTIONS,
     mmID_BROWSER,
     mmID_REMOVE,
     mmID_COLOR,

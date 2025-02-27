@@ -31,16 +31,16 @@ class mmAppStartDialog: public wxDialog
     wxDECLARE_EVENT_TABLE();
 
 public:
-    mmGUIApp* m_app;
+    mmGUIApp* m_app = nullptr;
     mmAppStartDialog(wxWindow* parent, mmGUIApp* app, const wxString& name = "mmAppStartDialog");
     ~mmAppStartDialog();
     void SetCloseButtonToExit();
 
 private:
     mmAppStartDialog(){};
-    wxCheckBox* itemCheckBox;
-    wxButton* m_buttonClose;
-    wxButton* m_buttonExit;
+    wxCheckBox* itemCheckBox = nullptr;
+    wxButton* m_buttonClose = nullptr;
+    wxButton* m_buttonExit = nullptr;
 
     bool Create(wxWindow* parent
         , wxWindowID id
@@ -55,6 +55,7 @@ private:
     void OnButtonAppstartChangeLanguage( wxCommandEvent& /*event*/ );
     void OnButtonAppstartHelpClick( wxCommandEvent& event );
     void OnButtonAppstartWebsiteClick( wxCommandEvent& event );
+    void OnButtonAppstartForumsClick( wxCommandEvent& /*event*/ );
     void OnButtonAppstartLastDatabaseClick( wxCommandEvent& event );
     void OnQuit(wxCommandEvent& event);
     void OnClose(wxCloseEvent& event);

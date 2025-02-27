@@ -47,7 +47,7 @@ public:
     static Model_Stock& instance();
 
 public:
-    static wxString get_stock_name(int stock_id);
+    static wxString get_stock_name(int64 stock_id);
 
     static wxDate PURCHASEDATE(const Data* stock);
     static wxDate PURCHASEDATE(const Data& stock);
@@ -60,10 +60,15 @@ public:
     static double CurrentValue(const Data* r);
     static double CurrentValue(const Data& r);
 
-    /** Realized gain/loss from sales */
-    static double RealGainLoss(const Data* r);
-    /** Realized gain/loss from sales */
-    static double RealGainLoss(const Data& r);
+    /** Realized gain/loss from sales, optionally converted to base currency */
+    static double RealGainLoss(const Data* r, bool base_curr = false);
+    /** Realized gain/loss from sales, optionally converted to base currency */
+    static double RealGainLoss(const Data& r, bool base_curr = false);
+
+    /** The current unrealized gain/loss, optionally converted to base currency */
+    static double UnrealGainLoss(const Data* r, bool base_curr = false);
+    /** The current unrealized gain/loss, optionally converted to base currency */
+    static double UnrealGainLoss(const Data& r, bool base_curr = false);
 
     /** Update current price across accounts */
     static void UpdateCurrentPrice(const wxString& symbol, const double price = -1);
@@ -73,7 +78,7 @@ public:
     * Remove the Data record from memory and the database.
     * Delete also all stock history
     */
-    bool remove(int id);
+    bool remove(int64 id);
 
     /**
     Returns the last price date of a given stock

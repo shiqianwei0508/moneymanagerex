@@ -21,6 +21,7 @@
 #include "Model_StockHistory.h"
 #include "Model_Translink.h"
 #include "Model_Shareinfo.h"
+#include "Model_CurrencyHistory.h"
 
 Model_Stock::Model_Stock()
 : Model<DB_Table_STOCK_V1>()
@@ -45,13 +46,13 @@ Model_Stock& Model_Stock::instance(wxSQLite3Database* db)
     return ins;
 }
 
-wxString Model_Stock::get_stock_name(int stock_id)
+wxString Model_Stock::get_stock_name(int64 stock_id)
 {
     Data* stock = instance().get(stock_id);
     if (stock)
         return stock->STOCKNAME;
     else
-        return _("Stock Error");
+        return _t("Stock Error");
 }
 
 /** Return the static instance of Model_Stock table */
@@ -96,7 +97,7 @@ double Model_Stock::CurrentValue(const Data& r)
 * Remove the Data record from memory and the database.
 * Delete also all stock history
 */
-bool Model_Stock::remove(int id)
+bool Model_Stock::remove(int64 id)
 {
     Model_Stock::Data *data = this->get(id);
     const auto &stocks = Model_Stock::instance().find(Model_Stock::SYMBOL(data->SYMBOL));
@@ -132,7 +133,7 @@ Returns the total stock balance at a given date
 double Model_Stock::getDailyBalanceAt(const Model_Account::Data *account, const wxDate& date)
 {
     wxString strDate = date.FormatISODate();
-    std::map<int, double> totBalance;
+    std::map<int64, double> totBalance;
 
     Data_Set stocks = this->instance().find(HELDAT(account->id()));
     for (const auto & stock : stocks)
@@ -176,7 +177,7 @@ double Model_Stock::getDailyBalanceAt(const Model_Account::Data *account, const 
                 precValueDate = stock.PURCHASEDATE;
             }
             //  if next not found and the accoung is open, takes previous date
-            if (nextValue == 0.0 && Model_Account::status(account) == Model_Account::OPEN)
+            if (nextValue == 0.0 && Model_Account::status_id(account) == Model_Account::STATUS_ID_OPEN)
             {
                 nextValue = precValue;
                 nextValueDate = precValueDate;
@@ -187,13 +188,17 @@ double Model_Stock::getDailyBalanceAt(const Model_Account::Data *account, const 
 
         double numShares = 0.0;
 
-        Model_Translink::Data_Set linkrecords = Model_Translink::instance().find(Model_Translink::LINKRECORDID(stock.STOCKID));
+        Model_Translink::Data_Set linkrecords = Model_Translink::TranslinkList(Model_Attachment::REFTYPE_ID_STOCK, stock.STOCKID);
         for (const auto& linkrecord : linkrecords)
         {
-            if (Model_Checking::instance().get(linkrecord.CHECKINGACCOUNTID)->TRANSDATE <= strDate) {
+            Model_Checking::Data* txn = Model_Checking::instance().get(linkrecord.CHECKINGACCOUNTID);
+            if (txn->DELETEDTIME.IsEmpty() && Model_Checking::TRANSDATE(txn).FormatISODate() <= strDate) {
                 numShares += Model_Shareinfo::instance().ShareEntry(linkrecord.CHECKINGACCOUNTID)->SHARENUMBER;
             }
         }
+
+        if (linkrecords.empty() && stock.PURCHASEDATE <= strDate)
+            numShares = stock.NUMSHARES;
 
         totBalance[stock.id()] += numShares * valueAtDate;
     }
@@ -206,27 +211,40 @@ double Model_Stock::getDailyBalanceAt(const Model_Account::Data *account, const 
 }
 
 /**
-Returns the realized gain/loss of the stock due to sold shares
+Returns the realized gain/loss of the stock due to sold shares.
+If the optional parameter to_base_curr = true is passed values are converted
+to base currency.
 */
-double Model_Stock::RealGainLoss(const Data* r)
+double Model_Stock::RealGainLoss(const Data* r, bool to_base_curr)
 {
-    Model_Translink::Data_Set trans_list = Model_Translink::TranslinkList(Model_Attachment::REFTYPE::STOCK, r->STOCKID);
+    Model_Currency::Data* currency = Model_Account::currency(Model_Account::instance().get(r->HELDAT));
+    Model_Translink::Data_Set trans_list = Model_Translink::TranslinkList(Model_Attachment::REFTYPE_ID_STOCK, r->STOCKID);
     double real_gain_loss = 0;
     double total_shares = 0;
     double total_initial_value = 0;
     double avg_share_price = 0;
-    for (const auto trans : trans_list)
-    {
-        Model_Shareinfo::Data* share_entry = Model_Shareinfo::ShareEntry(trans.CHECKINGACCOUNTID);
+    double conv_rate = 1;
 
+    Model_Checking::Data_Set checking_list;
+    for (const auto &trans : trans_list)
+    {
+        Model_Checking::Data* checking_entry = Model_Checking::instance().get(trans.CHECKINGACCOUNTID);
+        if (checking_entry && checking_entry->DELETEDTIME.IsEmpty()) checking_list.push_back(*checking_entry);
+    }
+    std::stable_sort(checking_list.begin(), checking_list.end(), SorterByTRANSDATE());
+
+    for (const auto &trans : checking_list)
+    {
+        Model_Shareinfo::Data* share_entry = Model_Shareinfo::ShareEntry(trans.TRANSID);
+        conv_rate = to_base_curr ? Model_CurrencyHistory::getDayRate(currency->CURRENCYID, trans.TRANSDATE) : 1;
         total_shares += share_entry->SHARENUMBER;
 
         if (share_entry->SHARENUMBER > 0) {
-            total_initial_value += share_entry->SHARENUMBER * share_entry->SHAREPRICE + share_entry->SHARECOMMISSION;
+            total_initial_value += (share_entry->SHARENUMBER * share_entry->SHAREPRICE + share_entry->SHARECOMMISSION) * conv_rate;
         }
         else {
             total_initial_value += share_entry->SHARENUMBER * avg_share_price;
-            real_gain_loss += -share_entry->SHARENUMBER * (share_entry->SHAREPRICE - avg_share_price) - share_entry->SHARECOMMISSION;
+            real_gain_loss += -share_entry->SHARENUMBER * (share_entry->SHAREPRICE * conv_rate - avg_share_price) - share_entry->SHARECOMMISSION * conv_rate;
         }
 
         if (total_shares < 0) total_shares = 0;
@@ -238,10 +256,79 @@ double Model_Stock::RealGainLoss(const Data* r)
     return real_gain_loss;
 }
 
-/** Realized gain/loss due to sales */
-double Model_Stock::RealGainLoss(const Data& r)
+/**
+Returns the realized gain/loss of the stock due to sold shares.
+If the optional parameter to_base_curr = true is passed values are converted
+to base currency.
+*/
+double Model_Stock::RealGainLoss(const Data& r, bool to_base_curr)
 {
-    return RealGainLoss(&r);
+    return RealGainLoss(&r, to_base_curr);
+}
+
+/**
+Returns the current unrealized gain/loss.
+If the optional parameter to_base_curr = true is passed values are converted
+to base currency.
+*/
+double Model_Stock::UnrealGainLoss(const Data& r, bool to_base_curr)
+{
+    return UnrealGainLoss(&r, to_base_curr);
+}
+
+/**
+Returns the current unrealized gain/loss.
+If the optional parameter to_base_curr = true is passed values are converted
+to base currency.
+*/
+double Model_Stock::UnrealGainLoss(const Data* r, bool to_base_curr)
+{
+    if (!to_base_curr)
+        return CurrentValue(r) - InvestmentValue(r);
+    else
+    {
+        Model_Currency::Data* currency = Model_Account::currency(Model_Account::instance().get(r->HELDAT));
+        double conv_rate = Model_CurrencyHistory::getDayRate(currency->CURRENCYID);
+        Model_Translink::Data_Set trans_list = Model_Translink::TranslinkList(Model_Attachment::REFTYPE_ID_STOCK, r->STOCKID);
+        if (!trans_list.empty())
+        {
+            double total_shares = 0;
+            double total_initial_value = 0;
+            double avg_share_price = 0;
+            wxString earliest_date = wxDate::Today().FormatISODate();
+
+            Model_Checking::Data_Set checking_list;
+            for (const auto &trans : trans_list)
+            {
+                Model_Checking::Data* checking_entry = Model_Checking::instance().get(trans.CHECKINGACCOUNTID);
+                if (checking_entry && checking_entry->DELETEDTIME.IsEmpty()) checking_list.push_back(*checking_entry);
+            }
+            std::stable_sort(checking_list.begin(), checking_list.end(), SorterByTRANSDATE());
+
+            for (const auto &trans : checking_list)
+            {
+                Model_Shareinfo::Data* share_entry = Model_Shareinfo::ShareEntry(trans.TRANSID);
+                conv_rate = Model_CurrencyHistory::getDayRate(currency->CURRENCYID, trans.TRANSDATE);
+                total_shares += share_entry->SHARENUMBER;
+                if (total_shares < 0) total_shares = 0;
+
+                if (share_entry->SHARENUMBER > 0) {
+                    total_initial_value += (share_entry->SHARENUMBER * share_entry->SHAREPRICE + share_entry->SHARECOMMISSION) * conv_rate;
+                }
+                else {
+                    total_initial_value += share_entry->SHARENUMBER * avg_share_price;
+                }
+
+                if (total_initial_value < 0) total_initial_value = 0;
+                if (total_shares > 0) avg_share_price = total_initial_value / total_shares;
+            }
+            conv_rate = Model_CurrencyHistory::getDayRate(currency->CURRENCYID);
+            return CurrentValue(r) * conv_rate - total_initial_value;
+        }
+        else {
+            return (CurrentValue(r) - InvestmentValue(r)) * conv_rate;
+        }
+    }
 }
 
 /** Updates the current price across all accounts which hold the stock */
@@ -250,13 +337,19 @@ void Model_Stock::UpdateCurrentPrice(const wxString& symbol, const double price)
     double current_price = price;
     if (price == -1) {
         Model_StockHistory::Data_Set histData = Model_StockHistory::instance().find(Model_StockHistory::SYMBOL(symbol));
-        std::sort(histData.begin(), histData.end(), SorterByDATE());
-        current_price = histData.back().VALUE;
+        if (!histData.empty())
+        {
+            std::sort(histData.begin(), histData.end(), SorterByDATE());
+            current_price = histData.back().VALUE;
+        }
     }
-    Model_Stock::Data_Set stocks = Model_Stock::instance().find(Model_Stock::SYMBOL(symbol));
-    for (auto& stock : stocks) {
-        Model_Stock::Data* stockRecord = Model_Stock::instance().get(stock.STOCKID);
-        stockRecord->CURRENTPRICE = current_price;
-        Model_Stock::instance().save(stockRecord);
+    if (current_price != -1)
+    {
+        Model_Stock::Data_Set stocks = Model_Stock::instance().find(Model_Stock::SYMBOL(symbol));
+        for (auto& stock : stocks) {
+            Model_Stock::Data* stockRecord = Model_Stock::instance().get(stock.STOCKID);
+            stockRecord->CURRENTPRICE = current_price;
+            Model_Stock::instance().save(stockRecord);
+        }
     }
 }

@@ -37,20 +37,19 @@ class mmQIFImportDialog : public wxDialog
     wxDECLARE_EVENT_TABLE();
 
 public:
-    mmQIFImportDialog() {}
-    mmQIFImportDialog(wxWindow* parent, int account_id);
+    mmQIFImportDialog()
+    {
+    }
+    mmQIFImportDialog(wxWindow* parent, int64 account_id, const wxString& file_path = wxEmptyString);
 
-    bool Create(wxWindow* parent, wxWindowID id = wxID_ANY
-        , const wxString& caption = _("QIF Import")
-        , const wxPoint& pos = wxDefaultPosition
-        , const wxSize& size = wxDefaultSize
-        , long style = wxCAPTION | wxRESIZE_BORDER | wxSYSTEM_MENU | wxCLOSE_BOX);
+    bool Create(wxWindow* parent, wxWindowID id = wxID_ANY, const wxString& caption = _t("Import from QIF file"), const wxPoint& pos = wxDefaultPosition,
+                const wxSize& size = wxDefaultSize, long style = wxCAPTION | wxRESIZE_BORDER | wxSYSTEM_MENU | wxCLOSE_BOX);
 
     wxString OnGetItemText(long item, long column) const;
-    int get_last_imported_acc();
+    int64 get_last_imported_acc();
 
 private:
-    mmQIFImport* qif_api;
+    mmQIFImport* qif_api = nullptr;
     void CreateControls();
     void fillControls();
     void OnFileSearch(wxCommandEvent& event);
@@ -63,74 +62,84 @@ private:
     void OnDecimalChange(wxCommandEvent& event);
     void OnFileNameChanged(wxCommandEvent& event);
     void OnMenuSelected(wxCommandEvent& event);
+    void OnShowPayeeDialog(wxMouseEvent&);
+    void OnShowCategDialog(wxMouseEvent&);
     void save_file_name();
     bool mmReadQIFFile();
-    int getOrCreateAccounts();
+    int64 getOrCreateAccounts();
     void getOrCreatePayees();
     void getOrCreateCategories();
-    bool completeTransaction(std::unordered_map <int, wxString> &trx, const wxString &accName);
-    bool completeTransaction(/*in*/ const std::unordered_map <int, wxString> &i
-        , /*out*/ Model_Checking::Data* trx, wxString& msg);
+    bool completeTransaction(std::unordered_map<int, wxString>& trx, const wxString& accName);
+    bool completeTransaction(/*in*/ const std::unordered_map<int, wxString>& i, /*out*/ Model_Checking::Data* trx, wxString& msg);
     bool mergeTransferPair(Model_Checking::Cache& to, Model_Checking::Cache& from);
-    void appendTransfers(Model_Checking::Cache &destination, Model_Checking::Cache &target);
-    void joinSplit(Model_Checking::Cache &destination, std::vector <Model_Splittransaction::Cache> &target);
+    void appendTransfers(Model_Checking::Cache& destination, Model_Checking::Cache& target);
+    void joinSplit(Model_Checking::Cache& destination, std::vector<Model_Splittransaction::Cache>& target);
     void saveSplit();
     void refreshTabs(int tabs);
+    void compilePayeeRegEx();
+    void validatePayees();
 
-    //QIF paragraphs represented like maps type = data
-    std::vector <std::unordered_map <int, wxString> > vQIF_trxs_;
-    std::unordered_map <wxString, std::unordered_map <int, wxString> > m_QIFaccounts;
-    std::unordered_map <wxString, int> m_QIFaccountsID;
-    std::unordered_map <wxString, int> m_QIFpayeeNames;
+    // QIF paragraphs represented like maps type = data
+    std::vector<std::unordered_map<int, wxString>> vQIF_trxs_;
+    std::unordered_map<wxString, std::unordered_map<int, wxString>> m_QIFaccounts;
+    std::unordered_map<wxString, int64> m_QIFaccountsID;
+    std::unordered_map<wxString, std::tuple<int64, wxString, wxString>> m_QIFpayeeNames;
     wxArrayString m_payee_names;
-    std::unordered_map <wxString, std::pair<int, int> > m_QIFcategoryNames;
-    std::vector <Model_Splittransaction::Cache> m_splitDataSets;
+    std::unordered_map<wxString, int64> m_QIFcategoryNames;
+    std::vector<Model_Splittransaction::Cache> m_splitDataSets;
+    std::map<int, std::map<int, Model_Taglink::Cache>> m_splitTaglinks;
+    std::map<std::pair<int, int>, Model_Taglink::Cache> m_txnTaglinks;
 
     wxString m_accountNameStr;
     wxString m_dateFormatStr;
     wxString decimal_;
-    bool m_userDefinedDateMask;
-    int fromAccountID_;
+    bool m_userDefinedDateMask = false;
+    int64 fromAccountID_ = -1;
     wxString m_FileNameStr;
     const wxDateTime m_today;
     const wxDateTime m_fresh;
 
-    wxDataViewListCtrl* dataListBox_;
-    wxDataViewListCtrl* accListBox_;
-    wxDataViewListCtrl* payeeListBox_;
-    wxDataViewListCtrl* categoryListBox_;
-    wxButton* button_search_;
-    wxComboBox* file_name_ctrl_;
-    wxChoice* m_choiceEncoding;
-    wxTextCtrl* log_field_;
-    wxCheckBox* dateFromCheckBox_;
-    wxCheckBox* dateToCheckBox_;
-    mmDatePickerCtrl* fromDateCtrl_;
-    mmDatePickerCtrl* toDateCtrl_;
-    wxComboBox* choiceDateFormat_;
-    wxCheckBox* accountCheckBox_;
-    wxChoice* accountDropDown_;
-    wxCheckBox* accountNumberCheckBox_;
-    wxCheckBox* payeeIsNotesCheckBox_;
-    wxButton* btnOK_;
-    mmChoiceAmountMask* m_choiceDecimalSeparator;
-    wxCheckBox* colorCheckBox_;
-    mmColorButton* mmColorBtn_;
+    wxDataViewListCtrl* dataListBox_ = nullptr;
+    wxDataViewListCtrl* accListBox_ = nullptr;
+    wxDataViewListCtrl* payeeListBox_ = nullptr;
+    wxDataViewListCtrl* categoryListBox_ = nullptr;
+    wxButton* button_search_ = nullptr;
+    wxComboBox* file_name_ctrl_ = nullptr;
+    wxChoice* m_choiceEncoding = nullptr;
+    wxTextCtrl* log_field_ = nullptr;
+    wxCheckBox* dateFromCheckBox_ = nullptr;
+    wxCheckBox* dateToCheckBox_ = nullptr;
+    mmDatePickerCtrl* fromDateCtrl_ = nullptr;
+    mmDatePickerCtrl* toDateCtrl_ = nullptr;
+    wxComboBox* choiceDateFormat_ = nullptr;
+    wxCheckBox* accountCheckBox_ = nullptr;
+    wxChoice* accountDropDown_ = nullptr;
+    wxCheckBox* accountNumberCheckBox_ = nullptr;
+    wxCheckBox* payeeIsNotesCheckBox_ = nullptr;
+    wxCheckBox* payeeMatchCheckBox_ = nullptr;
+    wxCheckBox* payeeMatchAddNotes_ = nullptr;
+    wxButton* btnOK_ = nullptr;
+    mmChoiceAmountMask* m_choiceDecimalSeparator = nullptr;
+    wxCheckBox* colorCheckBox_ = nullptr;
+    mmColorButton* mmColorBtn_ = nullptr;
 
-    bool payeeIsNotes_; //Include payee field in notes
+    bool payeeIsNotes_ = false; //Include payee field in notes
+    std::map<std::pair <int64, wxString>, std::map<int, std::pair<wxString, wxRegEx>> > payeeMatchPatterns_;
+    bool payeeRegExInitialized_ = false;
 
-    enum EColumn
+    enum LIST_ID
     {
-        COL_ID = 0,
-        COL_ACCOUNT,
-        COL_DATE,
-        COL_NUMBER,
-        COL_PAYEE,
-        COL_TYPE,
-        COL_CATEGORY,
-        COL_VALUE,
-        COL_NOTES,
-        COL_MAX, // number of columns
+        LIST_ID_ID = 0,
+        LIST_ID_ACCOUNT,
+        LIST_ID_DATE,
+        LIST_ID_NUMBER,
+        LIST_ID_PAYEE,
+        LIST_ID_TYPE,
+        LIST_ID_CATEGORY,
+        LIST_ID_TAGS,
+        LIST_ID_VALUE,
+        LIST_ID_NOTES,
+        LIST_ID_size, // number of columns
     };
     enum {
         ID_ACCOUNT = wxID_HIGHEST + 1

@@ -22,11 +22,11 @@ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 Model_StockHistory::Model_StockHistory()
 : Model<DB_Table_STOCKHISTORY_V1>()
 {
-};
+}
 
 Model_StockHistory::~Model_StockHistory()
 {
-};
+}
 
 /**
 * Initialize the global Model_StockHistory table.
@@ -70,7 +70,7 @@ DB_Table_STOCKHISTORY_V1::DATE Model_StockHistory::DATE(const wxDate& date, OP o
 /**
 Adds or updates an element in stock history
 */
-int Model_StockHistory::addUpdate(const wxString& symbol, const wxDate& date, double price, UPDTYPE type)
+int64 Model_StockHistory::addUpdate(const wxString& symbol, const wxDate& date, double price, UPDTYPE type)
 {
     Data *stockHist = this->get(symbol, date);
     if (!stockHist) stockHist = this->create();

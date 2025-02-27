@@ -18,14 +18,12 @@ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 ********************************************************/
 
 #include "myusage.h"
-#include "option.h"
 #include "reports/mmDateRange.h"
 #include "reports/htmlbuilder.h"
 #include "model/Model_Usage.h"
-#include "model/Model_Report.h"
 
 mmReportMyUsage::mmReportMyUsage()
-: mmPrintableBase(wxTRANSLATE("MMEX Usage Frequency"))
+: mmPrintableBase(_n("MMEX Usage Frequency"))
 {
     setReportParameters(Reports::MyUsage);
 }
@@ -86,7 +84,7 @@ wxString mmReportMyUsage::getHTMLText()
              {
                  const wxString rep_name_1 = pattern.GetMatch(rep_name, 1);
                  const wxString rep_name_2 = pattern.GetMatch(rep_name, 3);
-                 module += " / " + _(rep_name_1) + (rep_name_2.empty() ? "" : " - " + _(rep_name_2));
+                 module += " / " + wxGetTranslation(rep_name_1) + (rep_name_2.empty() ? "" : " - " + wxGetTranslation(rep_name_2));
              }
              else
              {
@@ -95,19 +93,20 @@ wxString mmReportMyUsage::getHTMLText()
 
              if (!pobj.HasMember("seconds") || !pobj["seconds"].IsDouble())
                  continue;
-             const auto s = pobj["seconds"].GetDouble();
 
              usage_by_module[module] += 1;
          }
     }
 
     if (usage_by_module.empty()) {
-        usage_by_module[_("Empty value")] = 0;
+        usage_by_module[_t("Empty value")] = 0;
     }
 
     std::map<int, wxString> usage_by_frequency;
-    for (const auto i : usage_by_module) {
+    std::vector<std::pair<wxString, int>> usage_vector;
+    for (const auto &i : usage_by_module) {
         usage_by_frequency[i.second] = i.first;
+        usage_vector.push_back(i);
     }
 
     loop_t contents;
@@ -133,13 +132,17 @@ wxString mmReportMyUsage::getHTMLText()
         GraphSeries data_usage;
 
         wxArrayString labels;
-        for (const auto &stats : usage_by_module)
+
+        std::stable_sort(usage_vector.begin(), usage_vector.end(), [](const std::pair<wxString, int>& left, const std::pair<wxString, int>& right) {
+            return left.second > right.second;});
+
+        for (const auto &stats : usage_vector)
         {
             data_usage.values.push_back(stats.second);
             gd.labels.push_back(stats.first);
         }
 
-        data_usage.name = _("Reports");
+        data_usage.name = _t("Reports");
         gd.series.push_back(data_usage);
 
         if (!gd.series.empty())
@@ -156,8 +159,8 @@ wxString mmReportMyUsage::getHTMLText()
             hb.startThead();
             {
                 hb.startTableRow();
-                hb.addTableHeaderCell(_("Reports"));
-                hb.addTableHeaderCell(_("Frequency"), "text-right");
+                hb.addTableHeaderCell(_t("Reports"));
+                hb.addTableHeaderCell(_t("Frequency"), "text-right");
                 hb.endTableRow();
                 hb.endThead();
             }

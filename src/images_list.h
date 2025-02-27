@@ -68,9 +68,10 @@ enum img {
     TERMACCOUNT_NORMAL_PNG,
     STOCK_ACC_NORMAL_PNG,
     CASH_ACC_NORMAL_PNG,
+    TRASH_PNG,
     LOAN_ACC_NORMAL_PNG,
     ACCOUNT_CLOSED_PNG,
-    LAST_NAVTREE_PNG
+    LAST_NAVTREE_PNG,
 };
 
 /* Images set for accounts to be user assigned */
@@ -102,6 +103,7 @@ enum png {
     CATEGORY,
     PAYEE,
     CURR,
+    TAG,
     FILTER, 
     GRM,
     OPTIONS, 
@@ -130,6 +132,7 @@ enum png {
     ASSET_NORMAL,
     ACCOUNT_CLOSED,
     RECURRING,
+    TRASH,
     BUDGET,
     PIE_CHART,
     
@@ -158,6 +161,7 @@ enum png {
     OTHER,
 
     //Controls
+    CALCULATOR,
     CLEAR,
     CLIP,
     DOWNARROW,
@@ -214,5 +218,4 @@ long mmThemeMetaLong(int ref);
 const wxColour mmThemeMetaColour(int ref);
 void mmThemeMetaColour(wxWindow *object, int ref, bool foreground = false);
 const std::vector<wxColour> mmThemeMetaColourArray(int ref);
-//const wxBitmap mmBitMap(int ref, int size = -1);
 const wxBitmapBundle mmBitmapBundle(const int ref, const int defSize = -1);

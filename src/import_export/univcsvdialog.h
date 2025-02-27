@@ -22,6 +22,7 @@
 #include <vector>
 #include <map>
 #include <wx/dialog.h>
+#include <wx/dataview.h>
 #include "Model_Checking.h"
 #include "mmSimpleDialogs.h"
 class wxSpinCtrl;
@@ -86,21 +87,22 @@ public:
 
     /// Constructors
     mmUnivCSVDialog();
-    mmUnivCSVDialog(wxWindow* parent, EDialogType dialogType,
+    mmUnivCSVDialog(wxWindow* parent, EDialogType dialogType, int64 account_id,
+                    const wxString& file_path = wxEmptyString,
                     wxWindowID id = SYMBOL_UNIVCSVDIALOG_IDNAME,
                     const wxPoint& pos = SYMBOL_UNIVCSVDIALOG_POSITION,
                     const wxSize& size = SYMBOL_UNIVCSVDIALOG_SIZE,
                     long style = SYMBOL_UNIVCSVDIALOG_STYLE);
 
     bool isImportCompletedSuccessfully() const;
-    int ImportedAccountID() const;
+    int64 ImportedAccountID() const;
     bool IsImporter() const;
     bool IsXML() const;
     bool IsCSV() const;
     wxString GetSettingsPrfix() const;
 
 private:
-    wxButton* bImport_;
+    wxButton* bImport_ = nullptr;
 
     enum EUnivCvs
     {
@@ -114,6 +116,7 @@ private:
         UNIV_CSV_CURRENCY,
         UNIV_CSV_CATEGORY,
         UNIV_CSV_SUBCATEGORY,
+        UNIV_CSV_TAGS,
         UNIV_CSV_TRANSNUM,
         UNIV_CSV_NOTES,
         UNIV_CSV_DONTCARE,
@@ -127,57 +130,74 @@ private:
     struct tran_holder
     {
         wxDateTime Date;
-        wxString Type = Model_Checking::all_type()[Model_Checking::WITHDRAWAL];
+        wxString Type = Model_Checking::TYPE_NAME_WITHDRAWAL;
         wxString Status = "";
-        int ToAccountID = -1;
+        int64 ToAccountID = -1;
         double ToAmount = 0.0;
-        int PayeeID = -1;
-        int CategoryID = -1;
-        int SubCategoryID = -1;
+        int64 PayeeID = -1;
+        int64 CategoryID = -1;
+        wxArrayInt64 tagIDs;
         double Amount = 0.0;
         wxString Number;
         wxString Notes;
         bool valid = true;
+        wxString PayeeMatchNotes;
+        std::map<int, wxString> customFieldData;
     };
 private:
-    EDialogType dialogType_;
-    wxString delimit_;
+    EDialogType dialogType_ = EDialogType::DIALOG_TYPE_IMPORT_CSV;
+    int64 m_account_id = -1;
+    wxString m_file_path;
+    wxString delimit_ = ",";
     wxString decimal_;
 
-    std::vector<int> csvFieldOrder_;
-    wxListBox* csvFieldCandicate_;
-    wxListBox* csvListBox_;
+    std::vector < std::pair <int, int>> csvFieldOrder_;
+    wxListBox* csvFieldCandicate_ = nullptr;
+    wxListBox* csvListBox_ = nullptr;
 
-    wxButton* m_button_add_;
-    wxButton* m_button_remove_;
-    wxChoice* m_choice_account_;
-    wxListCtrl* m_list_ctrl_; //preview
-    wxTextCtrl* m_text_ctrl_;
-    wxTextCtrl* m_setting_name_ctrl_;
-    wxTextCtrl* log_field_;
-    wxTextCtrl* m_textDelimiter;
-    wxSpinCtrl* m_spinIgnoreFirstRows_;
-    wxSpinCtrl* m_spinIgnoreLastRows_;
+    wxButton* m_button_add_ = nullptr;
+    wxButton* m_button_remove_ = nullptr;
+    wxChoice* m_choice_account_ = nullptr;
+    wxNotebook* m_preview_notebook = nullptr;
+    wxListCtrl* m_list_ctrl_ = nullptr; //preview
+    wxTextCtrl* m_text_ctrl_ = nullptr;
+    wxChoice* m_choice_preset_name = nullptr;
+    wxTextCtrl* log_field_ = nullptr;
+    wxTextCtrl* m_textDelimiter = nullptr;
+    wxSpinCtrl* m_spinIgnoreFirstRows_ = nullptr;
+    wxSpinCtrl* m_spinIgnoreLastRows_ = nullptr;
 
     std::map<int, wxString> CSVFieldName_;
 private:
-    wxChoice* choiceDateFormat_;
-    wxChoice* m_choiceEncoding;
+    wxChoice* choiceDateFormat_ = nullptr;
+    wxChoice* m_choiceEncoding = nullptr;
     wxString date_format_;
-    mmColorButton* colorButton_;
-    wxCheckBox* colorCheckBox_;
+    mmColorButton* colorButton_ = nullptr;
+    wxCheckBox* colorCheckBox_ = nullptr;
+    wxCheckBox* m_checkbox_preset_default = nullptr;
 
-    wxChoice* m_choiceAmountFieldSign;
-    mmChoiceAmountMask* m_choiceDecimalSeparator;
+    wxChoice* m_choiceAmountFieldSign = nullptr;
+    mmChoiceAmountMask* m_choiceDecimalSeparator = nullptr;
     enum amountFieldSignValues { PositiveIsDeposit, PositiveIsWithdrawal, DefindByType };
-    wxCheckBox* m_checkBoxExportTitles;
+    wxCheckBox* m_checkBoxExportTitles = nullptr;
 
-    int accountID_;
-    bool importSuccessful_;
-    bool m_userDefinedDateMask;
-    int m_object_in_focus;
-    bool m_reverce_sign;
+    int64 accountID_ = -1;
+    bool importSuccessful_ = false;
+    bool m_userDefinedDateMask = false;
+    int m_object_in_focus = wxID_ANY;
+    bool m_reverce_sign = false;
     wxString depositType_;
+    std::map <wxString, std::tuple<int64, wxString, wxString>, caseInsensitiveComparator> m_CSVpayeeNames;
+    wxArrayString m_payee_names;
+    std::map <wxString, int64, caseInsensitiveComparator> m_CSVcategoryNames;
+    std::map<std::pair <int64, wxString>, std::map<int, std::pair<wxString, wxRegEx>> > payeeMatchPatterns_;
+    bool payeeRegExInitialized_ = false;
+    wxCheckBox* payeeMatchCheckBox_ = nullptr;
+    wxCheckBox* payeeMatchAddNotes_ = nullptr;
+    wxDataViewListCtrl* payeeListBox_ = nullptr;
+    wxDataViewListCtrl* categoryListBox_ = nullptr;
+    std::map<wxString, wxString> m_preset_id;
+    std::map<int64, wxString> m_acct_default_preset;
 
     /// Creation
     bool Create(wxWindow* parent,
@@ -190,13 +210,13 @@ private:
     /// Creates the controls and sizers
     void CreateControls();
     void OnAdd(wxCommandEvent& event);
-    bool validateData(tran_holder & holder);
+    bool validateData(tran_holder & holder, wxString& message);
     void OnImport(wxCommandEvent& event);
     void OnExport(wxCommandEvent& event);
     void OnRemove(wxCommandEvent& event);
     bool isIndexPresent(int index) const;
     const wxString getCSVFieldName(int index) const;
-    void parseToken(int index, const wxString& token, tran_holder & holder);
+    void parseToken(int index, const wxString& token, tran_holder& holder);
     void OnSettingsSave(wxCommandEvent& event);
     void OnMoveUp(wxCommandEvent& event);
     void OnMoveDown(wxCommandEvent& event);
@@ -204,7 +224,8 @@ private:
     void OnButtonClearClick(wxCommandEvent& event);
     void OnFileBrowse(wxCommandEvent& event);
     void OnListBox(wxCommandEvent& event);
-    void OnDelimiterChange(wxCommandEvent& event);
+    void OnColumnResize(wxListEvent& event);
+    void OnDelimiterChange(wxCommandEvent&);
     void OnDecimalChange(wxCommandEvent& event);
     void OnButtonClear(wxCommandEvent& event);
     void OnFileNameEntered(wxCommandEvent& event);
@@ -213,16 +234,24 @@ private:
     void changeFocus(wxChildFocusEvent& event);
     void OnSpinCtrlIgnoreRows(wxSpinEvent& event);
     void OnCheckboxClick(wxCommandEvent& event);
-    void OnMenuSelected(wxCommandEvent& event);
+    void OnMenuSelected(wxCommandEvent&);
+    void OnShowPayeeDialog(wxMouseEvent&);
+    void OnShowCategDialog(wxMouseEvent&);
+    void saveAccountPresets();
+    bool validateCustomFieldData(int64 fieldId, wxString& value, wxString& log_message);
 private:
     void OnLoad();
     void UpdateListItemBackground();
     void update_preview();
     void initDelimiter();
     void initDateMask();
+    void refreshTabs(int tabs);
+    void compilePayeeRegEx();
+    void validatePayees();
+    void validateCategories();
 
     bool ShowToolTips();
-    void OnSettingsSelected(wxCommandEvent& event);
+    void OnSettingsSelected(wxCommandEvent&);
     const wxString GetStoredSettings(int id) const;
     void SetSettings(const wxString &data);
     ITransactionsFile *CreateFileHandler();
@@ -232,7 +261,7 @@ inline bool mmUnivCSVDialog::isImportCompletedSuccessfully() const
 {
     return importSuccessful_;
 }
-inline int mmUnivCSVDialog::ImportedAccountID() const
+inline int64 mmUnivCSVDialog::ImportedAccountID() const
 {
     return accountID_;
 }

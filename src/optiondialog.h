@@ -41,12 +41,12 @@ public:
 public:
     /// Saves the updated System Options to the appropriate databases.
     bool SaveNewSystemSettings();
-    mmGUIApp* m_app;
+    mmGUIApp* m_app = nullptr;
 
 private:
     /// Dialog Creation - Used by constructor
     bool Create(wxWindow* parent, wxWindowID id = wxID_ANY,
-        const wxString& caption = _("MMEX Options"),
+        const wxString& caption = _t("Settings"),
         const wxPoint& pos = wxDefaultPosition,
         const wxSize& size = wxDefaultSize,
         long style = wxCAPTION | wxRESIZE_BORDER | wxSYSTEM_MENU | wxCLOSE_BOX);
@@ -57,7 +57,7 @@ private:
     void OnPageChange(wxBookCtrlEvent& event);
 
 private:
-    wxListbook* m_notebook;
+    wxListbook* m_listbook = nullptr;
     std::vector<OptionSettingsBase*> m_panel_list;
 };
 

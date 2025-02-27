@@ -35,6 +35,34 @@ class billsDepositsListCtrl: public mmListCtrl
     wxDECLARE_EVENT_TABLE();
 
 public:
+    enum LIST_ID
+    {
+        LIST_ID_ICON = 0,
+        LIST_ID_ID,
+        LIST_ID_PAYMENT_DATE,
+        LIST_ID_DUE_DATE,
+        LIST_ID_ACCOUNT,
+        LIST_ID_PAYEE,
+        LIST_ID_STATUS,
+        LIST_ID_CATEGORY,
+        LIST_ID_TAGS,
+        LIST_ID_TYPE,
+        LIST_ID_AMOUNT,
+        LIST_ID_FREQUENCY,
+        LIST_ID_REPEATS,
+        LIST_ID_AUTO,
+        LIST_ID_DAYS,
+        LIST_ID_NUMBER,
+        LIST_ID_NOTES,
+        LIST_ID_size, // number of columns
+    };
+
+private:
+    static const std::vector<ListColumnInfo> LIST_INFO;
+    mmBillsDepositsPanel* m_bdp;
+    long m_selected_row = -1;
+
+public:
     billsDepositsListCtrl(mmBillsDepositsPanel* bdp, wxWindow *parent, wxWindowID winid = wxID_ANY);
     ~billsDepositsListCtrl();
 
@@ -49,13 +77,17 @@ public:
     void RefreshList();
 
 protected:
-    virtual void OnColClick(wxListEvent& event);
-    virtual wxListItemAttr *OnGetItemAttr(long item) const;
+    virtual int getSortIcon(bool asc) const override;
+    virtual void OnColClick(wxListEvent& event) override;
+    virtual wxListItemAttr *OnGetItemAttr(long item) const override;
 
 private:
+    static int col_sort();
+    void refreshVisualList(int selected_index = -1);
+
     /* required overrides for virtual style list control */
-    virtual wxString OnGetItemText(long item, long column) const;
-    virtual int OnGetItemImage(long item) const;
+    virtual wxString OnGetItemText(long item, long col_nr) const override;
+    virtual int OnGetItemImage(long item) const override;
 
     void OnItemRightClick(wxMouseEvent& event);
     void OnListLeftClick(wxMouseEvent& event);
@@ -65,10 +97,6 @@ private:
     void OnListKeyDown(wxListEvent& event);
     void OnListItemSelected(wxListEvent& event);
     void OnSetUserColour(wxCommandEvent& event);
-
-    void refreshVisualList(int selected_index = -1);
-
-    mmBillsDepositsPanel* m_bdp;
 };
 
 class mmBillsDepositsPanel : public mmPanelBase
@@ -100,20 +128,19 @@ public:
     void updateBottomPanelData(int selIndex);
     void enableEditDeleteButtons(bool en);
     /* updates the Repeating transactions panel data */
-    int initVirtualListControl(int id = -1);
+    int initVirtualListControl(int64 id = -1);
     /* Getter for Virtual List Control */
-    wxString getItem(long item, long column);
+    wxString getItem(long item, int col_id);
     void RefreshList();
-    int getColumnsNumber();
-    int col_sort();
 
     const wxString GetFrequency(const Model_Billsdeposits::Data* item) const;
+    int GetNumRepeats(const Model_Billsdeposits::Data* item) const;
     const wxString GetRemainingDays(const Model_Billsdeposits::Data* item) const;
 
     wxString BuildPage() const;
     wxDate getToday() const;
 
-    void do_delete_custom_values(int id);
+    void do_delete_custom_values(int64 id);
 
 private:
     void CreateControls();
@@ -135,46 +162,25 @@ private:
 
     //void OnViewPopupSelected(wxCommandEvent& event);
 
-    void sortTable();
+    void sortList();
     wxString tips();
 
 private:
     wxSharedPtr<mmFilterTransactionsDialog> transFilterDlg_;
-    billsDepositsListCtrl* listCtrlAccount_;
-    wxStaticText* m_infoText;
-    wxStaticText* m_infoTextMini;
+    billsDepositsListCtrl* m_lc = nullptr;
+    wxStaticText* m_infoText = nullptr;
+    wxStaticText* m_infoTextMini = nullptr;
     wxDate m_today;
-
-    enum EColumn
-    {
-        COL_ICON = 0,
-        COL_ID,
-        COL_PAYMENT_DATE,
-        COL_DUE_DATE,
-        COL_ACCOUNT,
-        COL_PAYEE,
-        COL_STATUS,
-        COL_CATEGORY,
-        COL_TYPE,
-        COL_AMOUNT,
-        COL_FREQUENCY,
-        COL_REPEATS,
-        COL_AUTO,
-        COL_DAYS,
-        COL_NUMBER,
-        COL_NOTES,
-        COL_MAX, // number of columns
-    };
 
     bool transFilterActive_;
     void OnFilterTransactions(wxCommandEvent& WXUNUSED(event));
-    wxButton* m_bitmapTransFilter;
+    wxButton* m_bitmapTransFilter = nullptr;
 
     wxArrayString tips_;
 };
 
-inline wxDate mmBillsDepositsPanel::getToday() const { return m_today; }
-inline int mmBillsDepositsPanel::getColumnsNumber() { return COL_MAX; }
-inline int mmBillsDepositsPanel::col_sort() { return COL_PAYMENT_DATE; }
-#endif
+inline int billsDepositsListCtrl::col_sort() { return LIST_ID_PAYMENT_DATE; }
 
+inline wxDate mmBillsDepositsPanel::getToday() const { return m_today; }
+
+#endif

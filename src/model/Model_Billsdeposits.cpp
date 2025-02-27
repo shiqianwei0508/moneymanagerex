@@ -23,52 +23,22 @@
 #include "Model_Attachment.h"
 #include "Model_Category.h"
 #include "Model_Payee.h"
+#include "Model_Tag.h"
+#include "Model_CustomFieldData.h"
 
-/* TODO: Move attachment management outside of attachmentdialog */
+ /* TODO: Move attachment management outside of attachmentdialog */
 #include "attachmentdialog.h"
 
-const std::vector<std::pair<Model_Billsdeposits::TYPE, wxString> > Model_Billsdeposits::TYPE_CHOICES =
-{
-    {Model_Billsdeposits::WITHDRAWAL, wxString(wxTRANSLATE("Withdrawal"))}
-    , {Model_Billsdeposits::DEPOSIT, wxString(wxTRANSLATE("Deposit"))}
-    , {Model_Billsdeposits::TRANSFER, wxString(wxTRANSLATE("Transfer"))}
-};
-
-const std::vector<std::pair<Model_Billsdeposits::STATUS_ENUM, wxString> > Model_Billsdeposits::STATUS_ENUM_CHOICES =
-{
-    {Model_Billsdeposits::NONE, wxString(wxTRANSLATE("Unreconciled"))}
-    , {Model_Billsdeposits::RECONCILED, wxString(wxTRANSLATE("Reconciled"))}
-    , {Model_Billsdeposits::VOID_, wxString(wxTRANSLATE("Void"))}
-    , {Model_Billsdeposits::FOLLOWUP, wxString(wxTRANSLATE("Follow Up"))}
-    , {Model_Billsdeposits::DUPLICATE_, wxString(wxTRANSLATE("Duplicate"))}
-};
-
 Model_Billsdeposits::Model_Billsdeposits()
-: Model<DB_Table_BILLSDEPOSITS_V1>()
-, m_autoExecuteManual (false)
-, m_autoExecuteSilent (false)
-, m_requireExecution (false)
-, m_allowExecution (false)
-
+    : Model<DB_Table_BILLSDEPOSITS_V1>()
+    , m_autoExecute (REPEAT_AUTO_NONE)
+    , m_requireExecution (false)
+    , m_allowExecution (false)
 {
 }
 
 Model_Billsdeposits::~Model_Billsdeposits()
 {
-}
-
-wxArrayString Model_Billsdeposits::all_type()
-{
-    wxArrayString types;
-    for (const auto& item : TYPE_CHOICES) types.Add(item.second);
-    return types;
-}
-
-wxArrayString Model_Billsdeposits::all_status()
-{
-    wxArrayString status;
-    for (const auto& item : STATUS_ENUM_CHOICES) status.Add(item.second);
-    return status;
 }
 
 /** Return the static instance of Model_Billsdeposits table */
@@ -95,7 +65,6 @@ wxDate Model_Billsdeposits::TRANSDATE(const Data* r)
 {
     return Model::to_date(r->TRANSDATE);
 }
-
 wxDate Model_Billsdeposits::TRANSDATE(const Data& r)
 {
     return Model::to_date(r.TRANSDATE);
@@ -105,150 +74,102 @@ wxDate Model_Billsdeposits::NEXTOCCURRENCEDATE(const Data* r)
 {
     return Model::to_date(r->NEXTOCCURRENCEDATE);
 }
-    
 wxDate Model_Billsdeposits::NEXTOCCURRENCEDATE(const Data& r)
 {
     return Model::to_date(r.NEXTOCCURRENCEDATE);
 }
 
-Model_Billsdeposits::TYPE Model_Billsdeposits::type(const wxString& r)
+Model_Checking::TYPE_ID Model_Billsdeposits::type_id(const Data* r)
 {
-    static std::unordered_map<wxString, TYPE> cache;
-    const auto it = cache.find(r);
-    if (it != cache.end()) return it->second;
-
-    for (const auto& t : TYPE_CHOICES) 
-    {
-        if (r.CmpNoCase(t.second) == 0)
-        {
-            cache.insert(std::make_pair(r, t.first));
-            return t.first;
-        }
-    }
-
-    cache.insert(std::make_pair(r, WITHDRAWAL));
-    return WITHDRAWAL;
+    return static_cast<Model_Checking::TYPE_ID>(Model_Checking::type_id(r->TRANSCODE));
 }
-Model_Billsdeposits::TYPE Model_Billsdeposits::type(const Data& r)
+Model_Checking::TYPE_ID Model_Billsdeposits::type_id(const Data& r)
 {
-    return type(r.TRANSCODE);
-}
-Model_Billsdeposits::TYPE Model_Billsdeposits::type(const Data* r)
-{
-    return type(r->TRANSCODE);
-}
-Model_Billsdeposits::STATUS_ENUM Model_Billsdeposits::status(const wxString& r)
-{
-    static std::unordered_map<wxString, STATUS_ENUM> cache;
-    const auto it = cache.find(r);
-    if (it != cache.end()) return it->second;
-
-    for (const auto & s : STATUS_ENUM_CHOICES)
-    {
-        if (r.CmpNoCase(s.second) == 0) 
-        {
-            cache.insert(std::make_pair(r, s.first));
-            return s.first;
-        }
-    }
-
-    STATUS_ENUM ret = NONE;
-    if (r.CmpNoCase("R") == 0) ret = RECONCILED;
-    else if (r.CmpNoCase("V") == 0) ret = VOID_;
-    else if (r.CmpNoCase("F") == 0) ret = FOLLOWUP;
-    else if (r.CmpNoCase("D") == 0) ret = DUPLICATE_;
-    cache.insert(std::make_pair(r, ret));
-
-    return ret;
-}
-Model_Billsdeposits::STATUS_ENUM Model_Billsdeposits::status(const Data& r)
-{
-    return status(r.STATUS);
-}
-Model_Billsdeposits::STATUS_ENUM Model_Billsdeposits::status(const Data* r)
-{
-    return status(r->STATUS);
+    return type_id(&r);
 }
 
-wxString Model_Billsdeposits::toShortStatus(const wxString& fullStatus)
+Model_Checking::STATUS_ID Model_Billsdeposits::status_id(const Data* r)
 {
-    wxString s = fullStatus.Left(1);
-    s.Replace("U", "");
-    return s;
+    return static_cast<Model_Checking::STATUS_ID>(Model_Checking::status_id(r->STATUS));
+}
+Model_Checking::STATUS_ID Model_Billsdeposits::status_id(const Data& r)
+{
+    return status_id(&r);
 }
 
 /**
 * Remove the Data record instance from memory and the database
 * including any splits associated with the Data Record.
 */
-bool Model_Billsdeposits::remove(int id)
+bool Model_Billsdeposits::remove(int64 id)
 {
-    for (auto &item : Model_Billsdeposits::splittransaction(get(id)))
+    for (auto &item : Model_Billsdeposits::split(get(id)))
         Model_Budgetsplittransaction::instance().remove(item.SPLITTRANSID);
+    // Delete tags for the scheduled transaction
+    Model_Taglink::instance().DeleteAllTags(Model_Attachment::REFTYPE_NAME_BILLSDEPOSIT, id);
     return this->remove(id, db_);
 }
 
-DB_Table_BILLSDEPOSITS_V1::STATUS Model_Billsdeposits::STATUS(STATUS_ENUM status, OP op)
+DB_Table_BILLSDEPOSITS_V1::STATUS Model_Billsdeposits::STATUS(Model_Checking::STATUS_ID status, OP op)
 {
-    return DB_Table_BILLSDEPOSITS_V1::STATUS(toShortStatus(all_status()[status]), op);
+    return DB_Table_BILLSDEPOSITS_V1::STATUS(Model_Checking::status_key(status), op);
 }
 
-DB_Table_BILLSDEPOSITS_V1::TRANSCODE Model_Billsdeposits::TRANSCODE(TYPE type, OP op)
+DB_Table_BILLSDEPOSITS_V1::TRANSCODE Model_Billsdeposits::TRANSCODE(Model_Checking::TYPE_ID type, OP op)
 {
-    return DB_Table_BILLSDEPOSITS_V1::TRANSCODE(all_type()[type], op);
+    return DB_Table_BILLSDEPOSITS_V1::TRANSCODE(Model_Checking::type_name(type), op);
 }
 
-const Model_Budgetsplittransaction::Data_Set Model_Billsdeposits::splittransaction(const Data* r)
+const Model_Budgetsplittransaction::Data_Set Model_Billsdeposits::split(const Data* r)
 {
-    return Model_Budgetsplittransaction::instance().find(Model_Budgetsplittransaction::TRANSID(r->BDID));
+    return Model_Budgetsplittransaction::instance().find(
+        Model_Budgetsplittransaction::TRANSID(r->BDID));
 }
 
-const Model_Budgetsplittransaction::Data_Set Model_Billsdeposits::splittransaction(const Data& r)
+const Model_Budgetsplittransaction::Data_Set Model_Billsdeposits::split(const Data& r)
 {
-    return Model_Budgetsplittransaction::instance().find(Model_Budgetsplittransaction::TRANSID(r.BDID));
+    return split(&r);
+}
+
+const Model_Taglink::Data_Set Model_Billsdeposits::taglink(const Data* r)
+{
+    return Model_Taglink::instance().find(
+        Model_Taglink::REFTYPE(Model_Attachment::REFTYPE_NAME_BILLSDEPOSIT),
+        Model_Taglink::REFID(r->BDID));
+}
+
+const Model_Taglink::Data_Set Model_Billsdeposits::taglink(const Data& r)
+{
+    return taglink(&r);
 }
 
 void Model_Billsdeposits::decode_fields(const Data& q1)
 {
-    m_autoExecuteManual = false; // Used when decoding: REPEATS
-    m_autoExecuteSilent = false;
-    m_requireExecution = false;
-    m_allowExecution = false;
-
     // DeMultiplex the Auto Executable fields from the db entry: REPEATS
-    int repeats = q1.REPEATS;
-    int numRepeats = q1.NUMOCCURRENCES;
+    m_autoExecute = q1.REPEATS.GetValue() / BD_REPEATS_MULTIPLEX_BASE;
+    m_allowExecution = true;
 
-    if (repeats >= BD_REPEATS_MULTIPLEX_BASE)    // Auto Execute User Acknowlegement required
+    int repeats = q1.REPEATS.GetValue() % BD_REPEATS_MULTIPLEX_BASE;
+    int numRepeats = q1.NUMOCCURRENCES.GetValue();
+    if (repeats >= Model_Billsdeposits::REPEAT_IN_X_DAYS && repeats <= Model_Billsdeposits::REPEAT_EVERY_X_MONTHS && numRepeats < 1)
     {
-        m_autoExecuteManual = true;
-        repeats -= BD_REPEATS_MULTIPLEX_BASE;
-    }
-
-    if (repeats >= BD_REPEATS_MULTIPLEX_BASE)    // Auto Execute Silent mode
-    {
-        m_autoExecuteManual = false;               // Can only be manual or auto. Not both
-        m_autoExecuteSilent = true;
-        repeats -= BD_REPEATS_MULTIPLEX_BASE;
-    }
-
-    if ((repeats < Model_Billsdeposits::REPEAT_IN_X_DAYS) || (numRepeats > Model_Billsdeposits::REPEAT_NONE) || (repeats > Model_Billsdeposits::REPEAT_EVERY_X_MONTHS))
-    {
-        m_allowExecution = true;
+        // old inactive entry
+        m_autoExecute = REPEAT_AUTO_NONE;
+        m_allowExecution = false;
     }
 
     m_requireExecution = (Model_Billsdeposits::NEXTOCCURRENCEDATE(&q1)
-        .Subtract(wxDate::Today()).GetDays() < 1);
+        .Subtract(wxDate::Today()).GetSeconds().GetValue() / 86400 < 1);
 }
 
 bool Model_Billsdeposits::autoExecuteManual()
 {
-    return m_autoExecuteManual;
+    return m_autoExecute == REPEAT_AUTO_MANUAL;
 }
 
 bool Model_Billsdeposits::autoExecuteSilent()
 {
-    return m_autoExecuteSilent;
+    return m_autoExecute == REPEAT_AUTO_SILENT;
 }
 
 bool Model_Billsdeposits::requireExecution()
@@ -261,102 +182,92 @@ bool Model_Billsdeposits::allowExecution()
     return m_allowExecution;
 }
 
-bool Model_Billsdeposits::AllowTransaction(const Data& r, AccountBalance& bal)
+bool Model_Billsdeposits::AllowTransaction(const Data& r)
 {
-    const int acct_id = r.ACCOUNTID;
+    if (r.STATUS == Model_Checking::STATUS_KEY_VOID)
+        return true;
+    if (r.TRANSCODE != Model_Checking::TYPE_NAME_WITHDRAWAL && r.TRANSCODE != Model_Checking::TYPE_NAME_TRANSFER)
+        return true;
+
+    const int64 acct_id = r.ACCOUNTID;
     Model_Account::Data* account = Model_Account::instance().get(acct_id);
-    double current_account_balance = 0;
 
-    AccountBalance::iterator itr_bal = bal.find(acct_id);
-    if (itr_bal != bal.end())
+    if (account->MINIMUMBALANCE == 0 && account->CREDITLIMIT == 0)
+        return true;
+
+    double current_balance = Model_Account::balance(account);
+    double new_balance = current_balance - r.TRANSAMOUNT;
+
+    bool allow_transaction = true;
+    wxString limitDescription;
+    double limitAmount{ 0.0L };
+    if (account->MINIMUMBALANCE != 0 && new_balance < account->MINIMUMBALANCE)
     {
-        current_account_balance = itr_bal->second;
+        allow_transaction = false;
+        limitDescription = _t("Minimum Balance");
+        limitAmount = account->MINIMUMBALANCE;
     }
-    else
+    else if (account->CREDITLIMIT != 0 && new_balance < -(account->CREDITLIMIT))
     {
-        current_account_balance = Model_Account::balance(account);
-        bal[acct_id] = current_account_balance;
-    }
-
-    double new_value = r.TRANSAMOUNT;
-
-    if (r.TRANSCODE == Model_Checking::all_type()[Model_Checking::WITHDRAWAL])
-    {
-        new_value *= -1;
-    }
-    new_value += current_account_balance;
-
-    bool abort_transaction = false;
-    if ((account->MINIMUMBALANCE != 0) && (new_value < account->MINIMUMBALANCE))
-    {
-        abort_transaction = true;
+        allow_transaction = false;
+        limitDescription = _t("Credit Limit");
+        limitAmount = account->CREDITLIMIT;
     }
 
-    if ((account->CREDITLIMIT != 0) && (new_value < (account->CREDITLIMIT * -1)))
+    if (!allow_transaction)
     {
-        abort_transaction = true;
+        wxString message = _t("A scheduled transaction will exceed the account limit.\n\n"
+            "Account: %1$s\n"
+            "Current Balance: %2$6.2f\n"
+            "Transaction amount: %3$6.2f\n"
+            "%4$s: %5$6.2f") + "\n\n" +
+            _t("Do you want to continue?");
+        message.Printf(message, account->ACCOUNTNAME, current_balance, r.TRANSAMOUNT, limitDescription, limitAmount);
+
+        if (wxMessageBox(message, _t("MMEX Scheduled Transaction Check"), wxYES_NO | wxICON_WARNING) == wxYES)
+            allow_transaction = true;
     }
 
-    if (abort_transaction && wxMessageBox(_(
-        "A recurring transaction will exceed your account limit.\n\n"
-        "Do you wish to continue?")
-        , _("MMEX Recurring Transaction Check"), wxYES_NO | wxICON_WARNING) == wxYES)
-    {
-        abort_transaction = false;
-    }
-
-    if (!abort_transaction)
-    {
-        bal[acct_id] = new_value;
-    }
-
-    return !abort_transaction;
+    return allow_transaction;
 }
 
-void Model_Billsdeposits::completeBDInSeries(int bdID)
+void Model_Billsdeposits::completeBDInSeries(int64 bdID)
 {
     Data* bill = get(bdID);
-    if (bill)
+    if (!bill) return;
+
+    int repeats = bill->REPEATS.GetValue() % BD_REPEATS_MULTIPLEX_BASE; // DeMultiplex the Auto Executable fields.
+    int numRepeats = bill->NUMOCCURRENCES.GetValue();
+
+    if ((repeats == REPEAT_TYPE::REPEAT_ONCE) || ((repeats < REPEAT_TYPE::REPEAT_IN_X_DAYS || repeats > REPEAT_TYPE::REPEAT_EVERY_X_MONTHS) && numRepeats == 1))
     {
-        int repeats = bill->REPEATS;
-        // DeMultiplex the Auto Executable fields.
-        if (repeats >= BD_REPEATS_MULTIPLEX_BASE)    // Auto Execute User Acknowlegement required
-            repeats -= BD_REPEATS_MULTIPLEX_BASE;
-        if (repeats >= BD_REPEATS_MULTIPLEX_BASE)    // Auto Execute Silent mode
-            repeats -= BD_REPEATS_MULTIPLEX_BASE;
-        int numRepeats = bill->NUMOCCURRENCES;
-        const wxDateTime& payment_date_current = TRANSDATE(bill);
-        const wxDateTime& payment_date_update = nextOccurDate(repeats, numRepeats, payment_date_current);
-
-        const wxDateTime& due_date_current = NEXTOCCURRENCEDATE(bill);
-        const wxDateTime& due_date_update = nextOccurDate(repeats, numRepeats, due_date_current);
-
-        if (numRepeats != REPEAT_TYPE::REPEAT_INACTIVE)
-        {
-            if ((repeats < REPEAT_TYPE::REPEAT_IN_X_DAYS) || (repeats > REPEAT_TYPE::REPEAT_EVERY_X_MONTHS))
-                numRepeats--;
-        }
-
-        if (repeats == REPEAT_TYPE::REPEAT_NONE)
-            numRepeats = 0;
-        else if ((repeats == REPEAT_TYPE::REPEAT_IN_X_DAYS)
-            || (repeats == REPEAT_TYPE::REPEAT_IN_X_MONTHS))
-        {
-            if (numRepeats != -1) numRepeats = -1;
-        }
-
-        bill->NEXTOCCURRENCEDATE = due_date_update.FormatISODate();
-        bill->TRANSDATE = payment_date_update.FormatISODate();
-
-        bill->NUMOCCURRENCES = numRepeats;
-        save(bill);
-
-        if (bill->NUMOCCURRENCES == REPEAT_TYPE::REPEAT_NONE)
-        {
-            mmAttachmentManage::DeleteAllAttachments(Model_Attachment::reftype_desc(Model_Attachment::BILLSDEPOSIT), bdID);
-            remove(bdID);
-        }
+        mmAttachmentManage::DeleteAllAttachments(Model_Attachment::REFTYPE_NAME_BILLSDEPOSIT, bdID);
+        remove(bdID);
+        return;
     }
+
+    wxDateTime transdate;
+    transdate.ParseDateTime(bill->TRANSDATE) || transdate.ParseDate(bill->TRANSDATE);
+    const wxDateTime& payment_date_current = transdate;
+    const wxDateTime& payment_date_update = nextOccurDate(repeats, numRepeats, payment_date_current);
+    bill->TRANSDATE = payment_date_update.FormatISOCombined();
+
+    const wxDateTime& due_date_current = NEXTOCCURRENCEDATE(bill);
+    const wxDateTime& due_date_update = nextOccurDate(repeats, numRepeats, due_date_current);
+    bill->NEXTOCCURRENCEDATE = due_date_update.FormatISODate();
+
+    if ((repeats < REPEAT_TYPE::REPEAT_IN_X_DAYS || repeats > REPEAT_TYPE::REPEAT_EVERY_X_MONTHS) && numRepeats > 1)
+    {
+        bill->NUMOCCURRENCES = numRepeats - 1;
+    }
+    else if (repeats >= REPEAT_TYPE::REPEAT_IN_X_DAYS && repeats <= REPEAT_TYPE::REPEAT_IN_X_MONTHS)
+    {
+        // preserve the Auto Executable fields, change type to REPEAT_ONCE
+        bill->REPEATS += REPEAT_TYPE::REPEAT_ONCE - repeats;
+        bill->NUMOCCURRENCES = -1;
+    }
+
+    save(bill);
 }
 
 const wxDateTime Model_Billsdeposits::nextOccurDate(int repeatsType, int numRepeats, wxDateTime nextOccurDate, bool reverse)
@@ -404,39 +315,105 @@ const wxDateTime Model_Billsdeposits::nextOccurDate(int repeatsType, int numRepe
                 dt.SetToPrevWeekDay(wxDateTime::Fri);
         }
     }
-    wxLogDebug("init date: %s -> next date: %s", nextOccurDate.FormatISODate(), dt.FormatISODate());
+    wxLogDebug("init date: %s -> next date: %s", nextOccurDate.FormatISOCombined(), dt.FormatISOCombined());
     return dt;
+}
+
+wxArrayString Model_Billsdeposits::unroll(const Data* r, const wxString end_date, int limit)
+{
+    wxArrayString dates;
+    int repeats = r->REPEATS.GetValue() % BD_REPEATS_MULTIPLEX_BASE;
+    int numRepeats = r->NUMOCCURRENCES.GetValue();
+
+    // ignore old inactive entries
+    if (repeats >= Model_Billsdeposits::REPEAT_IN_X_DAYS && repeats <= Model_Billsdeposits::REPEAT_EVERY_X_MONTHS && numRepeats == -1)
+        return dates;
+
+    // ignore invalid entries
+    if (repeats != Model_Billsdeposits::REPEAT_ONCE && (numRepeats == 0 || numRepeats < -1))
+        return dates;
+
+    wxString date = r->TRANSDATE;
+    while (date <= end_date && limit != 0) {
+        if (limit > 0) limit--;
+        dates.push_back(date);
+
+        if (repeats == Model_Billsdeposits::REPEAT_ONCE)
+            break;
+        if ((repeats < Model_Billsdeposits::REPEAT_IN_X_DAYS || repeats > Model_Billsdeposits::REPEAT_EVERY_X_MONTHS) && numRepeats == 1)
+            break;
+
+        wxDateTime date_curr;
+        date_curr.ParseDateTime(date) || date_curr.ParseDate(date);
+        const wxDateTime& date_next = Model_Billsdeposits::nextOccurDate(repeats, numRepeats, date_curr);
+        date = date_next.FormatISOCombined();
+
+        if ((repeats < Model_Billsdeposits::REPEAT_IN_X_DAYS || repeats > Model_Billsdeposits::REPEAT_EVERY_X_MONTHS) && numRepeats > 1)
+            numRepeats--;
+        else if (repeats >= Model_Billsdeposits::REPEAT_IN_X_DAYS && repeats <= Model_Billsdeposits::REPEAT_IN_X_MONTHS)
+            repeats = Model_Billsdeposits::REPEAT_ONCE;
+    }
+
+    return dates;
+}
+
+wxArrayString Model_Billsdeposits::unroll(const Data& r, const wxString end_date, int limit)
+{
+    return unroll(&r, end_date, limit);
 }
 
 Model_Billsdeposits::Full_Data::Full_Data()
 {}
 
-Model_Billsdeposits::Full_Data::Full_Data(const Data& r) : Data(r)
+Model_Billsdeposits::Full_Data::Full_Data(const Data& r) :
+    Data(r),
+    m_bill_splits(split(r)),
+    m_tags(Model_Taglink::instance().find(
+        Model_Taglink::REFTYPE(Model_Attachment::REFTYPE_NAME_BILLSDEPOSIT),
+        Model_Taglink::REFID(r.BDID)))
 {
-    m_bill_splits = splittransaction(r);
+    if (!m_tags.empty()) {
+        wxArrayString tagnames;
+        for (const auto& entry : m_tags)
+            tagnames.Add(Model_Tag::instance().get(entry.TAGID)->TAGNAME);
+        // Sort TAGNAMES
+        tagnames.Sort();
+        for (const auto& name : tagnames)
+            this->TAGNAMES += (this->TAGNAMES.empty() ? "" : " ") + name;
+    }
+
     if (!m_bill_splits.empty())
     {
         for (const auto& entry : m_bill_splits)
-            CATEGNAME += (CATEGNAME.empty() ? " * " : ", ")
-            + Model_Category::full_name(entry.CATEGID, entry.SUBCATEGID);
+        {
+            CATEGNAME += (CATEGNAME.empty() ? " + " : ", ")
+                + Model_Category::full_name(entry.CATEGID);
+
+            wxString splitTags;
+            for (const auto& tag : Model_Taglink::instance().get(Model_Attachment::REFTYPE_NAME_BILLSDEPOSITSPLIT, entry.SPLITTRANSID))
+                splitTags.Append(tag.first + " ");
+            if (!splitTags.IsEmpty())
+                TAGNAMES.Append((TAGNAMES.IsEmpty() ? "" : ", ") + splitTags.Trim());
+        }
     }
     else
-        CATEGNAME = Model_Category::full_name(r.CATEGID, r.SUBCATEGID);
+        CATEGNAME = Model_Category::full_name(r.CATEGID);
 
     ACCOUNTNAME = Model_Account::get_account_name(r.ACCOUNTID);
 
     PAYEENAME = Model_Payee::get_payee_name(r.PAYEEID);
-    if (Model_Billsdeposits::type(r) == Model_Billsdeposits::TRANSFER)
+    if (Model_Billsdeposits::type_id(r) == Model_Checking::TYPE_ID_TRANSFER)
     {
         PAYEENAME = Model_Account::get_account_name(r.TOACCOUNTID);
     }
+
 }
 
 wxString Model_Billsdeposits::Full_Data::real_payee_name() const
 {
-    if (TYPE::TRANSFER == type(this->TRANSCODE))
+    if (Model_Checking::TYPE_ID_TRANSFER == Model_Checking::type_id(this->TRANSCODE))
     {
-            return ("> " + this->PAYEENAME);
+        return ("> " + this->PAYEENAME);
     }
     return this->PAYEENAME;
 }

@@ -29,10 +29,14 @@ class mmNewDatabaseWizard : public wxWizard
 {
 public:
     mmNewDatabaseWizard(wxFrame *frame);
-    void RunIt(bool modal);
+    bool RunIt(bool modal);
 
 private:
-    wxWizardPageSimple* page1;
+    void OnCancel(wxWizardEvent&);
+    wxWizardPageSimple* page1 = nullptr;
+    bool success_ = false;
+    
+    wxDECLARE_EVENT_TABLE();
 };
 
 class mmNewDatabaseWizardPage : public wxWizardPageSimple
@@ -44,10 +48,10 @@ public:
     virtual bool TransferDataFromWindow();
 
 private:
-    mmNewDatabaseWizard* parent_;
-    wxButton* itemButtonCurrency_;
-    wxTextCtrl* itemUserName_;
-    int currencyID_;
+    mmNewDatabaseWizard* parent_ = nullptr;
+    wxButton* itemButtonCurrency_ = nullptr;
+    wxTextCtrl* itemUserName_ = nullptr;
+    int64 currencyID_ = -1;
 
     wxDECLARE_EVENT_TABLE();
 };

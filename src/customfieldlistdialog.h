@@ -25,6 +25,8 @@
 class wxDataViewListCtrl;
 class wxDataViewEvent;
 
+typedef wxLongLong int64;
+
 class mmCustomFieldListDialog : public wxDialog
 {
     wxDECLARE_DYNAMIC_CLASS(mmCustomFieldListDialog);
@@ -51,10 +53,10 @@ private:
         MENU_UPDATE_FIELD,
     };
 
-    wxDataViewListCtrl* fieldListBox_;
+    wxDataViewListCtrl* fieldListBox_ = nullptr;
 
-    int m_field_id;
-    mmCustomFieldListDialog() : m_field_id(-1) {}
+    int64 m_field_id = -1;
+    mmCustomFieldListDialog() {}
     std::map<int, wxString> ColName_;
 
     void Create(wxWindow* parent);
@@ -73,7 +75,11 @@ private:
     void OnListItemActivated(wxDataViewEvent& event);
     void OnMagicButton(wxCommandEvent& event);
 
-    bool debug_;
+    #ifdef _DEBUG
+	    bool debug_ = true;
+    #else
+        bool debug_ = false;
+    #endif
 };
 
 #endif // MM_EX_CUSTOMFIELDLISTDIALOG_H_

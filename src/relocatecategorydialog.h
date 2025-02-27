@@ -35,19 +35,21 @@ class relocateCategoryDialog : public wxDialog
 
 public:
     relocateCategoryDialog();
-    relocateCategoryDialog(wxWindow* parent, int sourceCatID = -1, int sourceSubCatID = -1);
+    ~relocateCategoryDialog();
+    relocateCategoryDialog(wxWindow* parent, int64 sourceCatID = -1, int64 sourceSubCatID = -1);
 
     bool Create(wxWindow* parent
         , wxWindowID id = wxID_ANY
-        , const wxString& caption = _("Relocate Category Dialog")
+        , const wxString& caption = _t("Merge Categories")
         , const wxPoint& pos = wxDefaultPosition
         , const wxSize& size = wxDefaultSize
-        , long style = wxCAPTION | wxSYSTEM_MENU | wxCLOSE_BOX );
+        , long style = wxCAPTION | wxSYSTEM_MENU | wxCLOSE_BOX
+        , const wxString& name = "Merge categories");
 
     void CreateControls();
 
     // utility functions
-    void OnTextUpdated(wxCommandEvent& event);
+    void OnTextUpdated(wxCommandEvent&);
     void OnFocusChange(wxChildFocusEvent& event);
     void OnComboKey(wxKeyEvent& event);
     void OnCancel(wxCommandEvent& event);
@@ -57,15 +59,15 @@ public:
 
 private:
     void IsOkOk();
-    int m_sourceCatID;
-    int m_sourceSubCatID;
-    mmComboBoxCategory* cbSourceCategory_;
-    mmComboBoxCategory* cbDestCategory_;
-    wxCheckBox* cbDeleteSourceCategory_;
-    wxStaticText* m_info;
+    int64 m_sourceCatID = -1;
+    int64 m_sourceSubCatID = -1;
+    mmComboBoxCategory* cbSourceCategory_ = nullptr;
+    mmComboBoxCategory* cbDestCategory_ = nullptr;
+    wxCheckBox* cbDeleteSourceCategory_ = nullptr;
+    wxStaticText* m_info = nullptr;
 
-    wxButton* m_buttonDest;
-    int m_changedRecords;
+    //wxButton* m_buttonDest = nullptr;
+    int m_changedRecords = 0;
 };
 
 inline int relocateCategoryDialog::updatedCategoriesCount() const { return m_changedRecords; }

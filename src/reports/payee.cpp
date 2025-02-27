@@ -30,7 +30,7 @@ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #include <algorithm>
 
 mmReportPayeeExpenses::mmReportPayeeExpenses()
-    : mmPrintableBase(wxTRANSLATE("Payee Report"))
+    : mmPrintableBase(_n("Payee Report"))
     , positiveTotal_(0.0)
     , negativeTotal_(0.0)
 {
@@ -48,7 +48,7 @@ void  mmReportPayeeExpenses::RefreshData()
     positiveTotal_ = 0.0;
     negativeTotal_ = 0.0;
 
-    std::map<int, std::pair<double, double> > payeeStats;
+    std::map<int64, std::pair<double, double> > payeeStats;
     getPayeeStats(payeeStats, const_cast<mmDateRange*>(m_date_range)
         , Option::instance().getIgnoreFutureTransactions());
 
@@ -108,14 +108,15 @@ wxString mmReportPayeeExpenses::getHTMLText()
     {
         GraphData gd;
         GraphSeries data_usage;
-
+        std::stable_sort(valueList_.begin(), valueList_.end(), [](const ValuePair& left, const ValuePair& right) {
+            return abs(left.amount) > abs(right.amount); });
         for (const auto &stats : valueList_)
         {
             data_usage.values.push_back(stats.amount);
             gd.labels.push_back(stats.label);
         }
 
-        data_usage.name = _("Payees");
+        data_usage.name = _t("Payees");
         gd.series.push_back(data_usage);
         
         if (!gd.series.empty())
@@ -132,10 +133,10 @@ wxString mmReportPayeeExpenses::getHTMLText()
             hb.startThead();
             {
                 hb.startTableRow();
-                hb.addTableHeaderCell(_("Payee"));
-                hb.addTableHeaderCell(_("Incomes"), "text-right");
-                hb.addTableHeaderCell(_("Expenses"), "text-right");
-                hb.addTableHeaderCell(_("Difference"), "text-right");
+                hb.addTableHeaderCell(_t("Payee"));
+                hb.addTableHeaderCell(_t("Incomes"), "text-right");
+                hb.addTableHeaderCell(_t("Expenses"), "text-right");
+                hb.addTableHeaderCell(_t("Difference"), "text-right");
                 hb.endTableRow();
             }
             hb.endThead();
@@ -146,7 +147,7 @@ wxString mmReportPayeeExpenses::getHTMLText()
                 {
                     hb.startTableRow();
                     {
-                        hb.addTableCellLink(wxString::Format("viewtrans:-1:-1:%d", entry.payee)
+                        hb.addTableCellLink(wxString::Format("viewtrans:-1:-1:%lld", entry.payee)
                             , entry.name);
                         hb.addMoneyCell(entry.incomes);
                         hb.addMoneyCell(entry.expenses);
@@ -163,7 +164,7 @@ wxString mmReportPayeeExpenses::getHTMLText()
                 totals.push_back(positiveTotal_);
                 totals.push_back(negativeTotal_);
                 totals.push_back(positiveTotal_ + negativeTotal_);
-                hb.addMoneyTotalRow(_("Total:"), 4, totals);
+                hb.addMoneyTotalRow(_t("Total:"), 4, totals);
             }
             hb.endTfoot();
         }
@@ -179,18 +180,18 @@ wxString mmReportPayeeExpenses::getHTMLText()
     return hb.getHTMLText();
 }
 
-void mmReportPayeeExpenses::getPayeeStats(std::map<int, std::pair<double, double> > &payeeStats
+void mmReportPayeeExpenses::getPayeeStats(std::map<int64, std::pair<double, double> > &payeeStats
                                           , mmDateRange* date_range, bool WXUNUSED(ignoreFuture)) const
 {
 // FIXME: do not ignore ignoreFuture param
     const auto &transactions = Model_Checking::instance().find(
-        Model_Checking::STATUS(Model_Checking::VOID_, NOT_EQUAL)
+        Model_Checking::STATUS(Model_Checking::STATUS_ID_VOID, NOT_EQUAL)
         , Model_Checking::TRANSDATE(date_range->start_date(), GREATER_OR_EQUAL)
-        , Model_Checking::TRANSDATE(date_range->end_date(), LESS_OR_EQUAL));
+        , Model_Checking::TRANSDATE(date_range->end_date().FormatISOCombined(), LESS_OR_EQUAL));
     const auto all_splits = Model_Splittransaction::instance().get_all();
     for (const auto& trx: transactions)
     {
-        if (Model_Checking::type(trx) == Model_Checking::TRANSFER) continue;
+        if (Model_Checking::type_id(trx) == Model_Checking::TYPE_ID_TRANSFER || !trx.DELETEDTIME.IsEmpty()) continue;
 
         // Do not include asset or stock transfers in income expense calculations.
         if (Model_Checking::foreignTransactionAsTransfer(trx))
@@ -202,7 +203,7 @@ void mmReportPayeeExpenses::getPayeeStats(std::map<int, std::pair<double, double
         if (all_splits.count(trx.id())) splits = all_splits.at(trx.id());
         if (splits.empty())
         {
-            if (Model_Checking::type(trx) == Model_Checking::DEPOSIT)
+            if (Model_Checking::type_id(trx) == Model_Checking::TYPE_ID_DEPOSIT)
                 payeeStats[trx.PAYEEID].first += trx.TRANSAMOUNT * convRate;
             else
                 payeeStats[trx.PAYEEID].second -= trx.TRANSAMOUNT * convRate;
@@ -211,7 +212,7 @@ void mmReportPayeeExpenses::getPayeeStats(std::map<int, std::pair<double, double
         {
             for (const auto& entry : splits)
             {
-                if (Model_Checking::type(trx) == Model_Checking::DEPOSIT)
+                if (Model_Checking::type_id(trx) == Model_Checking::TYPE_ID_DEPOSIT)
                 {
                     if (entry.SPLITTRANSAMOUNT >= 0)
                         payeeStats[trx.PAYEEID].first += entry.SPLITTRANSAMOUNT * convRate;

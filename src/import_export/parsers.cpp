@@ -43,15 +43,26 @@ bool FileCSV::Load(const wxString& fileName, unsigned int itemsInLine)
     wxTextFile txtFile(fileName);
     if (!txtFile.Open(encoding_))
     {
-        mmErrorDialogs::MessageError(pParentWindow_, _("Unable to open file."), _("Universal CSV Import"));
+        mmErrorDialogs::MessageError(pParentWindow_, _t("Unable to open file."), _t("Universal CSV Import"));
         return false;
     }
 
     // Parse rows
     wxString line;
     int row = 0;
+    wxRegEx splitLinePattern(delimiter_ + "[\x1a]?\"[^\"]*?$");
     for (line = txtFile.GetFirstLine(); !txtFile.Eof(); line = txtFile.GetNextLine())
     {
+        // remove double sets of quotes which parse as the double quote literal
+        line.Replace("\"\"", "\x1a");
+        // if there is an unclosed quote, the line has an in-field newline char
+        while (splitLinePattern.Matches(line))
+        {
+            // append the next line
+            line += "\n" + txtFile.GetNextLine();
+        }
+        // add double quotes back in
+        line.Replace("\x1a", "\"\"");
         csv2tab_separated_values(line, delimiter_);
         wxStringTokenizer tkz(line, "\t", wxTOKEN_RET_EMPTY_ALL);
         itemsTable_.push_back(std::vector<ValueAndType>());
@@ -86,7 +97,7 @@ bool FileCSV::Save(const wxString& fileName)
     wxTextFile txtFile(fileName);
     if (!txtFile.Create())
     {
-        mmErrorDialogs::MessageError(pParentWindow_, _("Unable to create file."), _("Universal CSV Import"));
+        mmErrorDialogs::MessageError(pParentWindow_, _t("Unable to create file."), _t("Universal CSV Import"));
         return false;
     }
 
@@ -106,7 +117,7 @@ bool FileCSV::Save(const wxString& fileName)
     // Save the file.
     if (!txtFile.Write(wxTextFileType_None, encoding_))
     {
-        mmErrorDialogs::MessageError(pParentWindow_, _("Could not save file."), _("Export error"));
+        mmErrorDialogs::MessageError(pParentWindow_, _t("Unable to save file."), _t("Export error"));
         return false;
     }
     txtFile.Close();
@@ -132,7 +143,7 @@ bool FileXML::Load(const wxString& fileName, unsigned int itemsInLine)
     if (!xmlFile.Load(fileName, encoding_))
     {
         mmErrorDialogs::MessageError(pParentWindow_
-            , _("File is not in Excel XML Spreadsheet 2003 format."), _("Parsing error"));
+            , _t("File is not in Excel XML Spreadsheet 2003 format."), _t("Parsing error"));
         return false;
     }
 
@@ -141,7 +152,7 @@ bool FileXML::Load(const wxString& fileName, unsigned int itemsInLine)
     if (workbookElement->GetName().Cmp("Workbook") != 0
         || workbookElement->GetAttribute("xmlns").Cmp("urn:schemas-microsoft-com:office:spreadsheet") != 0)
     {
-        mmErrorDialogs::MessageError(pParentWindow_, _("File is not in Excel XML Spreadsheet 2003 format."), _("Parsing error"));
+        mmErrorDialogs::MessageError(pParentWindow_, _t("File is not in Excel XML Spreadsheet 2003 format."), _t("Parsing error"));
         return false;
     }
 
@@ -150,19 +161,20 @@ bool FileXML::Load(const wxString& fileName, unsigned int itemsInLine)
     wxXmlNode *worksheetElement = workbookElement->GetChildren();
     for (; worksheetElement && worksheetElement->GetName() != "Worksheet"; worksheetElement = worksheetElement->GetNext())
     {
-    };
+    	;
+    }
 
-    if (!worksheetElement)
+    if (nullptr == worksheetElement)
     {
-        mmErrorDialogs::MessageError(pParentWindow_, _("Could not find Worksheet."), _("Parsing error"));
+        mmErrorDialogs::MessageError(pParentWindow_, _t("Unable to find Worksheet."), _t("Parsing error"));
         return false;
     }
 
     // Table
     wxXmlNode *tableElement = worksheetElement->GetChildren();
-    if (tableElement->GetName() != _("Table"))
+    if (tableElement->GetName() != _t("Table"))
     {
-        mmErrorDialogs::MessageError(pParentWindow_, _("Could not find Table."), _("Parsing error"));
+        mmErrorDialogs::MessageError(pParentWindow_, _t("Unable to find Table."), _t("Parsing error"));
         return false;
     }
 
@@ -203,7 +215,7 @@ bool FileXML::Save(const wxString& fileName)
     wxXmlDocument xmlFile;
 
     // Workbook
-    wxXmlNode* workbookElement = new wxXmlNode(NULL, wxXML_ELEMENT_NODE, "Workbook");
+    wxXmlNode* workbookElement = new wxXmlNode(nullptr, wxXML_ELEMENT_NODE, "Workbook");
     xmlFile.SetRoot(workbookElement);
     workbookElement->AddAttribute("xmlns", "urn:schemas-microsoft-com:office:spreadsheet");
     workbookElement->AddAttribute("xmlns:o", "urn:schemas-microsoft-com:office:office");
@@ -213,7 +225,7 @@ bool FileXML::Save(const wxString& fileName)
 
     // Worksheet
     wxXmlNode* worksheetElement = new wxXmlNode(workbookElement, wxXML_ELEMENT_NODE, "Worksheet");
-    worksheetElement->AddAttribute("ss:Name", _("Transactions")); //TODO: account name may be used here
+    worksheetElement->AddAttribute("ss:Name", _t("Transactions")); //TODO: account name may be used here
     // workbookElement->AddAttribute("ss:RightToLeft", "1");
 
      // Table
@@ -245,7 +257,7 @@ bool FileXML::Save(const wxString& fileName)
     // Save the file.
     if (!xmlFile.Save(fileName))
     {
-        mmErrorDialogs::MessageError(pParentWindow_, _("Could not save file."), _("Export error"));
+        mmErrorDialogs::MessageError(pParentWindow_, _t("Unable to save file."), _t("Export error"));
         return false;
     }
 

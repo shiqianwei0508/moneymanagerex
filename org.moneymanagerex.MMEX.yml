@@ -1,0 +1,52 @@
+app-id: org.moneymanagerex.MMEX
+runtime: org.gnome.Platform
+runtime-version: '47'
+sdk: org.gnome.Sdk
+command: mmex
+cleanup:
+  - /bin/wx-config
+  - /bin/wxrc
+  - /bin/wxrc-3.2
+  - /include
+  - /lib/*.a
+  - /lib/pkgconfig
+  - /lib/wx/include
+  - /share/aclocal
+  - /share/bakefile
+finish-args:
+  - --socket=fallback-x11
+  - --socket=wayland
+  - --device=dri
+  - --filesystem=home
+  - --filesystem=/mnt
+  - --filesystem=/run/media
+  - --filesystem=/media
+  - --share=ipc
+  - --share=network
+modules:
+  - name: wxWidgets
+    config-opts:
+      - --disable-shared
+      - --enable-cxx11
+      - --with-cxx=11
+      - --enable-webview
+      - --with-gtk=3
+      - --enable-unicode
+      - --enable-intl
+    sources:
+      - type: archive
+        url: https://github.com/wxWidgets/wxWidgets/releases/download/v3.2.6/wxWidgets-3.2.6.tar.bz2
+        sha256: 939e5b77ddc5b6092d1d7d29491fe67010a2433cf9b9c0d841ee4d04acb9dce7
+        x-checker-data:
+          type: json
+          url: https://api.github.com/repos/wxWidgets/wxWidgets/releases/latest
+          url-query: .assets[] | select(.name=="wxWidgets-" + $version + ".tar.bz2")
+            | .browser_download_url
+          version-query: .tag_name | sub("^v"; "")
+  - name: moneymanagerex
+    buildsystem: cmake
+    config-opts:
+      - -DCMAKE_BUILD_TYPE=Release
+    sources:
+      - type: dir
+        path: .

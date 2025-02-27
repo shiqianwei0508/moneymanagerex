@@ -27,7 +27,7 @@
 
 class mm_html_template;
 
-mmReportForecast::mmReportForecast(): mmPrintableBase(wxTRANSLATE("Forecast"))
+mmReportForecast::mmReportForecast(): mmPrintableBase(_n("Forecast"))
 {
     setReportParameters(Reports::ForecastReport);
 }
@@ -43,8 +43,8 @@ wxString mmReportForecast::getHTMLText()
     Model_Checking::Data_Set all_trans;
     
     if (m_date_range && m_date_range->is_with_date()) {
-        all_trans = Model_Checking::instance().find(DB_Table_CHECKINGACCOUNT_V1::TRANSDATE(m_date_range->start_date().FormatISODate(), GREATER_OR_EQUAL)
-            , DB_Table_CHECKINGACCOUNT_V1::TRANSDATE(m_date_range->end_date().FormatISODate(), LESS_OR_EQUAL));
+        all_trans = Model_Checking::instance().find(Model_Checking::TRANSDATE(m_date_range->start_date(), GREATER_OR_EQUAL),
+                                                    Model_Checking::TRANSDATE(m_date_range->end_date().FormatISOCombined(), LESS_OR_EQUAL));
     }
     else {
         all_trans = Model_Checking::instance().all();
@@ -52,11 +52,11 @@ wxString mmReportForecast::getHTMLText()
 
     for (const auto & trx : all_trans)
     {
-        if (Model_Checking::type(trx) == Model_Checking::TRANSFER || Model_Checking::foreignTransactionAsTransfer(trx))
+        if (Model_Checking::type_id(trx) == Model_Checking::TYPE_ID_TRANSFER || Model_Checking::foreignTransactionAsTransfer(trx))
             continue;
-
-        amount_by_day[trx.TRANSDATE].first += Model_Checking::withdrawal(trx, -1);
-        amount_by_day[trx.TRANSDATE].second += Model_Checking::deposit(trx, -1);
+        const double convRate = Model_CurrencyHistory::getDayRate(Model_Account::instance().get(trx.ACCOUNTID)->CURRENCYID, trx.TRANSDATE);
+        amount_by_day[trx.TRANSDATE].first += Model_Checking::account_outflow(trx, trx.ACCOUNTID) * convRate;
+        amount_by_day[trx.TRANSDATE].second += Model_Checking::account_inflow(trx, trx.ACCOUNTID) * convRate;
     }
 
     
@@ -76,9 +76,9 @@ wxString mmReportForecast::getHTMLText()
         gsWithdrawal.values.push_back(kv.second.first);
         gsDeposit.values.push_back(kv.second.second);
     }
-    gsDeposit.name = _("Deposit");
+    gsDeposit.name = _t("Deposit");
     gd.series.push_back(gsDeposit);
-    gsWithdrawal.name = _("Withdrawal");
+    gsWithdrawal.name = _t("Withdrawal");
     gd.series.push_back(gsWithdrawal);
 
     gd.type = GraphData::LINE_DATETIME;

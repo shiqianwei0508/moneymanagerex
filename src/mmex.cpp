@@ -19,11 +19,12 @@
 
 #include "mmex.h"
 #include "constants.h"
-#include "mmframe.h"
 #include "mmSimpleDialogs.h"
+#include "mmframe.h"
 #include "paths.h"
 #include "platfdep.h"
 #include "util.h"
+#include "daterange2.h"
 
 #include "model/Model_Setting.h"
 #include "model/Model_Usage.h"
@@ -33,34 +34,29 @@
 #include <wx/fs_arc.h>
 #include <wx/fs_filter.h>
 #include <wx/fs_mem.h>
-#include <wx/mstream.h>
 #include <wx/imagpng.h>
-#include "../resources/money.xpm"
- //----------------------------------------------------------------------------
+#include <wx/mstream.h>
+//----------------------------------------------------------------------------
 wxIMPLEMENT_APP(mmGUIApp);
 //----------------------------------------------------------------------------
 
-static const wxCmdLineEntryDesc g_cmdLineDesc[] =
-{
+static const wxCmdLineEntryDesc g_cmdLineDesc[] = {
     { wxCMD_LINE_SWITCH, "h", "help", "", wxCMD_LINE_VAL_NONE, wxCMD_LINE_OPTION_HELP },
     { wxCMD_LINE_SWITCH, "s", "silent", "Do not show warning messages at startup.", wxCMD_LINE_VAL_NONE, wxCMD_LINE_PARAM_OPTIONAL },
-    { wxCMD_LINE_OPTION, "i", "mmexini",   "where <str> is a path to mmexini.db3"
-        "\n\nTo open a determined database(.mmb) file from a shortcut or command line, set the path to the database file as a parameter."
-        "\n\nThe file with the application settings mmexini.db3 can be used separately."
-        " Otherwise, it is taken from the home directory or the root folder of the application."},
+    { wxCMD_LINE_OPTION, "i", "mmexini",
+      "where <str> is a path to mmexini.db3"
+      "\n\nTo open a determined database(.mmb) file from a shortcut or command line, set the path to the database file as a parameter."
+      "\n\nThe file with the application settings mmexini.db3 can be used separately."
+      " Otherwise, it is taken from the home directory or the root folder of the application.", wxCMD_LINE_VAL_STRING, 0 },
     { wxCMD_LINE_PARAM, nullptr, nullptr, wxT_2("database file"), wxCMD_LINE_VAL_STRING, wxCMD_LINE_PARAM_OPTIONAL },
-    { wxCMD_LINE_NONE }
+    { wxCMD_LINE_NONE, nullptr, nullptr, nullptr, wxCMD_LINE_VAL_NONE, 0 }
 };
 
 //----------------------------------------------------------------------------
 
-mmGUIApp::mmGUIApp() : m_frame(nullptr)
-, m_setting_db(nullptr)
-, m_optParam1(wxEmptyString)
-, m_optParam2(wxEmptyString)
-, m_optParamSilent(false)
-, m_lang(wxLANGUAGE_UNKNOWN)
-, m_locale(wxLANGUAGE_DEFAULT)
+mmGUIApp::mmGUIApp()
+    : m_optParam1(wxEmptyString), m_optParam2(wxEmptyString), m_lang(wxLANGUAGE_UNKNOWN),
+      m_locale(wxLANGUAGE_DEFAULT)
 {
 #if wxUSE_ON_FATAL_EXCEPTION
     // catch fatal exceptions
@@ -75,10 +71,16 @@ wxLanguage mmGUIApp::getGUILanguage() const
 
 bool mmGUIApp::setGUILanguage(wxLanguage lang)
 {
-    if (lang == this->m_lang && lang != wxLANGUAGE_UNKNOWN) {
+    if (lang == this->m_lang && lang != wxLANGUAGE_UNKNOWN)
+    {
         return false;
     }
     wxTranslations* trans = new wxTranslations;
+
+    // Add the common UI Language translation catalog
+    trans->SetLanguage(wxLANGUAGE_ENGLISH_US);
+    trans->AddCatalog("common", wxLANGUAGE_ENGLISH_US);
+
     trans->SetLanguage(lang);
     trans->AddStdCatalog();
     if (trans->AddCatalog("mmex", wxLANGUAGE_ENGLISH_US) || lang == wxLANGUAGE_ENGLISH_US || lang == wxLANGUAGE_DEFAULT)
@@ -94,17 +96,19 @@ bool mmGUIApp::setGUILanguage(wxLanguage lang)
         if (lang_files.Index("en_US") == wxNOT_FOUND)
             lang_files.Add("en_US");
         wxArrayString lang_names;
-        for (const auto & file : lang_files)
+        for (const auto& file : lang_files)
         {
             const wxLanguageInfo* info = wxLocale::FindLanguageInfo(file);
-            if (info) {
-                lang_names.Add(info->Description);
+            if (info)
+            {
+                lang_names.Add(wxGetTranslation(info->Description));
             }
         }
         lang_names.Sort();
 
         wxString languages_list;
-        for (const auto & name : lang_names) {
+        for (const auto& name : lang_names)
+        {
             languages_list += (languages_list.empty() ? "" : ", ") + name;
         }
 
@@ -122,20 +126,21 @@ bool mmGUIApp::setGUILanguage(wxLanguage lang)
             msg = wxString::Format("Cannot load a translation for the language: %s", best);
             lang = wxLANGUAGE_UNKNOWN;
         }
-        if (lang == wxLANGUAGE_UNKNOWN) {
+        if (lang == wxLANGUAGE_UNKNOWN)
+        {
             msg += "\n\n";
             msg += wxString::Format("Please use the Switch Application Language option in "
-                "View menu to select one of the following available languages:\n\n%s", languages_list);
+                                    "View menu to select one of the following available languages:\n\n%s",
+                                    languages_list);
             m_lang = wxLANGUAGE_DEFAULT;
             Option::instance().setLanguage(m_lang);
         }
 
         wxDELETE(trans);
-        mmErrorDialogs::MessageWarning(NULL, msg, "Language change");
+        mmErrorDialogs::MessageWarning(nullptr, msg, "Language change");
         return false;
     }
 }
-
 
 void mmGUIApp::OnInitCmdLine(wxCmdLineParser& parser)
 {
@@ -151,7 +156,8 @@ bool mmGUIApp::OnCmdLineParsed(wxCmdLineParser& parser)
     if (parser.GetParamCount() > 0)
         m_optParam1 = parser.GetParam(0);
 
-    if (parser.FoundSwitch("s")) {
+    if (parser.FoundSwitch("s"))
+    {
         m_optParamSilent = true;
     }
 
@@ -169,44 +175,44 @@ void mmGUIApp::ReportFatalException(wxDebugReport::Context ctx)
 
     if (!report.IsOk())
     {
-        wxSafeShowMessage(mmex::getProgramName()
-            , _("Fatal error occured.\nApplication will be terminated."));
+        wxSafeShowMessage(mmex::getProgramName(), _t("Fatal error occured.\nApplication will be terminated."));
     }
 
     report.AddAll(ctx);
 
     wxDebugReportPreviewStd preview;
 
-    if (preview.Show(report) && report.Process()) {
+    if (preview.Show(report) && report.Process())
+    {
         report.Reset();
     }
 }
 /*
     This method allows catching the exceptions thrown by any event handler.
 */
-void mmGUIApp::HandleEvent(wxEvtHandler *handler, wxEventFunction func, wxEvent& event) const
+void mmGUIApp::HandleEvent(wxEvtHandler* handler, wxEventFunction func, wxEvent& event) const
 {
     try
     {
         wxApp::HandleEvent(handler, func, event);
     }
-    catch (const wxSQLite3Exception &e)
+    catch (const wxSQLite3Exception& e)
     {
         wxLogError(e.GetMessage());
     }
-    catch (const std::exception &e)
+    catch (const std::exception& e)
     {
         wxLogError("%s", e.what());
     }
 }
 
-int mmGUIApp::FilterEvent(wxEvent &event)
+int mmGUIApp::FilterEvent(wxEvent& event)
 {
     int ret = wxApp::FilterEvent(event);
 
     if (event.GetEventType() == wxEVT_SHOW)
     {
-        wxWindow *win = static_cast<wxWindow*>(event.GetEventObject());
+        wxWindow* win = static_cast<wxWindow*>(event.GetEventObject());
 
         if (win && win->IsTopLevel() && win != this->m_frame) // wxDialog & wxFrame http://docs.wxwidgets.org/trunk/classwx_top_level_window.html
         {
@@ -227,11 +233,14 @@ void mmGUIApp::OnFatalException()
 
 bool OnInitImpl(mmGUIApp* app)
 {
+    bool ok = true;
+
     app->SetAppName(mmex::GetAppName());
 
     app->SetSettingDB(new wxSQLite3Database());
     wxString file_path = mmex::getPathUser(mmex::SETTINGS);
-    if (!app->GetIniParam().empty()) {
+    if (!app->GetIniParam().empty())
+    {
         if (wxFileName::FileExists(app->GetIniParam()))
         {
             file_path = app->GetIniParam();
@@ -240,26 +249,31 @@ bool OnInitImpl(mmGUIApp* app)
     app->GetSettingDB()->Open(file_path);
     Model_Setting::instance(app->GetSettingDB());
 
-    Model_Setting::instance().ShrinkUsageTable();
+    Model_Setting::instance().shrinkUsageTable();
     Model_Usage::instance(app->GetSettingDB());
 
     /* Load general MMEX Custom Settings */
-    Option::instance().LoadOptions(false);
+    Option::instance().load(false);
+
+    // checks (only in Debug build)
+#ifndef NDEBUG
+    ok = ok && DateRange2::debug();
+#endif
 
     /* initialize GUI with best language */
-    wxTranslations *trans = new wxTranslations;
+    wxTranslations* trans = new wxTranslations;
     trans->SetLanguage(wxLANGUAGE_DEFAULT);
     trans->AddStdCatalog();
     trans->AddCatalog("mmex", wxLANGUAGE_ENGLISH_US);
     wxTranslations::Set(trans);
 
-    wxImage::AddHandler(new wxPNGHandler);  
+    wxImage::AddHandler(new wxPNGHandler);
     // Resource files
 #if defined(__WXMSW__) || defined(__WXMAC__)
 
     wxFileSystem::AddHandler(new wxMemoryFSHandler);
 
-    //Copy files from resources to VFS
+    wxLogDebug("{{{ OnInitImpl(): Copy files from resources to VFS");
     const wxString res_dir = mmex::GetResourceDir().GetPathWithSep();
     wxArrayString files_array;
     wxDir::GetAllFiles(res_dir, &files_array);
@@ -270,17 +284,18 @@ bool OnInitImpl(mmGUIApp* app)
         {
             const auto file_name = wxFileName(source_file).GetFullName();
             const auto file_etx = wxFileName(file_name).GetExt();
-            if ( wxString("mo|css|mmextheme|grm").Contains(file_etx)) continue;
+            if (wxString("mo|css|mmextheme|grm").Contains(file_etx))
+                continue;
 
             wxFileInputStream input(source_file);
             wxMemoryOutputStream memOut(nullptr);
             input.Read(memOut);
             wxStreamBuffer* buffer = memOut.GetOutputStreamBuffer();
-            wxLogDebug("File: %s has been copied to VFS", file_name);
-            wxMemoryFSHandler::AddFile(file_name, buffer->GetBufferStart()
-                , buffer->GetBufferSize());
+            wxLogDebug("%s", file_name);
+            wxMemoryFSHandler::AddFile(file_name, buffer->GetBufferStart(), buffer->GetBufferSize());
         }
     }
+    wxLogDebug("}}}");
 
 #else
 
@@ -293,12 +308,12 @@ bool OnInitImpl(mmGUIApp* app)
     {
         const wxString repFile = tempDir + wxFileName(sourceFile).GetFullName();
         const auto file_etx = wxFileName(repFile).GetExt();
-        if (wxString("mo|css|mmextheme|grm").Contains(file_etx)) continue;
+        if (wxString("mo|css|mmextheme|grm").Contains(file_etx))
+            continue;
 
         if (::wxFileExists(sourceFile))
         {
-            if (!::wxFileExists(repFile)
-                || wxFileName(sourceFile).GetModificationTime() > wxFileName(repFile).GetModificationTime())
+            if (!::wxFileExists(repFile) || wxFileName(sourceFile).GetModificationTime() > wxFileName(repFile).GetModificationTime())
             {
                 if (!::wxCopyFile(sourceFile, repFile))
                     wxLogError("Could not copy %s !", sourceFile);
@@ -310,8 +325,7 @@ bool OnInitImpl(mmGUIApp* app)
 
 #endif
 
-
-#if defined (__WXMSW__)
+#if defined(__WXMSW__)
     // https://msdn.microsoft.com/en-us/library/ee330730(v=vs.85).aspx
     // https://kevinragsdale.net/windows-10-and-the-web-browser-control/
     wxRegKey Key(wxRegKey::HKCU, R"(Software\Microsoft\Internet Explorer\Main\FeatureControl\FEATURE_BROWSER_EMULATION)");
@@ -344,15 +358,16 @@ bool OnInitImpl(mmGUIApp* app)
     int defValH = rect.GetHeight() / 4 * 3;
 
     // Load Dimensions of Window, if not found use the 'sensible' values
-    int valX = Model_Setting::instance().GetIntSetting("ORIGINX", defValX);
-    int valY = Model_Setting::instance().GetIntSetting("ORIGINY", defValY);
-    int valW = Model_Setting::instance().GetIntSetting("SIZEW", defValW);
-    int valH = Model_Setting::instance().GetIntSetting("SIZEH", defValH);
+    int valX = Model_Setting::instance().getInt("ORIGINX", defValX);
+    int valY = Model_Setting::instance().getInt("ORIGINY", defValY);
+    int valW = Model_Setting::instance().getInt("SIZEW", defValW);
+    int valH = Model_Setting::instance().getInt("SIZEH", defValH);
 
     // Check if it 'fits' into any of the windows
     // -- 'fit' means either an exact fit or at least 20% of application is on a visible window)
     bool itFits = false;
-    for (unsigned int i = 0; i < wxDisplay::GetCount(); i++) {
+    for (unsigned int i = 0; i < wxDisplay::GetCount(); i++)
+    {
         wxSharedPtr<wxDisplay> display(new wxDisplay(i));
 
         wxRect displayRect = display->GetGeometry();
@@ -376,8 +391,8 @@ bool OnInitImpl(mmGUIApp* app)
         if (intersectRect.IsEmpty())
             percent = 0;
         else
-            percent = static_cast<double>(intersectRect.GetWidth()*intersectRect.GetHeight()) * 2.0 /
-                        static_cast<double>(dispWidth*dispHeight + savedPosition.GetWidth()*savedPosition.GetHeight());
+            percent = static_cast<double>(intersectRect.GetWidth() * intersectRect.GetHeight()) * 2.0 /
+                      static_cast<double>(dispWidth * dispHeight + savedPosition.GetWidth() * savedPosition.GetHeight());
 
         if (percent > 0.2)
         {
@@ -396,12 +411,12 @@ bool OnInitImpl(mmGUIApp* app)
     }
 
     app->m_frame = new mmGUIFrame(app, mmex::getProgramName(), wxPoint(valX, valY), wxSize(valW, valH));
-
-    bool ok = app->m_frame->Show();
+    ok = ok && app->m_frame->Show();
 
     /* Was App Maximized? */
-    bool isMax = Model_Setting::instance().GetBoolSetting("ISMAXIMIZED", true);
-    if (isMax) app->m_frame->Maximize(true);
+    bool isMax = Model_Setting::instance().getBool("ISMAXIMIZED", true);
+    if (isMax)
+        app->m_frame->Maximize(true);
 
     // success: wxApp::OnRun() will be called which will enter the main message
     // loop and the application will run. If we returned FALSE here, the
@@ -419,19 +434,21 @@ bool mmGUIApp::OnInit()
     {
         ok = wxApp::OnInit() && OnInitImpl(this);
     }
-    catch (const wxSQLite3Exception &e)
+    catch (const wxSQLite3Exception& e)
     {
         wxLogError(e.GetMessage());
     }
-    catch (const std::exception &e)
+    catch (const std::exception& e)
     {
         wxLogError("%s", e.what());
     }
 
-    if (!ok) {
+    if (!ok)
+    {
         wxSharedPtr<wxSQLite3Database> db;
         db = GetSettingDB();
-        if (db) {
+        if (db)
+        {
             db->Close();
         }
     }
@@ -441,46 +458,46 @@ bool mmGUIApp::OnInit()
 
 int mmGUIApp::OnExit()
 {
-    wxLogDebug("OnExit()");
+    wxLogDebug("{{{ mmGUIApp::OnExit()");
     Model_Usage::Data* usage = Model_Usage::instance().create();
     usage->USAGEDATE = wxDate::Today().FormatISODate();
 
     wxString rj = Model_Usage::instance().To_JSON_String();
-    wxLogDebug("===== mmGUIApp::OnExit ===========================");
     wxLogDebug("RapidJson\n%s", rj);
 
     usage->JSONCONTENT = rj;
     Model_Usage::instance().save(usage);
 
     if (m_setting_db) {
-        delete m_setting_db;
+        m_setting_db->Close();
+        m_setting_db->ShutdownSQLite();
     }
 
     /* CURL Cleanup */
     curl_global_cleanup();
 
-    //Delete mmex temp folder for current user
+    // Delete mmex temp folder for current user
     wxFileName::Rmdir(mmex::getTempFolder(), wxPATH_RMDIR_RECURSIVE);
 
+    wxLogDebug("}}}");
     return 0;
 }
 
-#if defined (__WXMAC__)
+#if defined(__WXMAC__)
 // Handle a closure for OSX dock correctly
 
-bool findModal(wxWindow *w)
+bool findModal(wxWindow* w)
 {
     wxWindowList& children = w->GetChildren();
-    for (wxWindowList::Node *node=children.GetFirst(); node; node = node->GetNext())
+    for (wxWindowList::Node* node = children.GetFirst(); node; node = node->GetNext())
     {
-        wxWindow *current = (wxWindow *)node->GetData();
+        wxWindow* current = static_cast<wxWindow*>(node->GetData());
         wxLogDebug("  Name [%s]", current->GetName());
         if (current->IsKindOf(CLASSINFO(wxDialog)))
             return true;
-        else
-            if (findModal(current))
-                return true;
-    }   
+        else if (findModal(current))
+            return true;
+    }
     return false;
 }
 bool mmGUIApp::OSXOnShouldTerminate()
@@ -491,5 +508,6 @@ bool mmGUIApp::OSXOnShouldTerminate()
     bool modalExists = findModal(GetTopWindow());
     if (!modalExists)
         this->GetTopWindow()->Close();
+    return true;
 }
 #endif

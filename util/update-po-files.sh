@@ -1,28 +1,31 @@
 #!/bin/sh -e
 
-XGETTEXT_ARGS="-k_ -kN_ -kwxGetTranslation -kwxTRANSLATE -kwxPLURAL:1,2 \
+XGETTEXT_ARGS="-k_ -kN_ -kwxGetTranslation -kwxTRANSLATE -kwxPLURAL:1,2 -kwxPLURAL_U8:1,2 -k_u -k_n -k_nu -k_t -k_tu\
                --language=C++ \
                --sort-by-file \
                --add-comments=TRANSLATORS \
                --from-code=UTF-8 \
                --add-location \
                --package-name=MMEX \
-               --width=78 \
+               --no-wrap \
                --msgid-bugs-address=developer@moneymanagerex.org"
 MSGMERGE_ARGS="--quiet \
                --update \
                --sort-by-file \
                --add-location \
-               --width=78 \
-               --backup=none"
-POT=MoneyManagerEx.pot
+               --no-wrap \
+               --backup=none" 
+POT=mmex.pot
 
 echo "Extracting strings into po/$POT..."
-find src -name \*.cpp -o -name \*.h | xgettext -f - $XGETTEXT_ARGS -o po/$POT
+cd src
+find . \( -name \*.cpp -o -name \*.h \) ! -name 'DB_Upgrade.h' ! -name 'DB_Table_Currencyformats_V1.h' | xgettext -f - $XGETTEXT_ARGS -o "../po/$POT"
 
 echo "Merging into *.po..."
-for p in po/*.po ; do
+for p in ../po/*.po ; do
     echo "Merging $p ..."
-    msgmerge $MSGMERGE_ARGS $p po/$POT
+    msgmerge $MSGMERGE_ARGS "$p" "../po/$POT"
 done
+
+cd ..
 echo "Finished"

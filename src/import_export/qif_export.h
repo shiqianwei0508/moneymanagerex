@@ -22,6 +22,8 @@ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #include "defs.h"
 
 class mmDatePickerCtrl;
+typedef wxLongLong int64;
+typedef std::vector<int64> wxArrayInt64;
 
 class mmQIFExportDialog : public wxDialog
 {
@@ -29,11 +31,11 @@ class mmQIFExportDialog : public wxDialog
     wxDECLARE_EVENT_TABLE();
 
 public:
-    enum type { QIF = 0, JSON, CSV };
+    enum type { CSV = 0, JSON, QIF };
     mmQIFExportDialog() {}
     //virtual ~mmQIFExportDialog() {}
 
-    mmQIFExportDialog(wxWindow* parent, int type);
+    mmQIFExportDialog(wxWindow* parent, int type, int64 account_id);
 
     bool Create(wxWindow* parent
         , const wxString& caption
@@ -44,7 +46,8 @@ public:
 
 private:
 
-    int m_type;
+    int m_type = type::CSV;
+    int64 m_account_id = -1;
     void mmExportQIF();
     void OnAccountsButton(wxCommandEvent& WXUNUSED(event));
     void OnCheckboxClick(wxCommandEvent& WXUNUSED(event));
@@ -60,25 +63,25 @@ private:
     void OnOk(wxCommandEvent& WXUNUSED(event));
 
 
-    wxCheckBox* cCategs_;
-    wxCheckBox* accountsCheckBox_;
-    wxButton* bSelectedAccounts_;
-    wxCheckBox* dateFromCheckBox_;
-    wxCheckBox* dateToCheckBox_;
-    mmDatePickerCtrl* fromDateCtrl_;
-    mmDatePickerCtrl* toDateCtrl_;
-    wxStaticText* choiceDateFormat_label_;
-    wxComboBox* m_choiceDateFormat;
-    wxCheckBox* toFileCheckBox_;
-    wxStaticText* file_name_label_;
-    wxButton* button_search_;
-    wxTextCtrl* m_text_ctrl_;
-    wxTextCtrl* log_field_;
+    wxCheckBox* cCategs_ = nullptr;
+    wxCheckBox* accountsCheckBox_ = nullptr;
+    wxButton* bSelectedAccounts_ = nullptr;
+    wxCheckBox* dateFromCheckBox_ = nullptr;
+    wxCheckBox* dateToCheckBox_ = nullptr;
+    mmDatePickerCtrl* fromDateCtrl_ = nullptr;
+    mmDatePickerCtrl* toDateCtrl_ = nullptr;
+    wxStaticText* choiceDateFormat_label_ = nullptr;
+    wxComboBox* m_choiceDateFormat = nullptr;
+    wxCheckBox* toFileCheckBox_ = nullptr;
+    wxStaticText* file_name_label_ = nullptr;
+    wxButton* button_search_ = nullptr;
+    wxTextCtrl* m_text_ctrl_ = nullptr;
+    wxTextCtrl* log_field_ = nullptr;
     //wxLog *logger_;
 
     /* Selected accounts values */
     wxArrayString m_accounts_name;
-    wxArrayInt accounts_id_;
-    wxArrayInt selected_accounts_id_;
+    wxArrayInt64 accounts_id_;
+    wxArrayInt64 selected_accounts_id_;
 };
 #endif

@@ -1,4 +1,4 @@
-﻿cmake_minimum_required(VERSION 3.0 FATAL_ERROR)
+cmake_minimum_required(VERSION 3.10 FATAL_ERROR)
 
 # ---------------------------------------------------------------------------
 # MMEX uses semantic versioning Ref: http://semver.org
@@ -17,10 +17,42 @@
 # ./resources/mmex.rc
 # ---------------------------------------------------------------------------
 
-set(MMEX_VERSION 1.6.0)
 SET(MMEX_VERSION_ALPHA -1)
-SET(MMEX_VERSION_BETA 2)
+SET(MMEX_VERSION_BETA -1)
 SET(MMEX_VERSION_RC -1)
+# Extract latest version from the top of the NEWS file
+file(STRINGS NEWS NEWS_VERSION_LINES REGEX "^Version .*")
+string(REPLACE "Version " "" MMEX_VERSIONS "${NEWS_VERSION_LINES}")
+list(GET MMEX_VERSIONS 0 LATEST_MMEX_VERSION)
+
+# Enable build type based on an optional version suffix.
+# Example:
+# "1.7.0 Alpha", "1.7.0 Alpha 1"
+if(LATEST_MMEX_VERSION MATCHES "^([0-9]+)(.[0-9]+)(.[0-9]+) (Alpha|Beta|RC)( [0-9]+)?$")
+    if(LATEST_MMEX_VERSION MATCHES ".* [0-9]+$")
+        string(REGEX REPLACE "^.* " "" RELEASE_VERSION "${LATEST_MMEX_VERSION}")
+    else()
+        SET(RELEASE_VERSION 0)
+    endif()
+    if(LATEST_MMEX_VERSION MATCHES ".* Alpha( [0-9]+)?$")
+        message(STATUS "Build type: Alpha")
+        SET(MMEX_VERSION_ALPHA ${RELEASE_VERSION})
+    elseif(LATEST_MMEX_VERSION MATCHES ".* Beta( [0-9]+)?$")
+        message(STATUS "Build type: Beta")
+        SET(MMEX_VERSION_BETA ${RELEASE_VERSION})
+    elseif(LATEST_MMEX_VERSION MATCHES ".* RC( [0-9]+)?$")
+        message(STATUS "Build type: RC")
+        SET(MMEX_VERSION_RC ${RELEASE_VERSION})
+    else()
+        message(SEND_ERROR "Invalid version string: \"${LATEST_MMEX_VERSION}\"")
+    endif()
+elseif(LATEST_MMEX_VERSION MATCHES "^([0-9]+)(.[0-9]+)(.[0-9]+)$")
+    message(STATUS "Build type: Stable")
+else()
+    message(SEND_ERROR "Invalid version string: \"${LATEST_MMEX_VERSION}\"")
+endif()
+
+string(REGEX REPLACE " .*$" "" MMEX_VERSION "${LATEST_MMEX_VERSION}")
 
 # ---------------------------------------------------------------------------
 
@@ -98,6 +130,12 @@ if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
     # define shortcut
     set(LINUX TRUE)
 
+    find_program(APPSTREAMCLI appstreamcli
+        DOC "tool for generating release information")
+    if(NOT APPSTREAMCLI)
+        message(SEND_ERROR "appstreamcli tool not found.")
+    endif()
+
     # Detect Linux distribution (if possible)
     find_program(LSB_RELEASE lsb_release
         DOC "tool to read linux distribution name")
@@ -123,6 +161,11 @@ if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
                 set(LINUX_DISTRO "${CMAKE_MATCH_1}")
                 set(LINUX_DISTRO_REL ${CMAKE_MATCH_2})
             endif()
+        # Check if cmake is new enough for querying host-specific system information:
+        # https://cmake.org/cmake/help/latest/command/cmake_host_system_information.html
+        elseif(EXISTS /etc/os-release AND ${CMAKE_VERSION} VERSION_GREATER_EQUAL "3.22.0")
+            cmake_host_system_information(RESULT LINUX_DISTRO QUERY DISTRIB_NAME)
+            cmake_host_system_information(RESULT LINUX_DISTRO_REL QUERY DISTRIB_VERSION)
         elseif(EXISTS /etc/arch-release)
             execute_process(COMMAND  uname -r
                 OUTPUT_VARIABLE LINUX_DISTRO_REL
@@ -590,9 +633,11 @@ endif()
 # Help Files
 install(FILES
     contrib.txt
-    license.txt
     README.TXT
     DESTINATION "${MMEX_DOC_DIR}")
+install(FILES
+    license.txt
+    DESTINATION "${MMEX_DOC_DIR}/help")
 install(DIRECTORY
     docs/
     DESTINATION "${MMEX_DOC_DIR}/help")
@@ -612,7 +657,8 @@ install(FILES
     resources/sorttable.js
     resources/jquery.min.js
     resources/home_page.htt
-    resources/kaching.wav
+    resources/drop.wav
+    resources/cash.wav
     resources/mmex.png
     resources/mmex.svg
     DESTINATION "${MMEX_RES_DIR}")
@@ -624,15 +670,68 @@ install(FILES ${GRMFILES} DESTINATION ${MMEX_RES_DIR_REPORTS})
 if(LINUX)
     # .desktop File
     install(FILES
-        resources/mmex.desktop
+        resources/dist/linux/share/applications/org.moneymanagerex.MMEX.desktop
         DESTINATION share/applications)
+    install(FILES
+        resources/dist/linux/share/mime/packages/org.moneymanagerex.MMEX.mime.xml
+        DESTINATION share/mime/packages)
+    # Determine AppStream version
+    execute_process(
+        COMMAND appstreamcli --version
+        OUTPUT_VARIABLE APPSTREAM_VERSION
+        OUTPUT_STRIP_TRAILING_WHITESPACE)
+    string(REPLACE "AppStream version: " "" APPSTREAM_VERSION ${APPSTREAM_VERSION})
+    string(REGEX MATCH "([0-9]+)\\.([0-9]+)\\.([0-9]+)" APPSTREAM_VERSION_MATCH "${APPSTREAM_VERSION}")
+    set(APPSTREAM_MAJOR_VERSION ${CMAKE_MATCH_1})
+    set(APPSTREAM_MINOR_VERSION ${CMAKE_MATCH_2})
+    set(APPSTREAM_PATCH_VERSION ${CMAKE_MATCH_3})
+    
+    # AppStream version < 0.12.9 does not have function news-to-metainfo, so just copy metainfo directly
+    if(APPSTREAM_MAJOR_VERSION EQUAL 0 AND (APPSTREAM_MINOR_VERSION LESS 12 OR (APPSTREAM_MINOR_VERSION EQUAL 12 AND APPSTREAM_PATCH_VERSION LESS 9)))
+        message(STATUS "AppStream version ${APPSTREAM_VERSION} < 0.12.9. Skipping merge of NEWS into Metainfo.")
+        execute_process(COMMAND cp ${PROJECT_SOURCE_DIR}/resources/dist/linux/share/metainfo/org.moneymanagerex.MMEX.metainfo.xml.in org.moneymanagerex.MMEX.metainfo.xml)
+    # AppStream version < 0.14.6 can't parse the 'Miscellaneous' section of NEWS, so merge with 'Bugfix'
+    elseif(APPSTREAM_MAJOR_VERSION EQUAL 0 AND (APPSTREAM_MINOR_VERSION LESS 14 OR (APPSTREAM_MINOR_VERSION EQUAL 14 AND APPSTREAM_PATCH_VERSION LESS 6)))
+        message(STATUS "AppStream version ${APPSTREAM_VERSION} < 0.14.6. Merging Miscellaneous into Bugfix section in NEWS.")
+        execute_process(COMMAND cp ${CMAKE_SOURCE_DIR}/NEWS ${CMAKE_BINARY_DIR}/NEWS)
+        execute_process(COMMAND sed -i -e ":a;N;$!ba;s/\\n\\nMiscellaneous://g" ${CMAKE_BINARY_DIR}/NEWS)
+        execute_process(COMMAND appstreamcli news-to-metainfo --format=markdown ${CMAKE_BINARY_DIR}/NEWS ${PROJECT_SOURCE_DIR}/resources/dist/linux/share/metainfo/org.moneymanagerex.MMEX.metainfo.xml.in org.moneymanagerex.MMEX.metainfo.xml
+                RESULT_VARIABLE cmd_result)
+        if(cmd_result)
+            message(FATAL_ERROR "appstreamcli news-to-metainfo returned ${cmd_result}")
+        endif()
+    # AppStream version >= 0.14.6
+    else()
+        message(STATUS "AppStream version ${APPSTREAM_VERSION}")
+        execute_process(COMMAND appstreamcli news-to-metainfo --format=markdown ${PROJECT_SOURCE_DIR}/NEWS ${PROJECT_SOURCE_DIR}/resources/dist/linux/share/metainfo/org.moneymanagerex.MMEX.metainfo.xml.in org.moneymanagerex.MMEX.metainfo.xml
+                COMMAND_ERROR_IS_FATAL ANY)
+    endif()
+
+    execute_process(COMMAND sed -i -e "s/<developer_name>.*<\\/developer_name>//g" org.moneymanagerex.MMEX.metainfo.xml)
+
+    # AppStream 'strict' validation wasn't an option prior to v0.15.4
+    if(APPSTREAM_MAJOR_VERSION GREATER 0 OR (APPSTREAM_MINOR_VERSION GREATER 15 OR (APPSTREAM_MINOR_VERSION EQUAL 15 AND APPSTREAM_PATCH_VERSION GREATER_EQUAL 4)))
+        execute_process(COMMAND appstreamcli validate --strict --no-net org.moneymanagerex.MMEX.metainfo.xml
+                COMMAND_ERROR_IS_FATAL ANY)
+    # Bypass metadata validation for AppStream versions < 0.12.3 which don't allow an empty content_rating tag
+    elseif(APPSTREAM_MINOR_VERSION GREATER 12 OR (APPSTREAM_MINOR_VERSION EQUAL 12 AND APPSTREAM_PATCH_VERSION GREATER_EQUAL 3))
+        execute_process(COMMAND appstreamcli validate --no-net org.moneymanagerex.MMEX.metainfo.xml RESULT_VARIABLE cmd_result)
+        if(cmd_result)
+            message(FATAL_ERROR "appstreamcli validate returned ${cmd_result}")
+        endif()
+    else()
+        message(STATUS "AppStream version ${APPSTREAM_VERSION} < 0.12.3. Skipping metainfo validation.")
+    endif()
+    install(FILES
+        ${CMAKE_BINARY_DIR}/org.moneymanagerex.MMEX.metainfo.xml
+        DESTINATION share/metainfo)
 endif()
 
 # Icons
 if(LINUX)
     install(FILES
         resources/mmex.svg
-        DESTINATION share/icons/hicolor/scalable/apps)
+        DESTINATION share/icons/hicolor/scalable/apps RENAME org.moneymanagerex.MMEX.svg)
 elseif(APPLE)
     install(FILES
         "${MACOSX_APP_ICON_FILE}"

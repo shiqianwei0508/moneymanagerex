@@ -18,8 +18,8 @@
 
 #pragma once
 
+#include "option.h"
 #include "model/Model_Asset.h"
-#include "model/Model_Currency.h"
 #include "model/Model_Translink.h"
 
 class mmDatePickerCtrl;
@@ -34,10 +34,10 @@ class mmAssetDialog : public wxDialog
 
 public:
     mmAssetDialog(){};
-    mmAssetDialog(wxWindow *parent, mmGUIFrame* gui_frame, Model_Asset::Data* asset, bool trans_data = false);
+    mmAssetDialog(wxWindow *parent, Model_Asset::Data* asset, const bool trans_data = false);
     mmAssetDialog(wxWindow *parent, mmGUIFrame* gui_frame, Model_Translink::Data* transfer_entry, Model_Checking::Data* checking_entry);
 
-    Model_Asset::Data* m_asset;
+    Model_Asset::Data* m_asset = nullptr;
     void SetTransactionAccountName(const wxString& account_name);
     void SetTransactionDate();
 
@@ -52,37 +52,43 @@ private:
     void OnOk(wxCommandEvent& event);
     void OnCancel(wxCommandEvent& event);
     void OnAttachments(wxCommandEvent& event);
-    void OnChangeAppreciationType(wxCommandEvent& event);
     void enableDisableRate(bool en);
+    double convertRate(int changeType, double xRate, int xCompounding, int yCompounding = Option::COMPOUNDING_ID_DAY);
+    void OnChangeAppreciationType(wxCommandEvent& event);
+    void OnChangeCompounding(wxCommandEvent& event);
     void dataToControls();
     void changeFocus(wxChildFocusEvent& event);
     void OnQuit(wxCloseEvent& event);
     void CreateAssetAccount();
     void HideTransactionPanel();
 private:
-    mmGUIFrame* m_gui_frame;
-    wxChoice*  m_assetType;
-    wxTextCtrl* m_assetName;
-    mmDatePickerCtrl* m_dpc;
-    wxTextCtrl* m_notes;
-    mmTextCtrl* m_value;
-    mmTextCtrl* m_valueChangeRate;
-    wxChoice*  m_valueChange;
-    wxStaticText* m_valueChangeRateLabel;
-    wxBitmapButton* bAttachments_;
-    wxStaticBox* m_transaction_frame;
-    UserTransactionPanel* m_transaction_panel;
-    Model_Translink::Data* m_transfer_entry;
-    Model_Checking::Data* m_checking_entry;
-    wxString m_dialog_heading;
-    bool m_hidden_trans_entry;
-    bool assetRichText;
+    mmGUIFrame* m_gui_frame = nullptr;
+    wxChoice*  m_assetType = nullptr;
+    wxTextCtrl* m_assetName = nullptr;
+    mmDatePickerCtrl* m_dpc = nullptr;
+    wxTextCtrl* m_notes = nullptr;
+    mmTextCtrl* m_value = nullptr;
+    wxChoice* m_valueChange = nullptr;
+    wxStaticText* m_compoundingLabel = nullptr;
+    wxChoice* m_compoundingChoice = nullptr;
+    Option::COMPOUNDING_ID m_compounding = Option::COMPOUNDING_ID_DAY;
+    wxStaticText* m_valueChangeRateLabel = nullptr;
+    mmTextCtrl* m_valueChangeRate = nullptr;
+    wxBitmapButton* bAttachments_ = nullptr;
+    wxStaticBox* m_transaction_frame = nullptr;
+    UserTransactionPanel* m_transaction_panel = nullptr;
+    Model_Translink::Data* m_transfer_entry = nullptr;
+    Model_Checking::Data* m_checking_entry = nullptr;
+    wxString m_dialog_heading = _t("New Asset");
+    bool m_hidden_trans_entry = true;
+    bool assetRichText = true;
 
     enum
     {
         IDC_COMBO_TYPE = wxID_HIGHEST + 1100,
-        IDC_NOTES,
         IDC_VALUE,
+        IDC_COMPOUNDING,
         IDC_RATE,
+        IDC_NOTES,
     };
 };

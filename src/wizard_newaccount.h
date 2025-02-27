@@ -25,16 +25,18 @@
 #include <wx/choice.h>
 //----------------------------------------------------------------------------
 
+typedef wxLongLong int64;
+
 class mmAddAccountWizard : public wxWizard
 {
 public:
     mmAddAccountWizard(wxFrame *frame);
     void RunIt();
     wxString accountName_;
-    int currencyID_;
-    int accountType_;
+    int64 currencyID_ = -1;
+    int accountType_ = 0;
 
-    int acctID_;
+    int64 acctID_ = -1;
 
 private:
     wxWizardPageSimple* page1;
@@ -48,8 +50,8 @@ public:
     void processPage(wxWizardEvent& event);
 
 private:
-    mmAddAccountWizard* parent_;
-    wxTextCtrl* textAccountName_;
+    mmAddAccountWizard* parent_ = nullptr;
+    wxTextCtrl* textAccountName_ = nullptr;
 
     wxDECLARE_EVENT_TABLE();
 };
@@ -62,8 +64,8 @@ public:
     virtual bool TransferDataFromWindow();
 
 private:
-    wxChoice* itemChoiceType_;
-    mmAddAccountWizard* parent_;
+    wxChoice* itemChoiceType_ = nullptr;
+    mmAddAccountWizard* parent_ = nullptr;
 };
 
 //----------------------------------------------------------------------------

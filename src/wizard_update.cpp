@@ -60,22 +60,19 @@ mmUpdateWizard::~mmUpdateWizard()
 {
     clearVFprintedFiles("rep");
     bool isActive = showUpdateCheckBox_->GetValue();
-    if (!isActive) {
-        Model_Setting::instance().Set("UPDATE_LAST_CHECKED_VERSION", top_version_);
-    }
-    else {
-        Model_Setting::instance().Set("UPDATE_LAST_CHECKED_VERSION", ("v" + mmex::version::string).Lower());
-    }
+    Model_Setting::instance().setString(
+        "UPDATE_LAST_CHECKED_VERSION",
+        (!isActive) ? top_version_ : ("v" + mmex::version::string).Lower()
+    );
 }
 
 mmUpdateWizard::mmUpdateWizard(wxWindow* parent, const Document& json_releases, wxArrayInt new_releases, const wxString& top_version)
     : top_version_(top_version)
-    , showUpdateCheckBox_(nullptr)
 {
 
     SetExtraStyle(GetExtraStyle() | wxWS_EX_BLOCK_EVENTS);
 
-    bool isDialogCreated = wxDialog::Create(parent, wxID_ANY, _("Update Wizard")
+    bool isDialogCreated = wxDialog::Create(parent, wxID_ANY, _t("Update Wizard")
         , wxDefaultPosition, wxDefaultSize
         , wxCAPTION | wxRESIZE_BORDER | wxCLOSE_BOX, "mmUpdateWizard");
 
@@ -103,15 +100,15 @@ void mmUpdateWizard::CreateControls(const Document& json_releases, wxArrayInt ne
     {
         if (!isHistory && new_releases.Index(i) == wxNOT_FOUND) {
             isHistory = true;
-            separator = wxString::Format("<h3> %s </h3>", _("Historical releases:"));
+            separator = wxString::Format("<h3> %s </h3>", _t("Historical releases:"));
         }
 
         bool is_prerelease = (r.HasMember("prerelease") && r["prerelease"].IsBool() && r["prerelease"].GetBool());
-        bool update_stable = Model_Setting::instance().GetIntSetting("UPDATESOURCE", 0) == 0;
+        bool update_stable = Model_Setting::instance().getInt("UPDATESOURCE", 0) == 0;
         if (update_stable && is_prerelease)
             continue;
 
-        const auto prerelease = !is_prerelease ? _("Stable") : _("Unstable");
+        const auto prerelease = !is_prerelease ? _t("Stable") : _t("Unstable");
 
         const auto html_url = (r.HasMember("html_url") && r["html_url"].IsString())
             ? wxString::FromUTF8(r["html_url"].GetString()) : "";
@@ -138,7 +135,7 @@ void mmUpdateWizard::CreateControls(const Document& json_releases, wxArrayInt ne
         const wxString link = wxString::Format(R"(<a href="%s" target="_blank">%s</a>)", html_url, tag);
 
         html += wxString::Format("%s<table class='table'><thead><tr><th>%s</th><th>%s</th><th>%s</th><th>%s</th></tr></thead>\n"
-            , separator, _("Version"), _("Status"), _("Date"), _("Time"));
+            , separator, _t("Version"), _t("Status"), _t("Date"), _t("Time"));
         html += wxString::Format("<tbody><tr class='success'><td>%s</td><td>%s</td><td>%s</td><td>%s</td></tr>"
             "<tr class='active'><td colspan='4'>%s</td></tr><tbody></table>\n\n"
             , link, prerelease, pd, time, body);
@@ -146,7 +143,7 @@ void mmUpdateWizard::CreateControls(const Document& json_releases, wxArrayInt ne
         i++;
     }
 
-    auto version = new_releases.empty() ? _("You already have the latest version") : _("A new version of MMEX is available!");
+    auto version = new_releases.empty() ? _t("MMEX is up to date.") : _t("A new version of MMEX is available.");
     if (!new_releases.empty()) {
 
         const auto ver_num = new_tag.Mid(1);
@@ -178,7 +175,7 @@ void mmUpdateWizard::CreateControls(const Document& json_releases, wxArrayInt ne
 #endif
     }
 
-    wxString header = wxString::Format(_("Your version is %s"), mmex::version::string);
+    wxString header = wxString::Format(_t("Version: %s"), mmex::version::string);
     html = wxString::Format(update_template, header, version, html);
 
     wxBoxSizer *page1_sizer = new wxBoxSizer(wxVERTICAL);
@@ -206,14 +203,13 @@ void mmUpdateWizard::CreateControls(const Document& json_releases, wxArrayInt ne
     const auto name = getVFname4print("rep", html);
     browser->LoadURL(name);
 
-    const wxString showAppStartString = wxString::Format(_("Show this window next time %s starts")
-        , mmex::getProgramName());
+    const wxString showAppStartString = wxString::Format(_t("&Show this dialog box at startup"));
     showUpdateCheckBox_ = new wxCheckBox(this, wxID_ANY, showAppStartString, wxDefaultPosition, wxDefaultSize, wxCHK_2STATE);
     showUpdateCheckBox_->SetValue(true);
     page1_sizer->Add(showUpdateCheckBox_, g_flagsV);
 
 
-    wxButton* buttonOk = new wxButton(this, wxID_OK, _("&OK "));
+    wxButton* buttonOk = new wxButton(this, wxID_OK, _t("&OK "));
     page1_sizer->Add(buttonOk, g_flagsCenter);
 
     buttonOk->SetDefault();
@@ -317,53 +313,50 @@ struct Version
 //--------------
 void mmUpdate::checkUpdates(wxFrame *frame, bool bSilent)
 {
+    bool is_stable = mmex::version::isStable();
+    const auto url = is_stable ? mmex::weblink::Latest : mmex::weblink::Releases;
+
     wxString resp;
-    CURLcode err_code = http_get_data(mmex::weblink::Releases, resp);
-    if (err_code != CURLE_OK)
-    {
-        if (!bSilent)
-        {
-            const wxString& msgStr = _("Unable to check for updates!")
-                + "\n\n" + _("Error: ") + curl_easy_strerror(err_code);
-            wxMessageBox(msgStr, _("MMEX Update Check"));
+    CURLcode err_code = http_get_data(url, resp);
+    if (err_code != CURLE_OK) {
+        if (!bSilent) {
+            const wxString& msgStr = _t("Unable to check for updates!")
+                + "\n\n" + _t("Error: ") + curl_easy_strerror(err_code);
+            wxMessageBox(msgStr, _t("MMEX Update Check"));
         }
         return;
     }
 
     // https://developer.github.com/v3/repos/releases/#list-releases-for-a-repository
 
+    resp = is_stable ? wxString::Format("[%s]", resp) : resp;
     Document json_releases;
     ParseResult res = json_releases.Parse(resp.utf8_str());
-    if (!res || !json_releases.IsArray())
-    {
-        if (!bSilent)
-        {
-            const wxString& msgStr = _("Unable to check for updates!")
-                + "\n\n" + _("Error: ")
+    if (!res || !json_releases.IsArray()) {
+        if (!bSilent) {
+            const wxString& msgStr = _t("Unable to check for updates!")
+                + "\n\n" + _t("Error: ")
                 + wxString::FromUTF8(!res ? GetParseError_En(res.Code()) : json_releases.GetString());
-            wxMessageBox(msgStr, _("MMEX Update Check"));
+            wxMessageBox(msgStr, _t("MMEX Update Check"));
         }
         return;
     }
 
-    wxLogDebug("======= mmUpdate::checkUpdates =======");
-
-    bool is_stable = mmex::version::isStable();
-    bool update_stable = Model_Setting::instance().GetIntSetting("UPDATESOURCE", 0) == 0;
+    wxLogDebug("{{{ mmUpdate::checkUpdates()");
+    bool update_stable = Model_Setting::instance().getInt("UPDATESOURCE", 0) == 0;
     const int _stable = is_stable ? update_stable : 0;
     const wxString current_tag = ("v" + mmex::version::string).Lower();
-    wxString last_checked = Model_Setting::instance().GetStringSetting("UPDATE_LAST_CHECKED_VERSION", current_tag);
+    wxString last_checked = Model_Setting::instance().getString("UPDATE_LAST_CHECKED_VERSION", current_tag);
 
     bool is_update_available = false;
     Version current(current_tag);
     Version top(current_tag);
     wxString top_version;
     Version last(last_checked);
-    wxLogDebug("Current vertion: = %s", current_tag);
+    wxLogDebug("Current vertion: %s", current_tag);
     wxArrayInt new_releases;
     int i = 0;
-    for (auto& r : json_releases.GetArray())
-    {
+    for (auto& r : json_releases.GetArray()) {
         const auto tag_name = wxString::FromUTF8(r["tag_name"].GetString());
         bool prerelease = r["prerelease"].GetBool();
         if (_stable && prerelease) {
@@ -388,12 +381,11 @@ void mmUpdate::checkUpdates(wxFrame *frame, bool bSilent)
         }
         i++;
     }
+    wxLogDebug("}}}");
 
-    if (!bSilent || (is_update_available && !new_releases.empty()))
-    {
+    if (!bSilent || (is_update_available && !new_releases.empty())) {
         mmUpdateWizard* wizard = new mmUpdateWizard(frame, json_releases, new_releases, top_version);
         wizard->CenterOnParent();
         wizard->ShowModal();
     }
-
 }

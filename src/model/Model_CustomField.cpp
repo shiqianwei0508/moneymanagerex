@@ -16,21 +16,21 @@
  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  ********************************************************/
 
+#include "defs.h"
 #include "Model_CustomField.h"
 #include "Model_CustomFieldData.h"
 #include <wx/string.h>
 
-const std::vector<std::pair<Model_CustomField::FIELDTYPE, wxString> > Model_CustomField::FIELDTYPE_CHOICES =
-{
-    {Model_CustomField::STRING, wxString(wxTRANSLATE("String"))},
-    {Model_CustomField::INTEGER, wxString(wxTRANSLATE("Integer"))},
-    {Model_CustomField::DECIMAL, wxString(wxTRANSLATE("Decimal"))},
-    {Model_CustomField::BOOLEAN, wxString(wxTRANSLATE("Boolean"))},
-    {Model_CustomField::DATE, wxString(wxTRANSLATE("Date"))},
-    {Model_CustomField::TIME, wxString(wxTRANSLATE("Time"))},
-    {Model_CustomField::SINGLECHOICE, wxString(wxTRANSLATE("SingleChoice"))},
-    {Model_CustomField::MULTICHOICE, wxString(wxTRANSLATE("MultiChoice"))}
-};
+ChoicesName Model_CustomField::TYPE_CHOICES = ChoicesName({
+    { TYPE_ID_STRING,       _n("String") },
+    { TYPE_ID_INTEGER,      _n("Integer") },
+    { TYPE_ID_DECIMAL,      _n("Decimal") },
+    { TYPE_ID_BOOLEAN,      _n("Boolean") },
+    { TYPE_ID_DATE,         _n("Date") },
+    { TYPE_ID_TIME,         _n("Time") },
+    { TYPE_ID_SINGLECHOICE, _n("SingleChoice") },
+    { TYPE_ID_MULTICHOICE,  _n("MultiChoice") }
+});
 
 Model_CustomField::Model_CustomField()
     : Model<DB_Table_CUSTOMFIELD_V1>()
@@ -62,10 +62,10 @@ Model_CustomField& Model_CustomField::instance()
 }
 
 ///** Return a dataset with fields linked to a specific object */
-//const Model_CustomField::Data_Set Model_CustomField::GetFields(Model_Attachment::REFTYPE RefType)
+//const Model_CustomField::Data_Set Model_CustomField::GetFields(Model_Attachment::REFTYPE_ID RefType)
 //{
 //    Data_Set fields;
-//    wxString reftype_desc = Model_Attachment::reftype_desc(RefType);
+//    wxString reftype_str = Model_Attachment::reftype_name(RefType);
 //    for (const auto & field : this->find(Model_CustomField::DB_Table_CUSTOMFIELD::REFTYPE(RefType)))
 //    {
 //        fields.push_back(field);
@@ -74,7 +74,7 @@ Model_CustomField& Model_CustomField::instance()
 //}
 
 /** Delete a field and all his data */
-bool Model_CustomField::Delete(const int& FieldID)
+bool Model_CustomField::Delete(const int64& FieldID)
 {
     this->Savepoint();
     for (const auto& r : Model_CustomFieldData::instance().find(Model_CustomFieldData::FIELDID(FieldID)))
@@ -83,81 +83,41 @@ bool Model_CustomField::Delete(const int& FieldID)
     return this->remove(FieldID, db_);
 }
 
-const wxString Model_CustomField::fieldtype_desc(const int FieldTypeEnum)
-{
-    const auto& item = FIELDTYPE_CHOICES[FieldTypeEnum];
-    const wxString reftype_desc = item.second;
-    return reftype_desc;
-}
-
-Model_CustomField::FIELDTYPE Model_CustomField::type(const wxString& value)
-{
-    for (const auto& item : FIELDTYPE_CHOICES)
-    {
-        if (item.second.CmpNoCase(value) == 0)
-            return item.first;
-    }
-
-    return UNKNOWN;
-}
-
-Model_CustomField::FIELDTYPE Model_CustomField::type(const Data* r)
-{
-    return type(r->TYPE);
-}
-
-Model_CustomField::FIELDTYPE Model_CustomField::type(const Data& r)
-{
-    return type(&r);
-}
-
-const wxArrayString Model_CustomField::all_type()
-{
-    static wxArrayString types;
-    if (types.empty())
-    {
-        for (const auto& item : FIELDTYPE_CHOICES)
-            types.Add(item.second);
-    }
-    return types;
-}
-
-const wxString Model_CustomField::getTooltip(const wxString& Properties)
+const wxString Model_CustomField::getTooltip(const wxString& properties)
 {
     Document json_doc;
-    if (!json_doc.Parse(Properties.c_str()).HasParseError())
+    if (!json_doc.Parse(properties.utf8_str()).HasParseError())
     {
         if (json_doc.HasMember("Tooltip") && json_doc["Tooltip"].IsString()) {
             Value& s = json_doc["Tooltip"];
-            return s.GetString();
+            return wxString::FromUTF8Unchecked(s.GetString());
         }
     }
     return "";
 }
 
-int Model_CustomField::getReference(const wxString& Properties)
+int Model_CustomField::getReference(const wxString& properties)
 {
-    int ref_type_id = Model_Attachment::instance().all_type().Index(Properties);
-    return ref_type_id;
+    return Model_Attachment::reftype_id(properties);
 }
 
-const wxString Model_CustomField::getRegEx(const wxString& Properties)
+const wxString Model_CustomField::getRegEx(const wxString& properties)
 {
     Document json_doc;
-    if (!json_doc.Parse(Properties.c_str()).HasParseError())
+    if (!json_doc.Parse(properties.utf8_str()).HasParseError())
     {
         if (json_doc.HasMember("RegEx") && json_doc["RegEx"].IsString()) {
             Value& s = json_doc["RegEx"];
-            return s.GetString();
+            return wxString::FromUTF8Unchecked(s.GetString());
         }
     }
     return "";
 }
 
-bool Model_CustomField::getAutocomplete(const wxString& Properties)
+bool Model_CustomField::getAutocomplete(const wxString& properties)
 {
     Document json_doc;
-    if (!json_doc.Parse(Properties.c_str()).HasParseError())
+    if (!json_doc.Parse(properties.utf8_str()).HasParseError())
     {
         if (json_doc.HasMember("Autocomplete") && json_doc["Autocomplete"].IsBool()) {
             Value& b = json_doc["Autocomplete"];
@@ -167,31 +127,31 @@ bool Model_CustomField::getAutocomplete(const wxString& Properties)
     return false;
 }
 
-const wxString Model_CustomField::getDefault(const wxString& Properties)
+const wxString Model_CustomField::getDefault(const wxString& properties)
 {
     Document json_doc;
-    if (!json_doc.Parse(Properties.c_str()).HasParseError())
+    if (!json_doc.Parse(properties.utf8_str()).HasParseError())
     {
         if (json_doc.HasMember("Default") && json_doc["Default"].IsString()) {
             Value& s = json_doc["Default"];
-            return s.GetString();
+            return wxString::FromUTF8Unchecked(s.GetString());
         }
     }
     return "";
 }
 
-const wxArrayString Model_CustomField::getChoices(const wxString& Properties)
+const wxArrayString Model_CustomField::getChoices(const wxString& properties)
 {
     wxArrayString choices;
     Document json_doc;
-    if (!json_doc.Parse(Properties.c_str()).HasParseError())
+    if (!json_doc.Parse(properties.utf8_str()).HasParseError())
     {
         if (json_doc.HasMember("Choice") && json_doc["Choice"].IsArray())
         {
             Value& sa = json_doc["Choice"];
             for (const auto& entry : sa.GetArray())
             {
-                choices.Add(entry.GetString());
+                choices.Add(wxString::FromUTF8Unchecked(entry.GetString()));
             }
         }
     }
@@ -199,10 +159,10 @@ const wxArrayString Model_CustomField::getChoices(const wxString& Properties)
     return choices;
 }
 
-const wxString Model_CustomField::getUDFC(const wxString& Properties)
+const wxString Model_CustomField::getUDFC(const wxString& properties)
 {
     Document json_doc;
-    if (!json_doc.Parse(Properties.c_str()).HasParseError())
+    if (!json_doc.Parse(properties.utf8_str()).HasParseError())
     {
         if (json_doc.HasMember("UDFC") && json_doc["UDFC"].IsString()) {
             Value& s = json_doc["UDFC"];
@@ -212,25 +172,25 @@ const wxString Model_CustomField::getUDFC(const wxString& Properties)
     return "";
 }
 
-const std::map<wxString, int> Model_CustomField::getMatrix(Model_Attachment::REFTYPE reftype)
+const std::map<wxString, int64> Model_CustomField::getMatrix(Model_Attachment::REFTYPE_ID reftype)
 {
-    std::map<wxString, int> m;
-    const wxString& reftype_desc = Model_Attachment::reftype_desc(reftype);
+    std::map<wxString, int64> m;
+    const wxString& reftype_str = Model_Attachment::reftype_name(reftype);
     for (const auto& entry : UDFC_FIELDS())
     {
         if (entry.empty()) continue;
-        m[entry] = getUDFCID(reftype_desc, entry);
+        m[entry] = getUDFCID(reftype_str, entry);
     }
     return m;
 }
 
-int Model_CustomField::getUDFCID(const wxString& ref_type, const wxString& name)
+int64 Model_CustomField::getUDFCID(const wxString& ref_type, const wxString& name)
 {
     Document json_doc;
     const auto& a = Model_CustomField::instance().find(REFTYPE(ref_type));
     for (const auto& item : a)
     {
-        if (!json_doc.Parse(item.PROPERTIES.c_str()).HasParseError())
+        if (!json_doc.Parse(item.PROPERTIES.utf8_str()).HasParseError())
         {
             if (json_doc.HasMember("UDFC") && json_doc["UDFC"].IsString())
             {
@@ -251,7 +211,7 @@ const wxString Model_CustomField::getUDFCName(const wxString& ref_type, const wx
     const auto& a = Model_CustomField::instance().find(REFTYPE(ref_type));
     for (const auto& item : a)
     {
-        if (!json_doc.Parse(item.PROPERTIES.c_str()).HasParseError())
+        if (!json_doc.Parse(item.PROPERTIES.utf8_str()).HasParseError())
         {
             if (json_doc.HasMember("UDFC") && json_doc["UDFC"].IsString())
             {
@@ -266,25 +226,25 @@ const wxString Model_CustomField::getUDFCName(const wxString& ref_type, const wx
     return wxEmptyString;
 }
 
-const Model_CustomField::FIELDTYPE Model_CustomField::getUDFCType(const wxString& ref_type, const wxString& name)
+Model_CustomField::TYPE_ID Model_CustomField::getUDFCType(const wxString& ref_type, const wxString& name)
 {
     Document json_doc;
     const auto& a = Model_CustomField::instance().find(REFTYPE(ref_type));
     for (const auto& item : a)
     {
-        if (!json_doc.Parse(item.PROPERTIES.c_str()).HasParseError())
+        if (!json_doc.Parse(item.PROPERTIES.utf8_str()).HasParseError())
         {
             if (json_doc.HasMember("UDFC") && json_doc["UDFC"].IsString())
             {
                 Value& s = json_doc["UDFC"];
                 const wxString& desc = s.GetString();
                 if (desc == name) {
-                    return type(item.TYPE);
+                    return static_cast<TYPE_ID>(type_id(item.TYPE));
                 }
             }
         }
     }
-    return Model_CustomField::FIELDTYPE::UNKNOWN;
+    return Model_CustomField::TYPE_ID_UNKNOWN;
 }
 
 const wxString Model_CustomField::getUDFCProperties(const wxString& ref_type, const wxString& name)
@@ -293,7 +253,7 @@ const wxString Model_CustomField::getUDFCProperties(const wxString& ref_type, co
     const auto& a = Model_CustomField::instance().find(REFTYPE(ref_type));
     for (const auto& item : a)
     {
-        if (!json_doc.Parse(item.PROPERTIES.c_str()).HasParseError())
+        if (!json_doc.Parse(item.PROPERTIES.utf8_str()).HasParseError())
         {
             if (json_doc.HasMember("UDFC") && json_doc["UDFC"].IsString())
             {
@@ -318,11 +278,11 @@ const wxArrayString Model_CustomField::UDFC_FIELDS()
     choices.Add("UDFC04");
     choices.Add("UDFC05");
     return choices;
-};
+}
 
 const wxArrayString Model_CustomField::getUDFCList(DB_Table_CUSTOMFIELD_V1::Data* r)
 {
-    const wxString& ref_type = Model_Attachment::reftype_desc(Model_Attachment::TRANSACTION);
+    const wxString& ref_type = Model_Attachment::REFTYPE_NAME_TRANSACTION;
     const auto& a = Model_CustomField::instance().find(Model_CustomField::DB_Table_CUSTOMFIELD_V1::REFTYPE(ref_type));
 
     wxArrayString choices = UDFC_FIELDS();
@@ -330,7 +290,7 @@ const wxArrayString Model_CustomField::getUDFCList(DB_Table_CUSTOMFIELD_V1::Data
     for (const auto& item : a)
     {
         Document json_doc;
-        if (!json_doc.Parse(item.PROPERTIES.c_str()).HasParseError())
+        if (!json_doc.Parse(item.PROPERTIES.utf8_str()).HasParseError())
         {
             if (json_doc.HasMember("UDFC") && json_doc["UDFC"].IsString())
             {
@@ -345,12 +305,13 @@ const wxArrayString Model_CustomField::getUDFCList(DB_Table_CUSTOMFIELD_V1::Data
     if (r)
     {
         Document json_doc;
-        if (!json_doc.Parse(r->PROPERTIES.c_str()).HasParseError())
+        if (!json_doc.Parse(r->PROPERTIES.utf8_str()).HasParseError())
         {
             if (json_doc.HasMember("UDFC") && json_doc["UDFC"].IsString())
             {
                 Value& s = json_doc["UDFC"];
-                choices.Add(wxString::FromUTF8(s.GetString()));
+                std::string str = s.GetString();
+                choices.Add(s.GetString());
             }
         }
     }
@@ -359,10 +320,10 @@ const wxArrayString Model_CustomField::getUDFCList(DB_Table_CUSTOMFIELD_V1::Data
     return choices;
 }
 
-int Model_CustomField::getDigitScale(const wxString& Properties)
+int Model_CustomField::getDigitScale(const wxString& properties)
 {
     Document json_doc;
-    if (!json_doc.Parse(Properties.c_str()).HasParseError())
+    if (!json_doc.Parse(properties.utf8_str()).HasParseError())
     {
         if (json_doc.HasMember("DigitScale") && json_doc["DigitScale"].IsInt()) {
             Value& s = json_doc["DigitScale"];
@@ -383,12 +344,12 @@ const wxString Model_CustomField::formatProperties(const wxString& Tooltip, cons
 
     if (!Tooltip.empty()) {
         json_writer.Key("Tooltip");
-        json_writer.String(Tooltip.c_str());
+        json_writer.String(Tooltip.ToUTF8());
     }
 
     if (!RegEx.empty()) {
         json_writer.Key("RegEx");
-        json_writer.String(RegEx.c_str());
+        json_writer.String(RegEx.ToUTF8());
     }
 
     if (Autocomplete) {
@@ -398,7 +359,7 @@ const wxString Model_CustomField::formatProperties(const wxString& Tooltip, cons
 
     if (!Default.empty()) {
         json_writer.Key("Default");
-        json_writer.String(Default.c_str());
+        json_writer.String(Default.ToUTF8());
     }
 
     if (!Choices.empty())
@@ -407,7 +368,7 @@ const wxString Model_CustomField::formatProperties(const wxString& Tooltip, cons
         json_writer.StartArray();
         for (const auto &choice : Choices)
         {
-            json_writer.String(choice.c_str());
+            json_writer.String(choice.ToUTF8());
         }
         json_writer.EndArray();
     }

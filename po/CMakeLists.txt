@@ -25,9 +25,14 @@ set(GETTEXT_VERSION_STRING "${GETTEXT_VERSION_STRING}"
 file(GLOB POFiles RELATIVE "${CMAKE_CURRENT_BINARY_DIR}" *.po)
 foreach(POFile ${POFiles})
     get_filename_component(CurrentFile "${POFile}" NAME_WE)
-    add_custom_command(OUTPUT ${CurrentFile}.mo
-        # COMMAND ${GETTEXT_MSGMERGE_EXECUTABLE} --quiet --update --backup=none -s "${POFile}" ${MMEX_EXE}.pot
-        COMMAND ${GETTEXT_MSGFMT_EXECUTABLE} -v --statistics -o ${CurrentFile}.mo "${POFile}"
+    if(CurrentFile MATCHES "common")
+        continue()
+    endif()
+    # Copy po file and append common translations
+    file(COPY ${CurrentFile}.po DESTINATION ${CMAKE_BINARY_DIR}/po)
+    add_custom_command(
+        OUTPUT ${CurrentFile}.mo
+        COMMAND ${GETTEXT_MSGFMT_EXECUTABLE} -v --statistics -o ${CurrentFile}.mo ${CMAKE_BINARY_DIR}/po/${CurrentFile}.po
         COMMENT ""
         MAIN_DEPENDENCY "${POFile}")
 
@@ -47,6 +52,28 @@ foreach(POFile ${POFiles})
 
     list(APPEND MOFiles "${CMAKE_CURRENT_BINARY_DIR}/${CurrentFile}.mo")
 endforeach()
+
+# put the common UI Languages translations in the en_US translations directory
+file(COPY "common.po" DESTINATION ${CMAKE_BINARY_DIR}/po)
+add_custom_command(
+    OUTPUT ${CMAKE_BINARY_DIR}/po/common.mo
+    COMMAND ${GETTEXT_MSGFMT_EXECUTABLE} -v --statistics -o ${CMAKE_BINARY_DIR}/po/common.mo ${CMAKE_BINARY_DIR}/po/common.po
+    COMMENT ""
+    MAIN_DEPENDENCY common.po
+)
+
+if(APPLE)
+    set(MODir ${MMEX_EXE}.app/Contents/Resources/en_US.lproj)
+elseif(WIN32)
+    set(MODir bin/en_US)
+else()
+    set(MODir share/${MMEX_EXE}/en_US)
+endif()
+
+install(FILES "${CMAKE_CURRENT_BINARY_DIR}/common.mo"
+        DESTINATION ${MODir})
+
+list(APPEND MOFiles "${CMAKE_CURRENT_BINARY_DIR}/common.mo")
 
 add_custom_target(Translations ALL DEPENDS ${MOFiles}
     COMMENT "Generated translations")

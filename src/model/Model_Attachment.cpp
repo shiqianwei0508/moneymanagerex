@@ -16,18 +16,28 @@
  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  ********************************************************/
 
+#include "defs.h"
 #include "Model_Attachment.h"
 #include <wx/string.h>
 
-const std::vector<std::pair<Model_Attachment::REFTYPE, wxString> > Model_Attachment::REFTYPE_CHOICES =
-{
-    {Model_Attachment::TRANSACTION, wxTRANSLATE("Transaction")},
-    {Model_Attachment::STOCK, wxTRANSLATE("Stock")},
-    {Model_Attachment::ASSET, wxTRANSLATE("Asset")},
-    {Model_Attachment::BANKACCOUNT, wxTRANSLATE("BankAccount")},
-    {Model_Attachment::BILLSDEPOSIT, wxTRANSLATE("RecurringTransaction")},
-    {Model_Attachment::PAYEE, wxTRANSLATE("Payee")}
-};
+ChoicesName Model_Attachment::REFTYPE_CHOICES = ChoicesName({
+    { REFTYPE_ID_TRANSACTION,       _n("Transaction") },
+    { REFTYPE_ID_STOCK,             _n("Stock") },
+    { REFTYPE_ID_ASSET,             _n("Asset") },
+    { REFTYPE_ID_BANKACCOUNT,       _n("BankAccount") },
+    { REFTYPE_ID_BILLSDEPOSIT,      _n("RecurringTransaction") },
+    { REFTYPE_ID_PAYEE,             _n("Payee") },
+    { REFTYPE_ID_TRANSACTIONSPLIT,  _n("TransactionSplit") },
+    { REFTYPE_ID_BILLSDEPOSITSPLIT, _n("RecurringTransactionSplit") },
+});
+const wxString Model_Attachment::REFTYPE_NAME_TRANSACTION       = reftype_name(REFTYPE_ID_TRANSACTION);
+const wxString Model_Attachment::REFTYPE_NAME_STOCK             = reftype_name(REFTYPE_ID_STOCK);
+const wxString Model_Attachment::REFTYPE_NAME_ASSET             = reftype_name(REFTYPE_ID_ASSET);
+const wxString Model_Attachment::REFTYPE_NAME_BANKACCOUNT       = reftype_name(REFTYPE_ID_BANKACCOUNT);
+const wxString Model_Attachment::REFTYPE_NAME_BILLSDEPOSIT      = reftype_name(REFTYPE_ID_BILLSDEPOSIT);
+const wxString Model_Attachment::REFTYPE_NAME_PAYEE             = reftype_name(REFTYPE_ID_PAYEE);
+const wxString Model_Attachment::REFTYPE_NAME_TRANSACTIONSPLIT  = reftype_name(REFTYPE_ID_TRANSACTIONSPLIT);
+const wxString Model_Attachment::REFTYPE_NAME_BILLSDEPOSITSPLIT = reftype_name(REFTYPE_ID_BILLSDEPOSITSPLIT);
 
 Model_Attachment::Model_Attachment()
 : Model<DB_Table_ATTACHMENT_V1>()
@@ -58,17 +68,8 @@ Model_Attachment& Model_Attachment::instance()
     return Singleton<Model_Attachment>::instance();
 }
 
-/** Return all attachments references */
-wxArrayString Model_Attachment::all_type()
-{
-    wxArrayString types;
-    for (const auto& item : REFTYPE_CHOICES)
-        types.Add(item.second);
-    return types;
-}
-
 /** Return a dataset with attachments linked to a specific object */
-const Model_Attachment::Data_Set Model_Attachment::FilterAttachments(const wxString& RefType, const int RefId)
+const Model_Attachment::Data_Set Model_Attachment::FilterAttachments(const wxString& RefType, const int64 RefId)
 {
     Data_Set attachments;
     for (auto &attachment : this->all(COL_DESCRIPTION))
@@ -80,13 +81,13 @@ const Model_Attachment::Data_Set Model_Attachment::FilterAttachments(const wxStr
 }
 
 /** Return the number of attachments linked to a specific object */
-int Model_Attachment::NrAttachments(const wxString& RefType, const int RefId)
+int Model_Attachment::NrAttachments(const wxString& RefType, const int64 RefId)
 {
     return Model_Attachment::instance().find(Model_Attachment::DB_Table_ATTACHMENT_V1::REFTYPE(RefType), Model_Attachment::REFID(RefId)).size();
 }
 
 /** Return the last attachment number linked to a specific object */
-int Model_Attachment::LastAttachmentNumber(const wxString& RefType, const int RefId)
+int Model_Attachment::LastAttachmentNumber(const wxString& RefType, const int64 RefId)
 {
     int LastAttachmentNumber = 0;
     Model_Attachment::Data_Set attachments = Model_Attachment::instance().FilterAttachments(RefType, RefId);
@@ -102,20 +103,12 @@ int Model_Attachment::LastAttachmentNumber(const wxString& RefType, const int Re
     return LastAttachmentNumber;
 }
 
-/** Return the description of the choice reftype */
-wxString Model_Attachment::reftype_desc(const int RefTypeEnum)
-{
-    const auto& item = REFTYPE_CHOICES[RefTypeEnum];
-    wxString reftype_desc = item.second;
-    return reftype_desc;
-}
-
 /** Return a dataset with attachments linked to a specific type*/
-std::map<int, Model_Attachment::Data_Set> Model_Attachment::get_all(REFTYPE reftype)
+std::map<int64, Model_Attachment::Data_Set> Model_Attachment::get_all(REFTYPE_ID reftype)
 {
-    std::map<int, Model_Attachment::Data_Set> data;
-    wxString reftype_desc = Model_Attachment::reftype_desc(reftype);
-    for (const auto & attachment : this->find(Model_Attachment::DB_Table_ATTACHMENT_V1::REFTYPE(reftype_desc)))
+    std::map<int64, Model_Attachment::Data_Set> data;
+    wxString reftype_str = Model_Attachment::reftype_name(reftype);
+    for (const auto & attachment : this->find(Model_Attachment::DB_Table_ATTACHMENT_V1::REFTYPE(reftype_str)))
     {
         data[attachment.REFID].push_back(attachment);
     }

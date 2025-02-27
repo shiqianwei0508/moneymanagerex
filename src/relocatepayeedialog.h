@@ -31,34 +31,36 @@ class relocatePayeeDialog : public wxDialog
 
 public:
     relocatePayeeDialog();
-    relocatePayeeDialog(wxWindow* parent, int source_payee_id = -1);
+    ~relocatePayeeDialog();
+    relocatePayeeDialog(wxWindow* parent, int64 source_payee_id = -1);
 
     int updatedPayeesCount() const;
 
 private:
     bool Create(wxWindow* parent
         , wxWindowID id = wxID_ANY
-        , const wxString& caption = _("Relocate Payee Dialog")
+        , const wxString& caption = _t("Merge Payees")
         , const wxPoint& pos = wxDefaultPosition
         , const wxSize& size = wxDefaultSize
-        , long style = wxCAPTION | wxSYSTEM_MENU | wxCLOSE_BOX);
+        , long style = wxCAPTION | wxSYSTEM_MENU | wxCLOSE_BOX
+        , const wxString& name = "Merge payees");
 
     void CreateControls();
     void IsOkOk();
     void OnOk(wxCommandEvent& event);
     void OnCancel(wxCommandEvent& event);
-    void OnTextUpdated(wxCommandEvent& event);
+    void OnTextUpdated(wxCommandEvent&);
 
     void OnFocusChange(wxChildFocusEvent& event);
 
-    int sourcePayeeID_;
-    int destPayeeID_;
+    int64 sourcePayeeID_;
+    int64 destPayeeID_ = -1;
 
-    mmComboBoxUsedPayee* cbSourcePayee_;
-    mmComboBoxPayee* cbDestPayee_;
-    int m_changed_records;
-    wxStaticText* m_info;
-    wxCheckBox* cbDeleteSourcePayee_;
+    mmComboBoxUsedPayee* cbSourcePayee_ = nullptr;
+    mmComboBoxPayee* cbDestPayee_ = nullptr;
+    int m_changed_records = 0;
+    wxStaticText* m_info = nullptr;
+    wxCheckBox* cbDeleteSourcePayee_ = nullptr;
     wxDECLARE_EVENT_TABLE();
 };
 

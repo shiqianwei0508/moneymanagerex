@@ -34,9 +34,6 @@ mmHistoryItem::mmHistoryItem()
 double mmHistoryData::getDailyBalanceAt(const Model_Account::Data *account, const wxDate& date)
 {
     return Model_Stock::instance().getDailyBalanceAt(account, date);
-
-
-
 }
 
 mmReportSummaryByDate::mmReportSummaryByDate(int mode)
@@ -51,12 +48,12 @@ std::map<wxDate, double> mmReportSummaryByDate::createCheckingBalanceMap(const M
     std::map<wxDate, double> balanceMap;
     double balance = account.INITIALBAL;
 
-    for (const auto& tran : Model_Account::transaction(account))
+    for (const auto& tran : Model_Account::transactionsByDateTimeId(account))
     {
         wxDate date = Model_Checking::TRANSDATE(tran);
-        balance += Model_Checking::balance(tran, account.ACCOUNTID);
+        balance += Model_Checking::account_flow(tran, account.ACCOUNTID);
         balanceMap[date] = balance;
-    }
+    } 
     return balanceMap;
 }
 
@@ -87,7 +84,7 @@ double mmReportSummaryByDate::getDailyBalanceAt(const Model_Account::Data* accou
     if (date.FormatISODate() < account->INITIALDATE)
         return 0.0;
 
-    if (Model_Account::type(account) == Model_Account::INVESTMENT)
+    if (Model_Account::type_id(account) == Model_Account::TYPE_ID_INVESTMENT)
     {
         return getInvestingDailyBalanceAt(account, date);
     }
@@ -97,9 +94,9 @@ double mmReportSummaryByDate::getDailyBalanceAt(const Model_Account::Data* accou
     }
 }
 
-double mmReportSummaryByDate::getDayRate(int currencyid, const wxDate& date)
+double mmReportSummaryByDate::getDayRate(int64 currencyid, const wxDate& date)
 {
-    wxString key = wxString::Format("%d_%s", currencyid, date.FormatDate());
+    wxString key = wxString::Format("%lld_%s", currencyid, date.FormatDate());
 
     auto i = currencyDateRateCache.find(key);
     if (i != currencyDateRateCache.end())
@@ -115,7 +112,7 @@ double mmReportSummaryByDate::getDayRate(int currencyid, const wxDate& date)
 
 wxString mmReportSummaryByDate::getHTMLText()
 {
-    double balancePerDay[Model_Account::MAX];
+    double balancePerDay[Model_Account::TYPE_ID_size];
     mmHTMLBuilder   hb;
     wxDate dateStart = wxDate::Today();
     wxDate dateEnd = wxDate::Today();
@@ -126,14 +123,14 @@ wxString mmReportSummaryByDate::getHTMLText()
         std::vector<double> values;
     };
     std::vector<BalanceEntry> totBalanceData;
-    
+
     GraphData gd;
-    GraphSeries gs_data[Model_Account::MAX + 1];    // +1 as we add balance to the end
+    GraphSeries gs_data[Model_Account::TYPE_ID_size + 2];    // +2 as we add assets and balance to the end
 
     std::vector<wxDate> arDates;
 
     hb.init();
-    const auto name = wxString::Format(_("Accounts Balance - %s"), mode_ == MONTHLY ? _("Monthly Report") : _("Yearly Report"));
+    const auto name = wxString::Format(_t("Accounts Balance - %s"), mode_ == MONTHLY ? _t("Monthly Report") : _t("Yearly Report"));
     hb.addReportHeader(name);
 
     currencyDateRateCache.clear();
@@ -146,7 +143,7 @@ wxString mmReportSummaryByDate::getHTMLText()
         const wxDate accountOpeningDate = Model_Account::get_date_by_string(account.INITIALDATE);
         if (accountOpeningDate.IsEarlierThan(dateStart))
             dateStart = accountOpeningDate;
-        if (Model_Account::type(account) == Model_Account::INVESTMENT)
+        if (Model_Account::type_id(account) == Model_Account::TYPE_ID_INVESTMENT)
         {
             Model_Stock::Data_Set stocks = Model_Stock::instance().find(Model_Stock::HELDAT(account.id()));
             for (const auto& stock : stocks)
@@ -186,18 +183,22 @@ wxString mmReportSummaryByDate::getHTMLText()
     }
 
     //  prepare the dates array
-    while (dateStart <= dateEnd) {
+    while (dateStart <= dateEnd)
+    {
         if (mode_ == MONTHLY)
+        {
             dateEnd.SetToLastMonthDay(dateEnd.GetMonth(), dateEnd.GetYear());
+        }
         arDates.push_back(dateEnd);
         dateEnd -= span;
-    };
+    }
     std::reverse(arDates.begin(), arDates.end());
 
 
     for (const auto & end_date : arDates)
     {
         double total = 0.0;
+        double assetBalance = 0;
         // prepare columns for report: date, cash, checking, CC, loan, term, asset, shares, partial total, investment, grand total
         BalanceEntry totBalanceEntry;
         totBalanceEntry.date = end_date;
@@ -206,64 +207,73 @@ wxString mmReportSummaryByDate::getHTMLText()
         if (mode_ == YEARLY)
             begin_date.SetMonth(wxDateTime::Jan);
 
-        for (int j = 0; j < sizeof(balancePerDay) / sizeof(*balancePerDay); j++)
+        for (int j = 0; j < static_cast<int>(sizeof(balancePerDay) / sizeof(*balancePerDay)); j++)
             balancePerDay[j] = 0.0;
 
         for (const auto& account : Model_Account::instance().all())
         {
-            balancePerDay[Model_Account::type(account)] += getDailyBalanceAt(&account, end_date) * getDayRate(account.CURRENCYID, end_date);
+            balancePerDay[Model_Account::type_id(account)] += getDailyBalanceAt(&account, end_date) * getDayRate(account.CURRENCYID, end_date);
         }
 
-        totBalanceEntry.values.push_back(balancePerDay[Model_Account::CASH]);
-        gs_data[0].values.push_back(balancePerDay[Model_Account::CASH]);
-        totBalanceEntry.values.push_back(balancePerDay[Model_Account::CHECKING]);
-        gs_data[1].values.push_back(balancePerDay[Model_Account::CHECKING]);
-        totBalanceEntry.values.push_back(balancePerDay[Model_Account::CREDIT_CARD]);
-        gs_data[2].values.push_back(balancePerDay[Model_Account::CREDIT_CARD]);
-        totBalanceEntry.values.push_back(balancePerDay[Model_Account::LOAN]);
-        gs_data[3].values.push_back(balancePerDay[Model_Account::LOAN]);
-        totBalanceEntry.values.push_back(balancePerDay[Model_Account::TERM]);
-        gs_data[4].values.push_back(balancePerDay[Model_Account::TERM]);
-        totBalanceEntry.values.push_back(balancePerDay[Model_Account::ASSET]);
-        gs_data[5].values.push_back(balancePerDay[Model_Account::ASSET]);
-        totBalanceEntry.values.push_back(balancePerDay[Model_Account::SHARES]);
-        gs_data[6].values.push_back(balancePerDay[Model_Account::SHARES]);
+        for (const auto& asset : Model_Asset::instance().all()) {
+            assetBalance += Model_Asset::instance().valueAtDate(&asset, end_date) * getDayRate(asset.CURRENCYID, end_date);
+        }
 
-        for (int i = 0; i < Model_Account::MAX; i++) {
-            if (i != Model_Account::INVESTMENT)
+        totBalanceEntry.values.push_back(balancePerDay[Model_Account::TYPE_ID_CASH]);
+        gs_data[0].values.push_back(balancePerDay[Model_Account::TYPE_ID_CASH]);
+        totBalanceEntry.values.push_back(balancePerDay[Model_Account::TYPE_ID_CHECKING]);
+        gs_data[1].values.push_back(balancePerDay[Model_Account::TYPE_ID_CHECKING]);
+        totBalanceEntry.values.push_back(balancePerDay[Model_Account::TYPE_ID_CREDIT_CARD]);
+        gs_data[2].values.push_back(balancePerDay[Model_Account::TYPE_ID_CREDIT_CARD]);
+        totBalanceEntry.values.push_back(balancePerDay[Model_Account::TYPE_ID_LOAN]);
+        gs_data[3].values.push_back(balancePerDay[Model_Account::TYPE_ID_LOAN]);
+        totBalanceEntry.values.push_back(balancePerDay[Model_Account::TYPE_ID_TERM]);
+        gs_data[4].values.push_back(balancePerDay[Model_Account::TYPE_ID_TERM]);
+        totBalanceEntry.values.push_back(balancePerDay[Model_Account::TYPE_ID_ASSET]);
+        gs_data[5].values.push_back(balancePerDay[Model_Account::TYPE_ID_ASSET]);
+        totBalanceEntry.values.push_back(balancePerDay[Model_Account::TYPE_ID_SHARES]);
+        gs_data[6].values.push_back(balancePerDay[Model_Account::TYPE_ID_SHARES]);
+
+        for (int i = 0; i < Model_Account::TYPE_ID_size; i++) {
+            if (i != Model_Account::TYPE_ID_INVESTMENT)
                 total += balancePerDay[i];
         }
 
         totBalanceEntry.values.push_back(total);
-        totBalanceEntry.values.push_back(balancePerDay[Model_Account::INVESTMENT]);
-        gs_data[7].values.push_back(balancePerDay[Model_Account::INVESTMENT]);
-        total += balancePerDay[Model_Account::INVESTMENT];
+        totBalanceEntry.values.push_back(assetBalance);
+        gs_data[7].values.push_back(assetBalance);
+        total += assetBalance;
+        totBalanceEntry.values.push_back(balancePerDay[Model_Account::TYPE_ID_INVESTMENT]);
+        gs_data[8].values.push_back(balancePerDay[Model_Account::TYPE_ID_INVESTMENT]);
+        total += balancePerDay[Model_Account::TYPE_ID_INVESTMENT];
         totBalanceEntry.values.push_back(total);
-        gs_data[8].values.push_back(total);
+        gs_data[9].values.push_back(total);
         totBalanceData.push_back(totBalanceEntry);
     }
 
     //Chart
     if (getChartSelection() == 0)
     {
-        gs_data[0].name = _("Cash");
+        gs_data[0].name = _t("Cash");
         gs_data[0].type = "column";
-        gs_data[1].name = _("Bank Accounts");
+        gs_data[1].name = _t("Bank Accounts");
         gs_data[1].type = "column";        
-        gs_data[2].name = _("Credit Card Accounts");
+        gs_data[2].name = _t("Credit Card Accounts");
         gs_data[2].type = "column";   
-        gs_data[3].name = _("Loan Accounts");
+        gs_data[3].name = _t("Loan Accounts");
         gs_data[3].type = "column";   
-        gs_data[4].name = _("Term Accounts");
+        gs_data[4].name = _t("Term Accounts");
         gs_data[4].type = "column";   
-        gs_data[5].name = _("Asset Accounts");
+        gs_data[5].name = _t("Asset Accounts");
         gs_data[5].type = "column";   
-        gs_data[6].name = _("Share Accounts");
-        gs_data[6].type = "column";   
-        gs_data[7].name = _("Stocks");
-        gs_data[7].type = "column";   
-        gs_data[8].name = _("Balance");
-        gs_data[8].type = "line";  
+        gs_data[6].name = _t("Share Accounts");
+        gs_data[6].type = "column";
+        gs_data[7].name = _t("Assets");
+        gs_data[7].type = "column";
+        gs_data[8].name = _t("Stocks");
+        gs_data[8].type = "column";   
+        gs_data[9].name = _t("Balance");
+        gs_data[9].type = "line";  
 
         for (const auto& entry : totBalanceData)
         {
@@ -287,17 +297,18 @@ wxString mmReportSummaryByDate::getHTMLText()
             {
                 hb.startTableRow();
                 {
-                    hb.addTableHeaderCell(_("Date"));
-                    hb.addTableHeaderCell(_("Cash"), "text-right");
-                    hb.addTableHeaderCell(_("Bank Accounts"), "text-right");
-                    hb.addTableHeaderCell(_("Credit Card Accounts"), "text-right");
-                    hb.addTableHeaderCell(_("Loan Accounts"), "text-right");
-                    hb.addTableHeaderCell(_("Term Accounts"), "text-right");
-                    hb.addTableHeaderCell(_("Asset Accounts"), "text-right");
-                    hb.addTableHeaderCell(_("Share Accounts"), "text-right");
-                    hb.addTableHeaderCell(_("Total"), "text-right");
-                    hb.addTableHeaderCell(_("Stocks"), "text-right");
-                    hb.addTableHeaderCell(_("Balance"), "text-right");
+                    hb.addTableHeaderCell(_t("Date"));
+                    hb.addTableHeaderCell(_t("Cash"), "text-right");
+                    hb.addTableHeaderCell(_t("Bank Accounts"), "text-right");
+                    hb.addTableHeaderCell(_t("Credit Card Accounts"), "text-right");
+                    hb.addTableHeaderCell(_t("Loan Accounts"), "text-right");
+                    hb.addTableHeaderCell(_t("Term Accounts"), "text-right");
+                    hb.addTableHeaderCell(_t("Asset Accounts"), "text-right");
+                    hb.addTableHeaderCell(_t("Share Accounts"), "text-right");
+                    hb.addTableHeaderCell(_t("Total"), "text-right");
+                    hb.addTableHeaderCell(_t("Assets"), "text-right");
+                    hb.addTableHeaderCell(_t("Stocks"), "text-right");
+                    hb.addTableHeaderCell(_t("Balance"), "text-right");
                 }
                 hb.endTableRow();
             }

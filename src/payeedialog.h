@@ -25,7 +25,9 @@
 #include "Model_Payee.h"
 #include <wx/dataview.h>
 #include <wx/srchctrl.h>
+#include <wx/grid.h>
 #include <map>
+#include <list>
 #include "mmSimpleDialogs.h"
 
 class mmEditPayeeDialog : public wxDialog
@@ -39,24 +41,27 @@ public:
     ~mmEditPayeeDialog();
 
 private:
-    Model_Payee::Data*  m_payee;
-    wxTextCtrl* m_payeeName;
-    wxCheckBox* m_hidden;
-    mmComboBoxCategory* m_category;
-    wxTextCtrl* m_reference;
-    wxTextCtrl* m_website;
-    wxTextCtrl* m_Notes;
+    Model_Payee::Data* m_payee = nullptr;
+    wxTextCtrl* m_payeeName = nullptr;
+    wxCheckBox* m_hidden = nullptr;
+    mmComboBoxCategory* m_category = nullptr;
+    wxTextCtrl* m_reference = nullptr;
+    wxTextCtrl* m_website = nullptr;
+    wxTextCtrl* m_Notes = nullptr;
+    wxGrid* m_patternTable = nullptr;
+    wxBoxSizer* patternButton_Arranger = nullptr;
 
     void CreateControls();
     void fillControls();
+    void ResizeDialog();
     void OnComboKey(wxKeyEvent& event);
     void OnCancel(wxCommandEvent& /*event*/);
     void OnOk(wxCommandEvent& /*event*/);
+    void OnMoveUp(wxCommandEvent& /*event*/);
+    void OnMoveDown(wxCommandEvent& /*event*/);
+    void OnPatternTableChanged(wxGridEvent& event);
+    void OnPatternTableSize(wxSizeEvent&);
 
-    enum
-    {
-        mmID_CATEGORY = wxID_HIGHEST +  + 1500
-    };
 };
 
 class mmPayeeDialog : public wxDialog
@@ -66,9 +71,9 @@ class mmPayeeDialog : public wxDialog
 
 public:
     ~mmPayeeDialog();
-    mmPayeeDialog(wxWindow* parent, bool payee_choose, const wxString &name = "mmPayeeDialog");
+    mmPayeeDialog(wxWindow* parent, bool payee_choose, const wxString& name = "mmPayeeDialog", const wxString& payee_selected = wxEmptyString);
     void DisableTools();
-    int getPayeeId() const;
+    int64 getPayeeId() const;
     bool getRefreshRequested() const;
 
 private:
@@ -79,7 +84,8 @@ private:
         PAYEE_CATEGORY,
         PAYEE_NUMBER,
         PAYEE_WEBSITE,
-        PAYEE_NOTES
+        PAYEE_NOTES,
+        PAYEE_PATTERN
     };
 
     enum menu_items
@@ -93,20 +99,22 @@ private:
         MENU_RELOCATE_PAYEE
     };
 
-    wxListView* payeeListBox_;
-    wxSearchCtrl* m_maskTextCtrl;
-    wxBitmapButton* m_magicButton;
+    wxListView* payeeListBox_ = nullptr;
+    wxSearchCtrl* m_maskTextCtrl = nullptr;
+    wxBitmapButton* m_magicButton = nullptr;
 
-    int m_payee_id;
-    int m_payee_rename;
-    bool m_payee_choose;
+    int64 m_payee_id = -1;
+    bool m_payee_choose = false;
+    wxString m_init_selected_payee;
+    //int m_payee_rename = -1;
     wxString m_maskStr;
-    int m_sort, m_lastSort;
-    bool refreshRequested_, m_sortReverse;
+    int m_sort = cols::PAYEE_NAME, m_lastSort = cols::PAYEE_NAME;
+    bool refreshRequested_ = false, m_sortReverse = false;
     std::map<int, wxString> ColName_;
+    std::map<long, int64> payee_idx_map_;
 
 private:
-    mmPayeeDialog() : m_payee_id(-1), refreshRequested_(false) {}
+    mmPayeeDialog() {}
 
     void Create(wxWindow* parent, const wxString &name);
     void CreateControls();
@@ -119,7 +127,8 @@ private:
     void RemoveDefaultCategory();
     void OnOrganizeAttachments();
     void OnPayeeRelocate();
-    int FindSelectedPayee();
+    int64 FindSelectedPayee();
+    void FindSelectedPayees(std::list<int64>& indexes);
     void OnCancel(wxCommandEvent& /*event*/);
     void OnOk(wxCommandEvent& /*event*/);
 
@@ -134,7 +143,7 @@ private:
 };
 
 inline void mmPayeeDialog::DisableTools() { m_magicButton->Disable(); }
-inline int mmPayeeDialog::getPayeeId() const { return m_payee_id; }
+inline int64 mmPayeeDialog::getPayeeId() const { return m_payee_id; }
 inline bool mmPayeeDialog::getRefreshRequested() const { return refreshRequested_; }
 inline void mmPayeeDialog::OnListItemDeselected(wxListEvent& WXUNUSED(event)) { m_payee_id = -1; }
 

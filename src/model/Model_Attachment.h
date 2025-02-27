@@ -19,16 +19,37 @@
 #ifndef MODEL_ATTACHMENT_H
 #define MODEL_ATTACHMENT_H
 
-#include "Model.h"
+#include "choices.h"
 #include "db/DB_Table_Attachment_V1.h"
+#include "Model.h"
 
 class Model_Attachment : public Model<DB_Table_ATTACHMENT_V1>
 {
 public:
     using Model<DB_Table_ATTACHMENT_V1>::get;
-    enum REFTYPE { TRANSACTION = 0, STOCK, ASSET, BANKACCOUNT, BILLSDEPOSIT, PAYEE};
+    enum REFTYPE_ID {
+        REFTYPE_ID_TRANSACTION = 0,
+        REFTYPE_ID_STOCK,
+        REFTYPE_ID_ASSET,
+        REFTYPE_ID_BANKACCOUNT,
+        REFTYPE_ID_BILLSDEPOSIT,
+        REFTYPE_ID_PAYEE,
+        REFTYPE_ID_TRANSACTIONSPLIT,
+        REFTYPE_ID_BILLSDEPOSITSPLIT,
+        REFTYPE_ID_size
+    };
+    static const wxString REFTYPE_NAME_TRANSACTION;
+    static const wxString REFTYPE_NAME_STOCK;
+    static const wxString REFTYPE_NAME_ASSET;
+    static const wxString REFTYPE_NAME_BANKACCOUNT;
+    static const wxString REFTYPE_NAME_BILLSDEPOSIT;
+    static const wxString REFTYPE_NAME_PAYEE;
+    static const wxString REFTYPE_NAME_TRANSACTIONSPLIT;
+    static const wxString REFTYPE_NAME_BILLSDEPOSITSPLIT;
 
-    static const std::vector<std::pair<REFTYPE, wxString> > REFTYPE_CHOICES;
+    static ChoicesName REFTYPE_CHOICES;
+    static const wxString reftype_name(int id);
+    static int reftype_id(const wxString& name, int default_id = -1);
 
 public:
     Model_Attachment();
@@ -50,26 +71,32 @@ public:
     static Model_Attachment& instance();
 
 public:
-    /** Return all attachments references */
-    wxArrayString all_type();
-
     /** Return a dataset with attachments linked to a specific object */
-    const Data_Set FilterAttachments(const wxString& RefType, const int RefId);
+    const Data_Set FilterAttachments(const wxString& RefType, const int64 RefId);
 
     /** Return the number of attachments linked to a specific object */
-    static int NrAttachments(const wxString& RefType, const int RefId);
+    static int NrAttachments(const wxString& RefType, const int64 RefId);
 
     /** Return the last attachment number linked to a specific object */
-    static int LastAttachmentNumber(const wxString& RefType, const int RefId);
-
-    /** Return the description of the choice reftype */
-    static wxString reftype_desc(const int RefTypeEnum);
+    static int LastAttachmentNumber(const wxString& RefType, const int64 RefId);
 
     /** Return a dataset with attachments linked to a specific type*/
-    std::map<int, Data_Set> get_all(REFTYPE reftype);
+    std::map<int64, Data_Set> get_all(REFTYPE_ID reftype);
 
     /** Return all attachments descriptions*/
     wxArrayString allDescriptions();
 };
 
-#endif // 
+//----------------------------------------------------------------------------
+
+inline const wxString Model_Attachment::reftype_name(int id)
+{
+    return REFTYPE_CHOICES.getName(id);
+}
+
+inline int Model_Attachment::reftype_id(const wxString& name, int default_id)
+{
+    return REFTYPE_CHOICES.findName(name, default_id);
+}
+
+#endif

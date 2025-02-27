@@ -28,19 +28,18 @@ wxEND_EVENT_TABLE()
 //----------------------------------------------------------------------------
 
 mmAddAccountWizard::mmAddAccountWizard(wxFrame *frame)
-    : wxWizard(frame,wxID_ANY,_("Add Account Wizard")
+    : wxWizard(frame,wxID_ANY,_t("Add Account Wizard")
     , wxBitmap(addacctwiz_xpm), wxDefaultPosition
-    , wxDEFAULT_DIALOG_STYLE), acctID_(-1)
-    , currencyID_(-1), accountType_(0)
+    , wxDEFAULT_DIALOG_STYLE)
 {
     // a wizard page may be either an object of predefined class
     page1 = new wxWizardPageSimple(this);
 
     wxString noteString = wxString::Format(
-        _("%s models all transactions as belonging to accounts."), mmex::getProgramName()) + "\n\n"
-        + _("The next pages will help you create a new account.\n"
-            "To help you get started, begin by making a list of all\n"
-            "financial institutions where you hold an account.");
+        _t("%s models all transactions as belonging to accounts."), mmex::getProgramName()) + "\n\n"
+        + _t("The next pages will help create a new account. "
+            "To help get started, begin by making a list of all the "
+            "financial institutions where the accounts are held.");
 
     new wxStaticText(page1, wxID_ANY, noteString);
 
@@ -64,8 +63,8 @@ void mmAddAccountWizard::RunIt()
         Model_Account::Data* account = Model_Account::instance().create();
 
         account->FAVORITEACCT = "TRUE";
-        account->STATUS = Model_Account::all_status()[Model_Account::OPEN];
-        account->ACCOUNTTYPE = Model_Account::all_type()[accountType_];
+        account->STATUS = Model_Account::STATUS_NAME_OPEN;
+        account->ACCOUNTTYPE = Model_Account::type_name(accountType_);
         account->ACCOUNTNAME = accountName_;
         account->INITIALBAL = 0;
         account->INITIALDATE = wxDate::Today().FormatISODate();
@@ -85,14 +84,14 @@ void mmAddAccountNamePage::processPage(wxWizardEvent& event)
     {
         if ( account_name.IsEmpty())
         {
-            wxMessageBox(_("Account Name Invalid"), _("New Account"), wxOK|wxICON_ERROR, this);
+            wxMessageBox(_t("Account Name Invalid"), _t("New Account"), wxOK|wxICON_ERROR, this);
             event.Veto();
         }
         else
         {
             if (Model_Account::instance().get(account_name))
             {
-                wxMessageBox(_("Account Name already exists"), _("New Account"), wxOK|wxICON_ERROR, this);
+                wxMessageBox(_t("An account with this name already exists"), _t("New Account"), wxOK|wxICON_ERROR, this);
                 event.Veto();
             }
         }
@@ -106,12 +105,12 @@ mmAddAccountNamePage::mmAddAccountNamePage(mmAddAccountWizard* parent)
     textAccountName_->SetMinSize(wxSize(200,-1));
 
     wxBoxSizer *mainSizer = new wxBoxSizer(wxVERTICAL);
-    mainSizer->Add(new wxStaticText(this, wxID_ANY, _("Name of the Account")), 0, wxALL, 5 );
+    mainSizer->Add(new wxStaticText(this, wxID_ANY, _t("Name of the Account")), 0, wxALL, 5 );
     mainSizer->Add( textAccountName_, 0 /* No stretching */, wxALL, 5 /* Border Size */);
 
     wxString helpMsg;
-    helpMsg  << "\n" << _("Specify a descriptive name for the account.") << "\n"
-            << _("This is generally the name of a financial institution\n"
+    helpMsg  << "\n" << _t("Specify a descriptive name for the account.") << "\n"
+            << _t("This is generally the name of a financial institution\n"
             "where the account is held. For example: 'ABC Bank'.");
     mainSizer->Add(new wxStaticText(this, wxID_ANY, helpMsg ), 0, wxALL, 5);
 
@@ -124,31 +123,33 @@ mmAddAccountTypePage::mmAddAccountTypePage(mmAddAccountWizard *parent)
     , parent_(parent)
 {
     itemChoiceType_ = new wxChoice(this, wxID_ANY);
-    for (const auto& type: Model_Account::all_type())
+    for (int i = 0; i < Model_Account::TYPE_ID_size; ++i) {
+        wxString type = Model_Account::type_name(i);
         itemChoiceType_->Append(wxGetTranslation(type), new wxStringClientData(type));
-    mmToolTip(itemChoiceType_, _("Specify the type of account to be created."));
-    itemChoiceType_->SetSelection(Model_Account::CHECKING);
+    }
+    mmToolTip(itemChoiceType_, _t("Specify the type of account to be created."));
+    itemChoiceType_->SetSelection(Model_Account::TYPE_ID_CHECKING);
 
     wxBoxSizer *mainSizer = new wxBoxSizer(wxVERTICAL);
 
-    mainSizer->Add( new wxStaticText(this, wxID_ANY, _("Type of Account")), 0, wxALL, 5 );
+    mainSizer->Add( new wxStaticText(this, wxID_ANY, _t("Type of Account")), 0, wxALL, 5 );
     mainSizer->Add( itemChoiceType_, 0 /* No stretching*/, wxALL, 5 /* Border Size */);
 
     wxString textMsg = "\n";
-    textMsg << _("Select the type of account you want to create:") << "\n\n"
-            << _("General bank accounts cover a wide variety of account\n"
+    textMsg << _t("Select the type of account to create:") << "\n\n"
+            << _t("General bank accounts cover a wide variety of account\n"
             "types like Cash, Checking, Loans, and Credit cards.");
     mainSizer->Add(new wxStaticText(this, wxID_ANY, textMsg), 0, wxALL, 5);
 
     textMsg = "\n";
-    textMsg << _("Investment and Share accounts are specialized accounts that\n"
+    textMsg << _t("Investment and Share accounts are specialized accounts that\n"
         "have stock/mutual fund investments associated with them.");
     mainSizer->Add( new wxStaticText(this, wxID_ANY,textMsg), 0, wxALL, 5);
 
     textMsg = "\n";
-    textMsg << _("Term and Asset accounts are specialized bank accounts.\n"
-        "They are intended for monitoring Assets or Term Deposits and Bonds\n"
-        "where typically you have regular money coming in and out, outside\n"
+    textMsg << _t("Term and asset accounts are specialized bank accounts. "
+        "They are intended for monitoring assets or term deposits and bonds "
+        "where typically regular money goes in and comes out, outside "
         "the general income stream.");
     mainSizer->Add( new wxStaticText(this, wxID_ANY,textMsg), 0, wxALL, 5);
 
@@ -158,13 +159,13 @@ mmAddAccountTypePage::mmAddAccountTypePage(mmAddAccountWizard *parent)
 
 bool mmAddAccountTypePage::TransferDataFromWindow()
 {
-    int currencyID = Option::instance().getBaseCurrencyID();
+    int64 currencyID = Option::instance().getBaseCurrencyID();
     if (currencyID == -1)
     {
         wxString errorMsg;
-        errorMsg << _("Base Account Currency Not set.") << "\n"
-                 << _("Set that first using Tools->Options menu and then add a new account.");
-        wxMessageBox( errorMsg, _("New Account"), wxOK|wxICON_WARNING, this);
+        errorMsg << _t("Base Account Currency Not set.") << "\n"
+                 << _tu("Set that first using Tools → Settings… menu and then add a new account.");
+        wxMessageBox( errorMsg, _t("New Account"), wxOK|wxICON_WARNING, this);
         return false;
     }
 

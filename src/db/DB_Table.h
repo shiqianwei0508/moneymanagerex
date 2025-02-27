@@ -1,7 +1,7 @@
 // -*- C++ -*-
 //=============================================================================
 /**
- *      Copyright: (c) 2013 - 2022 Guan Lisheng (guanlisheng@gmail.com)
+ *      Copyright: (c) 2013 - 2025 Guan Lisheng (guanlisheng@gmail.com)
  *      Copyright: (c) 2017 - 2018 Stefano Giorgio (stef145g)
  *      Copyright: (c) 2022 Mark Whalley (mark@ipx.co.uk)
  *
@@ -12,7 +12,7 @@
  *      @brief
  *
  *      Revision History:
- *          AUTO GENERATED at 2022-09-28 23:10:47.317664.
+ *          AUTO GENERATED at 2025-02-12 14:55:22.300937.
  *          DO NOT EDIT!
  */
 //=============================================================================
@@ -20,6 +20,7 @@
 
 #include <vector>
 #include <map>
+#include <random>
 #include <algorithm>
 #include <functional>
 #include <cwchar>
@@ -35,6 +36,8 @@ using namespace rapidjson;
 #include "html_template.h"
 using namespace tmpl;
 
+typedef wxLongLong int64;
+
 class wxString;
 enum OP { EQUAL = 0, GREATER, LESS, GREATER_OR_EQUAL, LESS_OR_EQUAL, NOT_EQUAL };
 
@@ -47,6 +50,8 @@ struct DB_Column
     {}
 };
 
+static int64 ticks_last_ = 0;
+    
 struct DB_Table
 {
     DB_Table(): hit_(0), miss_(0), skip_(0) {};
@@ -65,6 +70,23 @@ struct DB_Table
     void drop(wxSQLite3Database* db) const
     {
         db->ExecuteUpdate("DROP TABLE IF EXISTS " + this->name());
+    }
+
+    static wxLongLong newId()
+    {
+        // Get the current time in milliseconds as wxLongLong
+        wxLongLong ticks = wxDateTime::UNow().GetValue();
+        // Ensure uniqueness from last generated value
+        if (ticks <= ticks_last_)
+            ticks = ticks_last_ + 1;
+        ticks_last_ = ticks;
+        // Generate a random 3-digit number (0 to 999)
+        std::random_device rd;
+        std::mt19937 gen(rd());
+        std::uniform_int_distribution<int> dist(0, 999);
+        int randomSuffix = dist(gen);
+        // Combine ticks and randomSuffix
+        return (ticks * 1000) + randomSuffix;
     }
 };
 
@@ -213,30 +235,12 @@ struct SorterByACTIVE
     }
 };
 
-struct SorterByALLOCATION
-{ 
-    template<class DATA>
-    bool operator()(const DATA& x, const DATA& y)
-    {
-        return (x.ALLOCATION) < (y.ALLOCATION);
-    }
-};
-
 struct SorterByAMOUNT
 { 
     template<class DATA>
     bool operator()(const DATA& x, const DATA& y)
     {
         return (x.AMOUNT) < (y.AMOUNT);
-    }
-};
-
-struct SorterByASSETCLASSID
-{ 
-    template<class DATA>
-    bool operator()(const DATA& x, const DATA& y)
-    {
-        return (x.ASSETCLASSID) < (y.ASSETCLASSID);
     }
 };
 
@@ -363,6 +367,15 @@ struct SorterByCHECKINGACCOUNTID
     bool operator()(const DATA& x, const DATA& y)
     {
         return (x.CHECKINGACCOUNTID) < (y.CHECKINGACCOUNTID);
+    }
+};
+
+struct SorterByCOLOR
+{ 
+    template<class DATA>
+    bool operator()(const DATA& x, const DATA& y)
+    {
+        return (x.COLOR) < (y.COLOR);
     }
 };
 
@@ -501,6 +514,15 @@ struct SorterByDECIMAL_POINT
     }
 };
 
+struct SorterByDELETEDTIME
+{ 
+    template<class DATA>
+    bool operator()(const DATA& x, const DATA& y)
+    {
+        return (x.DELETEDTIME) < (y.DELETEDTIME);
+    }
+};
+
 struct SorterByDESCRIPTION
 { 
     template<class DATA>
@@ -591,15 +613,6 @@ struct SorterByHISTID
     }
 };
 
-struct SorterByID
-{ 
-    template<class DATA>
-    bool operator()(const DATA& x, const DATA& y)
-    {
-        return (x.ID) < (y.ID);
-    }
-};
-
 struct SorterByINFOID
 { 
     template<class DATA>
@@ -663,6 +676,15 @@ struct SorterByJSONCONTENT
     }
 };
 
+struct SorterByLASTUPDATEDTIME
+{ 
+    template<class DATA>
+    bool operator()(const DATA& x, const DATA& y)
+    {
+        return (x.LASTUPDATEDTIME) < (y.LASTUPDATEDTIME);
+    }
+};
+
 struct SorterByLINKRECORDID
 { 
     template<class DATA>
@@ -705,15 +727,6 @@ struct SorterByMINIMUMPAYMENT
     bool operator()(const DATA& x, const DATA& y)
     {
         return (x.MINIMUMPAYMENT) < (y.MINIMUMPAYMENT);
-    }
-};
-
-struct SorterByNAME
-{ 
-    template<class DATA>
-    bool operator()(const DATA& x, const DATA& y)
-    {
-        return (x.NAME) < (y.NAME);
     }
 };
 
@@ -768,6 +781,15 @@ struct SorterByPARENTID
     bool operator()(const DATA& x, const DATA& y)
     {
         return (x.PARENTID) < (y.PARENTID);
+    }
+};
+
+struct SorterByPATTERN
+{ 
+    template<class DATA>
+    bool operator()(const DATA& x, const DATA& y)
+    {
+        return (x.PATTERN) < (y.PATTERN);
     }
 };
 
@@ -978,15 +1000,6 @@ struct SorterBySHAREPRICE
     }
 };
 
-struct SorterBySORTORDER
-{ 
-    template<class DATA>
-    bool operator()(const DATA& x, const DATA& y)
-    {
-        return (x.SORTORDER) < (y.SORTORDER);
-    }
-};
-
 struct SorterBySPLITTRANSAMOUNT
 { 
     template<class DATA>
@@ -1068,39 +1081,39 @@ struct SorterBySTOCKNAME
     }
 };
 
-struct SorterBySTOCKSYMBOL
-{ 
-    template<class DATA>
-    bool operator()(const DATA& x, const DATA& y)
-    {
-        return (x.STOCKSYMBOL) < (y.STOCKSYMBOL);
-    }
-};
-
-struct SorterBySUBCATEGID
-{ 
-    template<class DATA>
-    bool operator()(const DATA& x, const DATA& y)
-    {
-        return (x.SUBCATEGID) < (y.SUBCATEGID);
-    }
-};
-
-struct SorterBySUBCATEGNAME
-{ 
-    template<class DATA>
-    bool operator()(const DATA& x, const DATA& y)
-    {
-        return (std::wcscoll(x.SUBCATEGNAME.Lower().wc_str(),y.SUBCATEGNAME.Lower().wc_str()) < 0);  // Locale case-insensitive
-    }
-};
-
 struct SorterBySYMBOL
 { 
     template<class DATA>
     bool operator()(const DATA& x, const DATA& y)
     {
         return (x.SYMBOL) < (y.SYMBOL);
+    }
+};
+
+struct SorterByTAGID
+{ 
+    template<class DATA>
+    bool operator()(const DATA& x, const DATA& y)
+    {
+        return (x.TAGID) < (y.TAGID);
+    }
+};
+
+struct SorterByTAGLINKID
+{ 
+    template<class DATA>
+    bool operator()(const DATA& x, const DATA& y)
+    {
+        return (x.TAGLINKID) < (y.TAGLINKID);
+    }
+};
+
+struct SorterByTAGNAME
+{ 
+    template<class DATA>
+    bool operator()(const DATA& x, const DATA& y)
+    {
+        return (x.TAGNAME) < (y.TAGNAME);
     }
 };
 

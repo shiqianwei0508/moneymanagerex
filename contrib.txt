@@ -1,6 +1,8 @@
 ﻿## Active Developers
+
 Nikolay          [Nikolay]
 Whalley          [whalley]
+n-stein          [n-stein]
 Gabriele         [gabriele-v]
 Lisheng          [guanlisheng]
 James            [siena123]
@@ -9,103 +11,187 @@ Pat              [omalleypat]
 
 =======================================
 
-## Translations
-Albanian
--- Artur Gjevori
-Brazilian Portuguese
--- Jose Carlos, Daniel Cunha de Almeida
-Bulgarian
--- Ivan Gyokov, Poltargaista
-Croatian
--- Goran Bobanovic
-Czech
--- Josef Remes, PepaR
-Dutch
--- Theo Kamphuis, PeCe
-Dutch (Belgian)
--- Rol, wimvhs
-Englsh (UK)
--- mcrossley
-French
--- Berry As, Jean-Christophe, bipop,
--- drambeau, Ben, Ghislain Baudichaud
--- phira
-German
--- Renato
--- Schrempfi, goe, STiGMaTa_ch,
--- Kai Kajus Noack
-Greek
--- Panagiotis Pentzeridis
--- Panagiotis Sapikas
--- Polvar
-Hebrew
--- Avi Markovitz
-Hungarian
--- Csaba, Zoltan Levardy [zlevardy]
--- Toroka
-Hindi
--- Ankur Jain
-Indonesian
--- Dindin
-Italian
--- Maurizio [Mau13]
--- Claudio
-Lithuanian
--- akmc
-Norwegian
--- Fredrik Strand, Torbjorn Kvande
-Polish
--- Damian_pl
--- Andrzej
--- Jerzy Machnicki 
-Portuguese (Portugal)
--- Fatela
-Romanian
--- Munteanu & Florin
-Russian
--- KarmaSV, Nikolay, Churzzz, Vadim
-Simple Chinese
--- Liu Ming
-Slovak
--- Abadyba, Misko B
-Spanish
--- jorgeb
--- Javier, Roberto
-Swedish
--- tomastomas
-Tr. Chinese
--- Kysouke
-Tamil
--- Gopi Gopalakrishnan,
--- Muguntharaj Subramanian
-Turkish
--- Murat Bilgen
-Ukrainian
--- Leonid Shturma
-Vietnamese
--- Nicky, Luu Cong Thanh, Toan [nktvnvn]
+## Translators
+
+Visit [Crowdin](https://crowdin.com/project/moneymanagerex/) to add new, or contribute to existing, translations.
+
+### Albanian
+Artur Gjevori
+
+### Arabic
+Ali AlMubarak
+
+### Belarusian
+maximax
+
+### Bulgarian
+Ivan Gyokov
+Poltargaista
+
+### Catalan
+linuxdcat
+
+### Chinese (Simplified)
+Liu Ming
+
+### Chinese (Traditional)
+Kysouke
+
+### Croatian
+Goran Bobanovic
+
+### Czech
+Josef Remes
+PepaR
+
+### Dutch
+Theo Kamphuis
+PeCe
+
+### Dutch (Belgian)
+Rol
+wimvhs
+
+### English (United Kingdom)
+mcrossley
+
+### French
+Berry As
+Jean-Christophe
+bipop
+drambeau
+Ben
+Ghislain Baudichaud
+phira
+
+### German
+Renato
+Schrempfi
+goe
+STiGMaTa_ch
+Kai Kajus Noack
+
+### Greek
+Panagiotis Pentzeridis
+Panagiotis Sapikas
+Polvar
+
+### Hebrew
+Avi Markovitz
+
+### Hindi
+Ankur Jain
+
+### Hungarian
+Csaba
+Zoltan Levardy [zlevardy]
+Toroka
+Óvári
+
+### Indonesian
+Dindin
+
+### Italian
+Maurizio [Mau13]
+Claudio
+
+### Japanese
+Tasuku Sasaki
+
+### Korean
+DevAny KR
+
+### Lithuanian
+akmc
+
+### Norwegian
+Fredrik Strand
+Torbjorn Kvande
+
+### Polish
+Damian_pl
+Andrzej
+Jerzy Machnicki 
+
+### Portuguese (Brazilian)
+Jose Carlos
+Daniel Cunha de Almeida
+
+### Portuguese (Portugal)
+Fatela
+Nuno Santos
+
+### Romanian
+Munteanu
+Florin
+
+### Russian
+KarmaSV
+Nikolay
+Churzzz
+Vadim
+
+### Serbian (Cyrillic)
+Anonymous
+
+### Slovak
+Abadyba
+Misko B
+
+### Spanish
+jorgeb
+Javier
+Roberto
+
+### Swedish
+tomastomas
+
+### Tamil
+Gopi Gopalakrishnan
+Muguntharaj Subramanian
+
+### Turkish
+Murat Bilgen
+
+### Ukrainian
+Leonid Shturma
+
+### Vietnamese
+Nicky
+Luu Cong Thanh
+Toan [nktvnvn]
 
 =======================================
 
 ## User Manual
-English
--- Stefano 	 [stef145g]
--- Tina P, Terry Wick
-Italian
--- Maurizio 	 [Mau13]
-French
--- catacotox
--- phira 	 [phira]
-Gernam
--- Renato 	 [Renato]
-Hungarian
--- Toroka 	 [Toroka]
-Russian 
--- Nikolay 	 [Nikolay]
-Polish
--- Damian_pl
-Spanish
--- jorgeb, kolmo7
+
+### English
+Stefano 	 [stef145g]
+Tina P
+Terry Wick
+
+### French
+catacotox
+phira 	 [phira]
+
+### German
+Renato 	 [Renato]
+
+### Hungarian
+Toroka 	 [Toroka]
+
+### Italian
+Maurizio 	 [Mau13]
+
+### Polish
+Damian_pl
+
+### Russian 
+Nikolay 	 [Nikolay]
+
+### Spanish
+jorgeb
+kolmo7
 
 =======================================
 
@@ -114,6 +200,135 @@ Spanish
 
 ---------------------------------------
 ## Sponsors
+
+### 2025
+Renato
+Michael Ellis
+Jose Manuel Marrero León
+Roger Gimbrere
+Francesco Orabona
+Pierre-Alain Mentha
+Francisco Fos Ros
+Adrien Marceau
+Michael Wright
+David Rasley
+Maurizio Ranghino
+Jean-Luc Germain
+Gummarus Van Sand
+Constantin Georgescu
+Bronislav Bagar
+Marita Copeland
+Alexander Habegger
+
+### 2024
+Renato
+Jarius Elliott
+Michael Ellis
+Constantin Georgescu
+Jose Manuel Marrero León
+Sven Wiesner
+Francesco Orabona
+Damon Achey
+Manuel Mayr
+David Coons
+Markus Egg
+Tobias Dach
+Francisco Fos Ros
+Marco Fusini
+Rafael Tappe Maestro
+Robert D Quinlan
+Roger Gimbrere
+Stefano Ducati
+Juan de Arriba
+Michel Limenitakis
+Urias Jimenez
+Mihkel Loderaud
+Adam Leinss
+Mariano Rossello
+Alberto Ghilardi
+Daniel Vittet
+John Weaving
+Peter Hulm
+Angel Fernandez
+Carol Williams
+Herve Farge
+Ricardo Valencia Melendez
+Jill Solomon
+James Rogers
+Harold Horton
+Vijay Varadarajan
+Gordon Bassett
+Cornelio Achille
+Ricardo Iturriaga
+Ciro Caruso
+Pascal Freland
+Detlef Straube
+Stephan Kasslatter
+Panagiotis Theodosopoulos
+Antonis Vithoulkas
+Jean-Michel Louiset
+Marino Lippi
+Glenn Fowler
+Gary Ferland
+Jurica Polkovnikov
+Andreas Löwenhagen
+Theodoros Triparolis
+Emanuele Pizzurno
+David Rasley
+Robert Dougherty
+
+### 2023
+Renato
+Michael Ellis
+Constantin Georgescu
+Juan De Arriba
+Francesco Orabona
+Michael Copeland
+Andrea Contini
+Jean-Robert Simard
+Ernie Turner
+Jean-Michel Maritan
+Francisco Fos Ros
+John Ditchfield
+Marc Decock
+Tom Schulte
+Roger Gimbrere
+Jean Jacques Pons
+Giuseppe Maffione
+George Cucak
+Graham Young
+Jose Manuel Marrero León
+Morris Stout
+Benjamin Julien Caplet
+Duncan Livingstone
+Carlos Pérez-Adsuar Antón
+Kevin Pengel
+Kai Regenstein
+Massimo Palo
+Michael Brede
+Сергій Погудо
+Dollar Saver Express
+Cristian Nardelli
+Dan Miller
+Jairo Henrique Da Silva
+Vasilii Repkin
+Frank Sierowski
+Robert Flounders
+Jarius Elliott
+Roy Rutter
+Seamus McGuire
+Regis Arblade
+Pablo De La Mota Ramos
+Otto Kindelmayer
+Robert Sjursen
+Adam Gallagher
+John David Bowman
+Glenn Fowler
+Stanislav Gusev
+Lucano Grascelli
+Peter Csernak
+Artem Odulov
+Andreas Goette
 
 ### 2022
 Renato
@@ -153,6 +368,14 @@ John Weaving
 Rushikesh Jukar
 Ruben Fernandes
 Sabrina Blanc
+Martin Goike
+Michael Smith
+Antonio Navarro Sánchez
+Alain Barussaud
+Emanuele Pizzurno
+William McCracken
+Timur Yilmaz
+Jose Manuel Marrero León
 
 ### 2021
 Renato
@@ -404,7 +627,7 @@ Jeremy McEachron
 Michael Ellis
 Michel EVERS
 Santiago Durango
-william Doscher
+William Doscher
 Barry Petersen
 John Stewart
 Brian Marstella

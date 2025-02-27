@@ -50,9 +50,9 @@ public:
     ~mmEditSplitOther();
 
 private:
-    Split* m_split;
-    Model_Currency::Data* m_currency;
-    wxTextCtrl* m_Notes;
+    Split* m_split = nullptr;
+    Model_Currency::Data* m_currency = nullptr;
+    wxTextCtrl* m_Notes = nullptr;
 
     void CreateControls();
     void fillControls();
@@ -68,7 +68,7 @@ public:
     mmSplitTransactionDialog();
     mmSplitTransactionDialog(wxWindow* parent
         , std::vector<Split>& split
-        , int accountID
+        , int64 accountID
         , int transType
         , double totalAmount = 0.0
         , bool is_view_only = false
@@ -79,7 +79,7 @@ private:
     bool Create(
         wxWindow* parent
         , wxWindowID id = wxID_ANY
-        , const wxString& caption = _("Split Transaction")
+        , const wxString& caption = _t("Split Transaction")
         , const wxPoint& pos = wxDefaultPosition
         , const wxSize& size = wxDefaultSize
         , long style = wxCAPTION | wxRESIZE_BORDER | wxSYSTEM_MENU | wxCLOSE_BOX
@@ -87,15 +87,16 @@ private:
         );
 
     void CreateControls();
-    void FillControls(int focusRow = -1);
-    void createNewRow(bool enabled);
+    void FillControls(const int focusRow = -1);
+    void createNewRow(const bool enabled);
     void activateNewRow();
     void UpdateSplitTotal();
     void UpdateExtraInfo(int row);
 
     void OnOk(wxCommandEvent& event);
     void OnAddRow(wxCommandEvent& event);
-    void OnRemoveRow(wxCommandEvent& event);
+    void OnNewTagCreated(wxListEvent& event);
+    void OnRemoveRow(wxCommandEvent&);
     void OnOtherButton(wxCommandEvent& event);
     void OnTextEntered(wxCommandEvent& event);
     void OnFocusChange(wxChildFocusEvent& event);
@@ -106,21 +107,22 @@ private:
     {
         mmComboBoxCategory* category;
         mmTextCtrl* amount;
+        mmTagTextCtrl* tags;
         wxButton* other;
     };
 
     std::vector<SplitWidget> m_splits_widgets;
     std::vector<Split> m_orig_splits, m_splits;
-    double totalAmount_;
-    int transType_;
-    int row_num_;
-    Model_Currency::Data* m_currency;
+    double totalAmount_ =0.0;
+    int transType_ = 0;
+    int row_num_ = 0;
+    Model_Currency::Data* m_currency = nullptr;
     bool is_view_only_;
 
-    wxButton* itemButtonOK_;
-    wxScrolledWindow* slider_;
-    wxStaticText* transAmount_;
-    wxFlexGridSizer* flexGridSizer_;
+    wxButton* itemButtonOK_ = nullptr;
+    wxScrolledWindow* slider_ = nullptr;
+    wxStaticText* transAmount_ = nullptr;
+    wxFlexGridSizer* flexGridSizer_ = nullptr;
 
     wxDECLARE_EVENT_TABLE();
 };

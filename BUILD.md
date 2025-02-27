@@ -95,14 +95,14 @@ __All following commands must be run from this command prompt!__
        mkdir c:\curl-<version>\build
        cd c:\curl-<version>\build
        set "PATH=%PATH%;%DevEnvDir%CommonExtensions\Microsoft\CMake\CMake\bin"
-       cmake -G "Visual Studio 17 2022 Win64" -DBUILD_CURL_EXE=OFF -DHTTP_ONLY=ON ^
+       cmake -G "Visual Studio 17 2022" -A x64 -DBUILD_CURL_EXE=OFF -DHTTP_ONLY=ON ^
          -DENABLE_MANUAL=OFF -DBUILD_TESTING=OFF -DCURL_STATICLIB=ON ^
-         -DCMAKE_USE_WINSSL=ON -DCMAKE_INSTALL_PREFIX=c:\libcurl ..
+         -DCURL_USE_SCHANNEL=ON -DCMAKE_INSTALL_PREFIX=c:\libcurl ..
        set "CL=/MP"
        cmake --build . --target install --config Release --clean-first ^
          -- /maxcpucount /verbosity:minimal /nologo /p:PreferredToolArchitecture=x64
 
-   Replace `Visual Studio 17 2022 Win64` with `Visual Studio 17 2022` for remove 64-bit support.
+   Replace `-A x64` with `-A Win32` to remove 64-bit support.
 
 8. Then you should follow one of  
    [Visual Studio project] | [Visual Studio CLI] | [Visual Studio CMake]
@@ -117,7 +117,7 @@ tools to manage projects in VS IDE.
        mkdir c:\projects\mmex\build
        cd c:\projects\mmex\build
        set "PATH=%PATH%;%DevEnvDir%CommonExtensions\Microsoft\CMake\CMake\bin"
-       cmake -G "Visual Studio 17 2022 Win64" -DCMAKE_PREFIX_PATH=c:\libcurl ..
+       cmake -G "Visual Studio 17 2022" -A x64 -DCMAKE_PREFIX_PATH=c:\libcurl ..
 
    This produce `c:\projects\mmex\build\MMEX.sln` file ready to be loaded into
    Visual Studio GUI.
@@ -214,16 +214,16 @@ macOS with Homebrew
 
 #### 2. Build wxWidgets
 
-Current stable version that has been tested with MMEX is v3.1.5
+Current stable version that has been tested with MMEX is v3.2.6
 
 1. Download Sources
         
-        /bin/bash -c "$(curl -fsSL -O https://github.com/wxWidgets/wxWidgets/releases/download/v3.1.5/wxWidgets-3.1.5.tar.bz2)"
+        /bin/bash -c "$(curl -fsSL -O https://github.com/wxWidgets/wxWidgets/releases/download/v3.2.6/wxWidgets-3.2.6.tar.bz2)"
         tar xzf wxWidgets-*.tar.bz2
 
 2. Build from source
 
-        cd wxWidgets-3.1.5
+        cd wxWidgets-3.2.6
         mkdir build-cocoa
         cd build-cocoa
         export MAKEFLAGS=-j4
@@ -250,7 +250,7 @@ Current stable version that has been tested with MMEX is v3.1.5
     cd moneymanagerex/build
     export MAKEFLAGS=-j4
     cmake -DCMAKE_CXX_FLAGS="-w" \
-    -DwxWidgets_CONFIG_EXECUTABLE={PATH-TO-wxWidgets}/wxWidgets-3.1.5/build-cocoa/wx-config \
+    -DwxWidgets_CONFIG_EXECUTABLE={PATH-TO-wxWidgets}/wxWidgets-3.2.6/build-cocoa/wx-config \
     -DCMAKE_BUILD_TYPE=Release \
     -DCMAKE_OSX_ARCHITECTURES="arm64;x86_64" \
     -DCMAKE_OSX_DEPLOYMENT_TARGET=10.10 ..
@@ -318,9 +318,9 @@ additional package and select it as default compiler:
 
 You need git to download the sources, see prerequisites above.
 
-If you want the stable 1.5.11 version of mmex:
+If you want the stable 1.7.0 version of mmex:
 
-    git clone --recursive https://github.com/moneymanagerex/moneymanagerex  --branch v1.5.11
+    git clone --recursive https://github.com/moneymanagerex/moneymanagerex  --branch v1.7.0
 
 If you want the latest (possibly unstable) version of the trunk:
 
@@ -332,7 +332,6 @@ Got to the directory, where you downloaded the sources from github.
 
     cd moneymanagerex/
     mkdir build
-    cmake . (only sometimes needed)
     cd build/
     cmake ..
 
@@ -340,8 +339,8 @@ E.g. for the trunk version the output should be something like:
 
     -- MMEX configuration summary
     -- ==========================
-    -- Version        : 1.5.13-Beta.1
-    -- Commit         : 94b606828 (2022-01-30)
+    -- Version        : 1.7.1-Beta.1
+    -- Commit         : 1edc0dfe2 (2024-01-16)
     -- Branch         : master
     -- Host system    : Linux x86_64
     -- Target system  : Linux x86_64
@@ -352,26 +351,27 @@ E.g. for the trunk version the output should be something like:
     -- 
     -- Versions
     -- --========--
-    -- Linux 4.15.0-166-generic
-    -- Ubuntu 18.04 'bionic'
-    -- CMake 3.10.2
-    -- GNU Make 4.1
-    -- ccache
-    -- GNU 7.5.0
-    -- wxWidgets 3.1.5
-    -- wxSQLite3 4.6.0
-    -- Lua 5.3.3
-    -- curl 7.58.0
-    -- gettext 0.19.8.1
+    -- Linux 6.1.38
+    -- Debian.12.bookworm
+    -- Debian.GNU/Linux.12.(bookworm)
+    -- CMake 3.25.1
+    -- GNU Make 4.3
+    -- ccache 4.7.5
+    -- GNU 12.2.0
+    -- wxWidgets 3.2.4
+    -- wxSQLite3 4.9.1
+    -- Lua 5.3.6
+    -- curl 7.88.1
+    -- gettext 0.21
     -- ------------------ 8< -----------------
     -- Configuring done
     -- Generating done
-    -- Build files have been written to: <your $HOME >/<directory where you downloaded mmex>/moneymanagerex
+    -- Build files have been written to: <your $HOME >/<directory where you downloaded mmex>/moneymanagerex/build
 
 Now build
 
     export MAKEFLAGS=-j4  (to speed up the build)
-    cmake --build .. --target package
+    cmake --build . --target package
 
 If the build was ok the last message should be something like:
 
@@ -384,10 +384,10 @@ If the build was ok the last message should be something like:
     CPack: - Install project: MMEX
     CPack: Create package
     CPackDeb: - Generating dependency list
-    CPack: - package: <directory where you saved the download from git>/moneymanagerex/mmex_1.5.13-Beta.1-1~bionic_amd64.deb generated.
+    CPack: - package: <directory where you saved the download from git>/moneymanagerex/mmex_1.7.1-Beta.1-Debian.12.bookworm_amd64.deb generated.
 
     For testing without installing you can run
-    ../_CPack_Packages/Linux/DEB/mmex-1.5.13-Beta.1-Linux/usr/bin/mmex
+    ../_CPack_Packages/Linux/DEB/mmex-1.7.1-Beta.1-Linux/usr/bin/mmex
     
 #### 5. Install MMEX Package
 

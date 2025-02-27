@@ -27,24 +27,12 @@
 #include "util.h"
 
 mmPrintableBase::mmPrintableBase(const wxString& title)
-    : m_title(title)
-    , m_date_range(nullptr)
-    , m_initial(true)
-    , m_date_selection(0)
-    , m_account_selection(0)
-    , m_chart_selection(0)
-    , m_forward_months(24)
-    , accountArray_(nullptr)
-    , m_only_active(false)
-    , m_id(-1)
-    , m_parameters(0)
-    , m_settings("")
+    : m_title(title)    
 {
 }
 
 mmPrintableBase::~mmPrintableBase()
 {
-
 }
 
 void mmPrintableBase::setReportParameters(int id)
@@ -94,7 +82,7 @@ void mmPrintableBase::setReportSettings()
         if ((m_parameters & DATE_RANGE) || (m_parameters & BUDGET_DATES))
         {
             json_writer.Key("REPORTPERIOD");
-            json_writer.Int(m_date_selection);
+            json_writer.Int64(m_date_selection.GetValue());
             isActive = true;
         }
 
@@ -136,7 +124,7 @@ void mmPrintableBase::setReportSettings()
         {
             const wxString& rj_key = wxString::Format("REPORT_%d", ID);
             const wxString& rj_value = wxString::FromUTF8(json_buffer.GetString());
-            Model_Infotable::instance().Set(rj_key, rj_value);
+            Model_Infotable::instance().setString(rj_key, rj_value);
             m_settings = rj_value;
         }
     }
@@ -165,9 +153,9 @@ void mmPrintableBase::restoreReportSettings()
     int selection = 0;
     if (j_doc.HasMember("ACCOUNTSELECTION") && j_doc["ACCOUNTSELECTION"].IsInt()) {
         selection = j_doc["ACCOUNTSELECTION"].GetInt();
-        if (selection > (Model_Account::all_type().Count() + 2)) selection = 0;
+        if (selection > (Model_Account::TYPE_ID_size + 2)) selection = 0;
     }
-    if (selection > (Model_Account::all_type().Count() + 2))
+    if (selection > (Model_Account::TYPE_ID_size + 2))
         selection = 0;
 
     accountArray_ = selectedAccountArray_ = nullptr;
@@ -183,7 +171,7 @@ void mmPrintableBase::restoreReportSettings()
         }
         accountArray_ = selectedAccountArray_ = accountSelections;
     } else if (selection > 1)
-        setAccounts(selection, Model_Account::all_type()[selection - 2]);
+        setAccounts(selection, Model_Account::type_name(selection - 2));
 
     m_account_selection = selection;
 }
@@ -205,13 +193,13 @@ const wxString mmPrintableBase::getAccountNames() const
     }
     else
     {
-        accountsMsg << _("All Accounts");
+        accountsMsg << _t("All Accounts");
     }
 
     if (accountsMsg.empty()) {
-        accountsMsg = _("None");
+        accountsMsg = _t("None");
     }
-    accountsMsg.Prepend(_("Accounts: "));
+    accountsMsg.Prepend(_t("Accounts: "));
     return accountsMsg;
 }
 
@@ -229,16 +217,17 @@ void mmPrintableBase::setAccounts(int selection, const wxString& name)
         case 1: // Select Accounts
         {
             wxArrayString accounts;
-            auto a = Model_Account::instance().find(Model_Account::ACCOUNTTYPE(Model_Account::all_type()[Model_Account::INVESTMENT], NOT_EQUAL));
+            auto a = Model_Account::instance().find(
+                Model_Account::ACCOUNTTYPE(Model_Account::TYPE_NAME_INVESTMENT, NOT_EQUAL));
             std::stable_sort(a.begin(), a.end(), SorterByACCOUNTNAME());
             for (const auto& item : a) {
-                if (m_only_active && item.STATUS != Model_Account::all_status()[Model_Account::OPEN])
+                if (m_only_active && item.STATUS != Model_Account::STATUS_NAME_OPEN)
                     continue;
                 accounts.Add(item.ACCOUNTNAME);
             }
 
             auto parent = wxWindow::FindWindowById(mmID_REPORTS);
-            mmMultiChoiceDialog mcd(parent ? parent : 0, _("Choose Accounts"), m_title, accounts);
+            mmMultiChoiceDialog mcd(parent ? parent : 0, _t("Choose Accounts"), wxGetTranslation(m_title), accounts);
 
             if (selectedAccountArray_ && !selectedAccountArray_->IsEmpty())
             {
@@ -267,7 +256,7 @@ void mmPrintableBase::setAccounts(int selection, const wxString& name)
         {
             wxArrayString* accountSelections = new wxArrayString();
             auto accounts = Model_Account::instance().find(Model_Account::ACCOUNTTYPE(name)
-                , Model_Account::STATUS(Model_Account::CLOSED, NOT_EQUAL));
+                , Model_Account::STATUS(Model_Account::STATUS_ID_CLOSED, NOT_EQUAL));
             for (const auto &i : accounts) {
                 accountSelections->Add(i.ACCOUNTNAME);
             }
@@ -348,6 +337,9 @@ int mmGeneralReport::report_parameters()
         params |= SINGLE_DATE;
     else if (content.Contains("&only_years"))
         params |= ONLY_YEARS;
+
+    if (content.Contains("&single_time"))
+        params |= TIME;
 
     return params;
 }

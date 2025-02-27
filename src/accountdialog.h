@@ -24,6 +24,8 @@
 #include "mmSimpleDialogs.h"
 #include "mmTextCtrl.h"
 
+#include <memory>
+
 class mmNewAcctDialog : public wxDialog
 {
     wxDECLARE_DYNAMIC_CLASS(mmNewAcctDialog);
@@ -36,7 +38,7 @@ public:
 
     bool Create(wxWindow* parent
         , wxWindowID id = wxID_ANY
-        , const wxString& caption = _("New Account")
+        , const wxString& caption = _t("New Account")
         , const wxPoint& pos = wxDefaultPosition
         , const wxSize& size = wxDefaultSize
         , long style = wxCAPTION | wxSYSTEM_MENU | wxCLOSE_BOX);
@@ -58,29 +60,29 @@ private:
     void OnChangeFocus(wxChildFocusEvent& event);
 
 private:
-    Model_Account::Data* m_account;
-    wxNotebook* m_notebook;
-    wxTextCtrl* m_textAccountName;
-    wxTextCtrl* m_notesCtrl;
-    mmTextCtrl* m_initbalance_ctrl;
-    mmDatePickerCtrl* m_initdate_ctrl;
+    Model_Account::Data* m_account = nullptr;
+    wxNotebook* m_notebook = nullptr;
+    wxTextCtrl* m_textAccountName = nullptr;
+    wxTextCtrl* m_notesCtrl = nullptr;
+    mmTextCtrl* m_initbalance_ctrl = nullptr;
+    mmDatePickerCtrl* m_initdate_ctrl = nullptr;
 
     wxVector<wxBitmapBundle> m_images;
-    wxBitmapButton* m_bitmapButtons;
-    wxBitmapButton* bAttachments_;
+    wxBitmapButton* m_bitmapButtons = nullptr;
+    wxBitmapButton* bAttachments_ = nullptr;
     wxString m_accessInfo;
 
-    wxCheckBox* m_statement_lock_ctrl;
-    mmDatePickerCtrl* m_statement_date_ctrl;
-    mmTextCtrl* m_minimum_balance_ctrl;
+    wxCheckBox* m_statement_lock_ctrl = nullptr;
+    mmDatePickerCtrl* m_statement_date_ctrl = nullptr;
+    mmTextCtrl* m_minimum_balance_ctrl = nullptr;
 
-    mmTextCtrl* m_credit_limit_ctrl;
-    mmTextCtrl* m_interest_rate_ctrl;
-    mmDatePickerCtrl* m_payment_due_date_ctrl;
-    mmTextCtrl* m_minimum_payment_ctrl;
+    mmTextCtrl* m_credit_limit_ctrl = nullptr;
+    mmTextCtrl* m_interest_rate_ctrl = nullptr;
+    mmDatePickerCtrl* m_payment_due_date_ctrl = nullptr;
+    mmTextCtrl* m_minimum_payment_ctrl = nullptr;
 
-    int m_currencyID;
-    bool m_accessinfo_infocus;
+    int64 m_currencyID = 0;
+    bool m_accessinfo_infocus = false;
 };
 
 #endif

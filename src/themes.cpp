@@ -52,7 +52,7 @@ bool mmThemesDialog::vfsThemeImageLoaded = false;
 mmThemesDialog::ThemeEntry mmThemesDialog::getThemeEntry(const wxString& name)
 {
     ThemeEntry thisTheme;
-    for (const auto theme : m_themes)
+    for (const auto &theme : m_themes)
     {
         if (theme.name == name)
         {
@@ -65,7 +65,7 @@ mmThemesDialog::ThemeEntry mmThemesDialog::getThemeEntry(const wxString& name)
 
 void mmThemesDialog::addThemes(const wxString& themeDir, bool isSystem)
 {
-    wxString chosenTheme = Model_Setting::instance().Theme();
+    wxString chosenTheme = Model_Setting::instance().getTheme();
     wxDir directory(themeDir);
     wxLogDebug("Scanning Theme Dir [%s]", themeDir);
     if (!directory.IsOpened()) return;
@@ -128,7 +128,7 @@ void mmThemesDialog::addThemes(const wxString& themeDir, bool isSystem)
 
 mmThemesDialog::~mmThemesDialog()
 {
-    Model_Infotable::instance().Set("THEMES_DIALOG_SIZE", GetSize());
+    Model_Infotable::instance().setSize("THEMES_DIALOG_SIZE", GetSize());
 }
 
 mmThemesDialog::mmThemesDialog(wxWindow *parent, const wxString &name)
@@ -140,7 +140,7 @@ mmThemesDialog::mmThemesDialog(wxWindow *parent, const wxString &name)
 void mmThemesDialog::Create(wxWindow* parent, const wxString &name)
 {
     long style = wxCAPTION | wxCLOSE_BOX | wxRESIZE_BORDER;
-    if (!wxDialog::Create(parent, wxID_ANY, _("Theme Manager")
+    if (!wxDialog::Create(parent, wxID_ANY, _t("Theme Manager")
         , wxDefaultPosition, wxDefaultSize, style, name))
     {
         return;
@@ -169,7 +169,7 @@ void mmThemesDialog::CreateControls()
 
     wxPanel *pnl1 = new wxPanel(splittermain, wxID_ANY);
     wxBoxSizer *bSizerp1 = new wxBoxSizer(wxVERTICAL);
-    m_themesListBox_ = new wxListBox(pnl1, wxID_ANY, wxDefaultPosition, wxDefaultSize, 0, NULL, wxLB_SINGLE | wxLB_NEEDED_SB);
+    m_themesListBox_ = new wxListBox(pnl1, wxID_ANY, wxDefaultPosition, wxDefaultSize, 0, nullptr, wxLB_SINGLE | wxLB_NEEDED_SB);
     m_themesListBox_->SetSize(200, wxDefaultCoord, wxDefaultCoord, wxDefaultCoord);
     bSizerp1->Add(m_themesListBox_, 1, wxEXPAND, 0);
     pnl1->SetSizer(bSizerp1);
@@ -186,13 +186,13 @@ void mmThemesDialog::CreateControls()
     splittermain->SplitVertically(pnl1, pnl2);
 
     wxBoxSizer* bSizer02 = new wxBoxSizer(wxHORIZONTAL);
-    m_importButton = new wxButton(this, ID_DIALOG_THEME_IMPORT, _("Import"));
+    m_importButton = new wxButton(this, ID_DIALOG_THEME_IMPORT, _t("&Import"));
     bSizer02->Add(m_importButton, 0, wxALL, 5);
-    m_deleteButton = new wxButton(this, ID_DIALOG_THEME_DELETE, _("Delete"));
+    m_deleteButton = new wxButton(this, ID_DIALOG_THEME_DELETE, _t("&Delete"));
     bSizer02->Add(m_deleteButton, 0, wxALL, 5);
-    m_useButton = new wxButton(this, ID_DIALOG_THEME_USE, _("Use"));
+    m_useButton = new wxButton(this, ID_DIALOG_THEME_USE, _t("&Use"));
     bSizer02->Add(m_useButton, 0, wxALL, 5);
-    m_okButton = new wxButton(this, wxID_OK, _("Close"));
+    m_okButton = new wxButton(this, wxID_OK, _t("&Close"));
     bSizer02->Add(m_okButton, 0, wxALL, 5);
 
     bSizer0->Add(bSizer02, g_flagsCenter);
@@ -209,9 +209,9 @@ void mmThemesDialog::ReadThemes()
     addThemes(mmex::getPathUser(mmex::USERTHEMEDIR), false);
 
     m_themesListBox_->Clear();
-    for (const auto theme : m_themes)
+    for (const auto &theme : m_themes)
         m_themesListBox_->Append(theme.name);
-    m_themesListBox_->SetStringSelection(Model_Setting::instance().Theme());
+    m_themesListBox_->SetStringSelection(Model_Setting::instance().getTheme());
     m_themesListBox_->Refresh();
     m_themesListBox_->Update();
 }
@@ -232,11 +232,11 @@ void mmThemesDialog::RefreshView()
 
     // author
     j_grab = GetValueByPointerWithDefault(j_doc, "/theme/author", "");
-    const wxString& s_author = j_grab.IsString() ? wxString::FromUTF8(j_grab.GetString()) : _("Unknown");
+    const wxString& s_author = j_grab.IsString() ? wxString::FromUTF8(j_grab.GetString()) : _t("Unknown");
 
     // description
     j_grab = GetValueByPointerWithDefault(j_doc, "/theme/description", "");
-    const wxString& s_description = j_grab.IsString() ? wxString::FromUTF8(j_grab.GetString()) : _("No description available");
+    const wxString& s_description = j_grab.IsString() ? wxString::FromUTF8(j_grab.GetString()) : _t("No description available");
 
     // url
     j_grab = GetValueByPointerWithDefault(j_doc, "/theme/url", "");
@@ -275,16 +275,16 @@ void mmThemesDialog::RefreshView()
     m_useButton->Enable(!thisTheme.isChosen);
 }
 
-void mmThemesDialog::OnThemeView(wxCommandEvent& event)
+void mmThemesDialog::OnThemeView(wxCommandEvent&)
 {
     RefreshView();
 }
 
-void mmThemesDialog::OnImport(wxCommandEvent& event)
+void mmThemesDialog::OnImport(wxCommandEvent&)
 {
-    wxString fileName = wxFileSelector(_("Choose theme file to import")
+    wxString fileName = wxFileSelector(_t("Choose theme file to import")
         , wxEmptyString, wxEmptyString, wxEmptyString
-        , "MMX Theme (*.mmxtheme)|*.mmextheme"
+        , "MMX Theme (*.mmextheme)|*.mmextheme"
         , wxFD_FILE_MUST_EXIST | wxFD_OPEN
         , this
     );
@@ -302,7 +302,7 @@ void mmThemesDialog::OnImport(wxCommandEvent& event)
 
     if (wxFileExists(destFile.GetFullPath()))
     {
-        wxString existingThemeText = _("The theme already exists, do you still want to import and overwrite the existing theme?");
+        wxString existingThemeText = _t("The theme already exists. Do you want to import and overwrite the existing theme?");
         wxMessageDialog msgDlg(this, existingThemeText, destFile.GetName(),
             wxYES_NO | wxNO_DEFAULT | wxICON_EXCLAMATION);
         if (msgDlg.ShowModal() == wxID_NO)
@@ -312,8 +312,8 @@ void mmThemesDialog::OnImport(wxCommandEvent& event)
     wxLogDebug("Theme import: Copying\n%s\nto\n%s", fileName, destFile.GetFullPath());
     if (!wxCopyFile(fileName, destFile.GetFullPath()))
     {
-        wxString copyFailedText = _("Something went wrong importing the theme");
-        wxMessageBox(copyFailedText, _("Error"), wxOK | wxICON_ERROR);
+        wxString copyFailedText = _t("Something went wrong importing the theme");
+        wxMessageBox(copyFailedText, _t("Error"), wxOK | wxICON_ERROR);
     }
 
     ReadThemes();
@@ -321,18 +321,18 @@ void mmThemesDialog::OnImport(wxCommandEvent& event)
 
 }
 
-void mmThemesDialog::OnDelete(wxCommandEvent& event)
+void mmThemesDialog::OnDelete(wxCommandEvent&)
 {
     ThemeEntry thisTheme = getThemeEntry(m_themesListBox_->GetString(m_themesListBox_->GetSelection()));
-    wxString deletingThemeText = _("Are you sure you want to delete this theme? If you want to use it again you will need to re-import it.");
+    wxString deletingThemeText = _t("Do you want to delete the theme? If you want to use it again you will need to re-import it.");
     wxMessageDialog msgDlg(this, deletingThemeText, thisTheme.name,
         wxYES_NO | wxNO_DEFAULT | wxICON_EXCLAMATION);
     if (msgDlg.ShowModal() == wxID_YES)
     {
         if (!wxRemoveFile(thisTheme.fullPath))
         {
-            wxString deleteFailedText = _("Something went wrong when attempting to delete the theme");
-            wxMessageBox(deleteFailedText, _("Error"), wxOK | wxICON_ERROR);
+            wxString deleteFailedText = _t("Something went wrong when attempting to delete the theme");
+            wxMessageBox(deleteFailedText, _t("Error"), wxOK | wxICON_ERROR);
         }
     }
     ReadThemes();
@@ -340,22 +340,22 @@ void mmThemesDialog::OnDelete(wxCommandEvent& event)
 
 }
 
-void mmThemesDialog::OnUse(wxCommandEvent& event)
+void mmThemesDialog::OnUse(wxCommandEvent&)
 {
     ThemeEntry thisTheme = getThemeEntry(m_themesListBox_->GetString(m_themesListBox_->GetSelection()));
-    wxString changingThemeText = _("Are you sure you want to use this theme? Please note that this will only take effect when MMEX is re-started.");
+    wxString changingThemeText = _t("Do you want to use the theme? Please note that this will only take effect when MMEX is re-started.");
     wxMessageDialog msgDlg(this, changingThemeText, thisTheme.name,
         wxYES_NO | wxNO_DEFAULT | wxICON_EXCLAMATION);
     if (msgDlg.ShowModal() == wxID_YES)
     {
-        Model_Setting::instance().SetTheme(thisTheme.name);
+        Model_Setting::instance().setTheme(thisTheme.name);
         for (auto it = begin(m_themes); it != end(m_themes); ++it)
             it->isChosen = (it->name == thisTheme.name);
     }
     RefreshView();
 }
 
-void mmThemesDialog::OnOk(wxCommandEvent& event)
+void mmThemesDialog::OnOk(wxCommandEvent&)
 {
     EndModal(wxID_OK);
 }
